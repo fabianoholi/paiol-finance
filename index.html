@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PAIOL FINANCE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+  // Ícones SVG inline — substitui lucide-react sem dependência CDN
+  (function(){
+    function ic(els){
+      return function Icon(p){
+        var s=p.size||16,st=p.style,cl=p.className
+        return React.createElement('svg',{xmlns:'http://www.w3.org/2000/svg',width:s,height:s,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',style:st,className:cl},...els)
+      }
+    }
+    function p(d){return React.createElement('path',{d:d})}
+    function ci(cx,cy,r){return React.createElement('circle',{cx:cx,cy:cy,r:r})}
+    function rc(x,y,w,h,rx){return React.createElement('rect',{x:x,y:y,width:w,height:h,rx:rx||0})}
+    function ln(x1,y1,x2,y2){return React.createElement('line',{x1:x1,y1:y1,x2:x2,y2:y2})}
+    function pl(pts){return React.createElement('polyline',{points:pts})}
+    window.LayoutDashboard=ic([rc(3,3,7,7,1),rc(14,3,7,7,1),rc(14,14,7,7,1),rc(3,14,7,7,1)])
+    window.CalendarDays=ic([rc(3,4,18,18,2),p('M16 2v4M8 2v4M3 10h18'),p('M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01')])
+    window.TrendingUp=ic([pl('3 17 9 11 13 15 21 7'),p('M14 7h7v7')])
+    window.TrendingDown=ic([pl('3 7 9 13 13 9 21 17'),p('M14 17h7v-7')])
+    window.CreditCard=ic([rc(1,4,22,16,2),ln(1,10,23,10)])
+    window.Users=ic([p('M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'),ci(9,7,4),p('M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75')])
+    window.Target=ic([ci(12,12,10),ci(12,12,6),ci(12,12,2)])
+    window.Zap=ic([p('M13 2 3 14h9l-1 8 10-12h-9l1-8z')])
+    window.Settings=ic([p('M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z'),ci(12,12,3)])
+    window.Menu=ic([ln(3,6,21,6),ln(3,12,21,12),ln(3,18,21,18)])
+    window.X=ic([ln(18,6,6,18),ln(6,6,18,18)])
+    window.Plus=ic([ln(12,5,12,19),ln(5,12,19,12)])
+    window.Pencil=ic([p('M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'),p('m15 5 4 4')])
+    window.Trash2=ic([p('M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'),ln(10,11,10,17),ln(14,11,14,17)])
+    window.CheckCircle=ic([p('M22 11.08V12a10 10 0 1 1-5.93-9.14'),pl('9 11 12 14 22 4')])
+    window.Clock=ic([ci(12,12,10),p('M12 6v6l4 2')])
+    window.AlertCircle=ic([ci(12,12,10),ln(12,8,12,12),ln(12,16,12.01,16)])
+    window.ChevronLeft=ic([p('m15 18-6-6 6-6')])
+    window.ChevronRight=ic([p('m9 18 6-6-6-6')])
+    window.ChevronDown=ic([p('m6 9 6 6 6-6')])
+    window.Download=ic([p('M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'),pl('7 10 12 15 17 10'),ln(12,15,12,3)])
+    window.Copy=ic([rc(9,9,13,13,2),p('M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1')])
+    window.DollarSign=ic([ln(12,1,12,23),p('M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6')])
+    window.Wallet=ic([p('M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4'),p('M4 6v12c0 1.1.9 2 2 2h14v-4'),p('M18 12a2 2 0 0 0 0 4h4v-4z')])
+    window.BarChart2=ic([ln(18,20,18,10),ln(12,20,12,4),ln(6,20,6,14)])
+    window.RefreshCw=ic([p('M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8'),p('M21 3v5h-5'),p('M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16'),p('M8 16H3v5')])
+    window.Check=ic([pl('20 6 9 17 4 12')])
+    window.Eye=ic([p('M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z'),ci(12,12,3)])
+    window.Save=ic([p('M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'),p('M17 21v-8H7v8M7 3v5h8')])
+    window.Minus=ic([ln(5,12,19,12)])
+    window.PieChart=ic([p('M21.21 15.89A10 10 0 1 1 8 2.83'),p('M22 12A10 10 0 0 0 12 2v10z')])
+  })()
+  </script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#1e293b}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:#0f172a}
+    ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+    select option{background:#1e293b;color:#f1f5f9}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useReducer,useEffect,useMemo,useRef,useCallback} = React
+const {BarChart,Bar,LineChart,Line,PieChart,Pie,Cell,XAxis,YAxis,CartesianGrid,Tooltip,Legend,ResponsiveContainer,AreaChart,Area} = Recharts
+// Ícones já definidos como globais window.* no <script> acima
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+const uid=()=>Math.random().toString(36).slice(2,9)
+const fmtBRL=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+const monthKey=(y,m)=>`${y}-${String(m).padStart(2,'0')}`
+const parseMonthKey=k=>({year:parseInt(k.split('-')[0]),month:parseInt(k.split('-')[1])})
+const MONTH_NAMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const CATEGORIES=['Ferramentas','Aluguel','Salários','Alimentação','Cartão','Transporte','Marketing','Impostos','Outros']
+const CAT_COLORS=['#10b981','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#f97316','#ef4444','#94a3b8']
+
+// ─── SEED ─────────────────────────────────────────────────────────────────────
+const SEED={
+  settings:{
+    clients:[
+      {id:'c1',name:'Involt',value:2000,dueDay:5},
+      {id:'c2',name:'SA Hair',value:1300,dueDay:10},
+      {id:'c3',name:'Angel',value:1500,dueDay:12},
+      {id:'c4',name:'Marmoraria',value:1000,dueDay:10},
+      {id:'c5',name:'M1 Dist',value:1500,dueDay:14},
+      {id:'c6',name:'GWD Adv',value:3500,dueDay:14},
+    ],
+    fixedExpenses:[
+      {id:'e1',name:'Santander PJ',value:3600,category:'Cartão',day:10,cardId:'k1'},
+      {id:'e2',name:'Luz',value:113,category:'Outros',day:10,cardId:null},
+      {id:'e3',name:'Aluguel',value:1500,category:'Aluguel',day:10,cardId:null},
+      {id:'e4',name:'Mentoria',value:834,category:'Marketing',day:7,cardId:null},
+      {id:'e5',name:'Empréstimo',value:743,category:'Outros',day:10,cardId:null},
+      {id:'e6',name:'Cartão Inter',value:175,category:'Cartão',day:5,cardId:null},
+    ],
+    cards:[
+      {id:'k1',name:'Santander PJ 1',type:'PJ',limit:1700,closeDay:29,dueDay:10,description:'Ferramentas recorrentes'},
+      {id:'k2',name:'Santander PJ 2',type:'PJ',limit:1700,closeDay:10,dueDay:20,description:'Despesas operacionais'},
+      {id:'k3',name:'Nubank PJ',type:'PJ',limit:1850,closeDay:11,dueDay:18,description:'Compras gerais PJ'},
+      {id:'k4',name:'Neon',type:'PF',limit:0,closeDay:17,dueDay:22,description:'Cartão pessoal / casa'},
+    ],
+    collaborators:[
+      {id:'col1',name:'Mainara',role:'Assistente',baseSalary:1600},
+      {id:'col2',name:'Fábio',role:'Sócio / Diretor',baseSalary:3000},
+      {id:'col3',name:'Designer Freelancer',role:'Freelancer',baseSalary:800},
+    ],
+  },
+  months:{
+    '2026-03':{
+      cashBalance:8450,closed:false,snapshot:null,
+      entries:[
+        {id:uid(),client:'Involt',dueDay:5,expectedValue:2000,status:'Recebido',realValue:2000,note:''},
+        {id:uid(),client:'SA Hair',dueDay:10,expectedValue:1300,status:'Recebido',realValue:1300,note:''},
+        {id:uid(),client:'Angel',dueDay:12,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
+        {id:uid(),client:'Marmoraria',dueDay:10,expectedValue:1000,status:'Recebido',realValue:1000,note:''},
+        {id:uid(),client:'M1 Dist',dueDay:14,expectedValue:1500,status:'Cobrado',realValue:0,note:'Aguardando confirmação'},
+        {id:uid(),client:'GWD Adv',dueDay:14,expectedValue:3500,status:'Previsto',realValue:0,note:''},
+        {id:uid(),client:'Job Avulso',dueDay:20,expectedValue:800,status:'Previsto',realValue:0,note:'Arte para redes sociais'},
+      ],
+      exits:[
+        {id:uid(),name:'Santander PJ',category:'Cartão',day:10,cardId:'k1',expectedValue:3600,status:'Pago',realValue:3600,note:''},
+        {id:uid(),name:'Luz',category:'Outros',day:10,cardId:null,expectedValue:113,status:'Pago',realValue:118,note:'R$5 acima'},
+        {id:uid(),name:'Aluguel',category:'Aluguel',day:10,cardId:null,expectedValue:1500,status:'Pago',realValue:1500,note:''},
+        {id:uid(),name:'Mentoria',category:'Marketing',day:7,cardId:null,expectedValue:834,status:'Pago',realValue:834,note:''},
+        {id:uid(),name:'Empréstimo',category:'Outros',day:10,cardId:null,expectedValue:743,status:'Pago',realValue:743,note:''},
+        {id:uid(),name:'Cartão Inter',category:'Cartão',day:5,cardId:null,expectedValue:175,status:'Pago',realValue:175,note:''},
+        {id:uid(),name:'Salário Mainara',category:'Salários',day:5,cardId:null,expectedValue:1600,status:'Pago',realValue:1600,note:''},
+        {id:uid(),name:'Salário Fábio',category:'Salários',day:5,cardId:null,expectedValue:3000,status:'Pago',realValue:3000,note:''},
+        {id:uid(),name:'Freelancer Designer',category:'Salários',day:25,cardId:null,expectedValue:800,status:'Pendente',realValue:0,note:''},
+        {id:uid(),name:'Nubank PJ fatura',category:'Cartão',day:18,cardId:'k3',expectedValue:420,status:'Pendente',realValue:0,note:''},
+      ],
+      cardExpenses:{
+        k1:[
+          {id:uid(),description:'Adobe CC',value:350,installments:1,currentInstallment:1},
+          {id:uid(),description:'Notion',value:80,installments:1,currentInstallment:1},
+          {id:uid(),description:'Hostinger',value:120,installments:12,currentInstallment:3},
+        ],
+        k3:[
+          {id:uid(),description:'Almoço reunião',value:145,installments:1,currentInstallment:1},
+          {id:uid(),description:'Curso online',value:275,installments:3,currentInstallment:2},
+        ],
+        k4:[],k2:[],
+      },
+      collaboratorExtras:{
+        col1:[{id:uid(),description:'Vale refeição',value:200}],
+        col2:[{id:uid(),description:'Combustível',value:180}],
+        col3:[],
+      },
+      dailyNotes:{'10':'Dia de muitos pagamentos fixos','14':'Aguardando M1 e GWD'},
+      dailyCash:{},
+    },
+  },
+}
+
+// ─── REDUCER ──────────────────────────────────────────────────────────────────
+function reducer(state,action){
+  const{type,payload}=action
+  const updMonth=(key,fn)=>({...state,months:{...state.months,[key]:fn(state.months[key]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}})}})
+  switch(type){
+    case'ADD_ENTRY':return updMonth(payload.monthKey,m=>({...m,entries:[...(m.entries||[]),{...payload.entry,id:uid()}]}))
+    case'UPDATE_ENTRY':return updMonth(payload.monthKey,m=>({...m,entries:m.entries.map(e=>e.id===payload.entry.id?payload.entry:e)}))
+    case'DELETE_ENTRY':return updMonth(payload.monthKey,m=>({...m,entries:m.entries.filter(e=>e.id!==payload.id)}))
+    case'ADD_EXIT':return updMonth(payload.monthKey,m=>({...m,exits:[...(m.exits||[]),{...payload.exit,id:uid()}]}))
+    case'UPDATE_EXIT':return updMonth(payload.monthKey,m=>({...m,exits:m.exits.map(e=>e.id===payload.exit.id?payload.exit:e)}))
+    case'DELETE_EXIT':return updMonth(payload.monthKey,m=>({...m,exits:m.exits.filter(e=>e.id!==payload.id)}))
+    case'SET_CASH_BALANCE':return updMonth(payload.monthKey,m=>({...m,cashBalance:payload.value}))
+    case'UPDATE_DAILY_NOTE':return updMonth(payload.monthKey,m=>({...m,dailyNotes:{...m.dailyNotes,[payload.day]:payload.note}}))
+    case'UPDATE_DAILY_CASH':return updMonth(payload.monthKey,m=>({...m,dailyCash:{...m.dailyCash,[payload.day]:payload.value}}))
+    case'ADD_CARD_EXPENSE':return updMonth(payload.monthKey,m=>({...m,cardExpenses:{...m.cardExpenses,[payload.cardId]:[...(m.cardExpenses?.[payload.cardId]||[]),{...payload.expense,id:uid()}]}}))
+    case'DELETE_CARD_EXPENSE':return updMonth(payload.monthKey,m=>({...m,cardExpenses:{...m.cardExpenses,[payload.cardId]:(m.cardExpenses?.[payload.cardId]||[]).filter(e=>e.id!==payload.id)}}))
+    case'ADD_COLLAB_EXTRA':return updMonth(payload.monthKey,m=>({...m,collaboratorExtras:{...m.collaboratorExtras,[payload.collabId]:[...(m.collaboratorExtras?.[payload.collabId]||[]),{...payload.extra,id:uid()}]}}))
+    case'DELETE_COLLAB_EXTRA':return updMonth(payload.monthKey,m=>({...m,collaboratorExtras:{...m.collaboratorExtras,[payload.collabId]:(m.collaboratorExtras?.[payload.collabId]||[]).filter(e=>e.id!==payload.id)}}))
+    case'CLOSE_MONTH':return updMonth(payload.monthKey,m=>({...m,closed:true,snapshot:{...m,closed:true}}))
+    case'COPY_FROM_PREV':{
+      const prev=state.months[payload.prevKey]
+      if(!prev)return state
+      return updMonth(payload.monthKey,m=>({...m,entries:prev.entries.map(e=>({...e,id:uid(),status:'Previsto',realValue:0,note:''})),exits:prev.exits.map(e=>({...e,id:uid(),status:'Pendente',realValue:0,note:''}))}))
+    }
+    case'ADD_SETTING':return{...state,settings:{...state.settings,[payload.key]:[...(state.settings[payload.key]||[]),{...payload.item,id:uid()}]}}
+    case'UPDATE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].map(i=>i.id===payload.item.id?payload.item:i)}}
+    case'DELETE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].filter(i=>i.id!==payload.id)}}
+    case'IMPORT':return payload.data
+    default:return state
+  }
+}
+
+function loadState(){try{const s=localStorage.getItem('paiolfinance_v1');return s?JSON.parse(s):SEED}catch{return SEED}}
+
+// ─── GOOGLE SHEETS BACKEND ────────────────────────────────────────────────────
+const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
+const GAS_TOKEN='paiol2026secret'
+async function gasGet(){const r=await fetch(`${GAS_URL}?token=${GAS_TOKEN}`);const j=await r.json();return j.ok?j.data:null}
+async function gasPost(data){await fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── UI BASE ──────────────────────────────────────────────────────────────────
+function Modal({title,onClose,children,wide}){
+  return(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.7)'}} onClick={onClose}>
+      <div className={`relative rounded-xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'#1e293b',border:'1px solid #334155'}} onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-100 transition-colors"><X size={20}/></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Toast({toasts}){
+  return(
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+      {toasts.map(t=>(
+        <div key={t.id} className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium shadow-xl"
+          style={{background:t.type==='error'?'#ef4444':t.type==='warn'?'#f59e0b':'#10b981',color:'#fff',minWidth:220}}>
+          {t.type==='error'?<AlertCircle size={16}/>:<CheckCircle size={16}/>}{t.msg}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SummaryCard({label,value,sub,color,icon:Icon}){
+  return(
+    <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-xs text-slate-400 uppercase tracking-wider">{label}</span>
+        {Icon&&<div className="p-2 rounded-lg" style={{background:color+'22'}}><Icon size={16} style={{color}}/></div>}
+      </div>
+      <div className="text-2xl font-bold mb-1" style={{color:color||'#f1f5f9'}}>{value}</div>
+      {sub&&<div className="text-xs text-slate-500">{sub}</div>}
+    </div>
+  )
+}
+
+function StatusBadge({status}){
+  const cfg={
+    'Previsto':{bg:'#1e40af22',color:'#60a5fa'},
+    'Cobrado':{bg:'#78350f22',color:'#f59e0b'},
+    'Recebido':{bg:'#06522022',color:'#10b981'},
+    'Pendente':{bg:'#78350f22',color:'#f59e0b'},
+    'Pago':{bg:'#06522022',color:'#10b981'},
+  }[status]||{bg:'#33415522',color:'#94a3b8'}
+  return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{background:cfg.bg,color:cfg.color}}>{status}</span>
+}
+
+function ProgressBar({label,current,total,color}){
+  const pct=total>0?Math.min(100,(current/total)*100):0
+  return(
+    <div>
+      <div className="flex justify-between text-xs text-slate-400 mb-1"><span>{label}</span><span>{Math.round(pct)}%</span></div>
+      <div className="h-2 rounded-full overflow-hidden" style={{background:'#334155'}}>
+        <div className="h-full rounded-full transition-all" style={{width:`${pct}%`,background:color||'#10b981'}}/>
+      </div>
+    </div>
+  )
+}
+
+function Field({label,children}){return <div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>}
+const iCls="w-full px-3 py-2 rounded-lg text-sm text-slate-100 outline-none"
+const iSty={background:'#0f172a',border:'1px solid #334155'}
+function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
+function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
+function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-medium rounded-lg transition-all hover:brightness-110 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff'}}>{children}</button>}
+function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 rounded-lg transition-all ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'#33415540',color:'#94a3b8',border:'1px solid #334155'}}>{children}</button>}
+
+function Th({children,right}){return <th className={`px-3 py-2.5 text-xs font-medium text-slate-400 uppercase tracking-wider ${right?'text-right':'text-left'}`}>{children}</th>}
+function Td({children,right,muted,color}){return <td className={`px-3 py-2.5 text-sm ${right?'text-right':''} ${muted?'text-slate-500':''}`} style={{color:color||undefined}}>{children}</td>}
+
+const CTip=({active,payload,label})=>{
+  if(!active||!payload?.length)return null
+  return <div className="rounded-lg p-3 text-sm" style={{background:'#0f172a',border:'1px solid #334155'}}><p className="text-slate-400 mb-1">{label}</p>{payload.map((p,i)=><p key={i} style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function DashboardPage({state,dispatch,monthKey:mk,toast}){
+  const month=state.months[mk]||{}
+  const entries=month.entries||[]
+  const exits=month.exits||[]
+  const totalExpIn=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
+  const totalRealIn=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
+  const totalExpOut=exits.reduce((s,e)=>s+(e.expectedValue||0),0)
+  const totalRealOut=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
+  const resPrev=totalExpIn-totalExpOut
+  const resReal=totalRealIn-totalRealOut
+  const [editBal,setEditBal]=useState(false)
+  const [balVal,setBalVal]=useState(String(month.cashBalance||''))
+  const pendIn=entries.filter(e=>e.status!=='Recebido')
+  const pendOut=exits.filter(e=>e.status!=='Pago')
+  const barData=[{name:'Entradas',Previsto:totalExpIn,Realizado:totalRealIn},{name:'Saídas',Previsto:totalExpOut,Realizado:totalRealOut},{name:'Resultado',Previsto:resPrev,Realizado:resReal}]
+
+  function saveBal(){const v=parseFloat(balVal.replace(',','.')); if(!isNaN(v)){dispatch({type:'SET_CASH_BALANCE',payload:{monthKey:mk,value:v}});toast('Saldo atualizado')}; setEditBal(false)}
+
+  return(
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="col-span-2 rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <div className="flex items-start justify-between mb-3"><span className="text-xs text-slate-400 uppercase tracking-wider">Saldo em Caixa</span><Wallet size={16} style={{color:'#10b981'}}/></div>
+          {editBal?(
+            <div className="flex gap-2 items-center">
+              <input className={iCls} style={{...iSty,maxWidth:160}} type="number" value={balVal} onChange={e=>setBalVal(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveBal()} autoFocus/>
+              <button onClick={saveBal}><Check size={18} style={{color:'#10b981'}}/></button>
+            </div>
+          ):(
+            <div className="flex items-center gap-2 cursor-pointer" onClick={()=>{setBalVal(String(month.cashBalance||'0'));setEditBal(true)}}>
+              <span className="text-2xl font-bold" style={{color:'#10b981'}}>{fmtBRL(month.cashBalance)}</span>
+              <Pencil size={14} className="text-slate-500"/>
+            </div>
+          )}
+          <div className="text-xs text-slate-500 mt-1">Clique para editar</div>
+        </div>
+        <SummaryCard label="Entradas Previstas" value={fmtBRL(totalExpIn)} sub={`Realizadas: ${fmtBRL(totalRealIn)}`} color="#10b981" icon={TrendingUp}/>
+        <SummaryCard label="Saídas Previstas" value={fmtBRL(totalExpOut)} sub={`Pagas: ${fmtBRL(totalRealOut)}`} color="#ef4444" icon={TrendingDown}/>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-xl p-5 space-y-4" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <h3 className="text-sm font-semibold text-slate-300">Resultado do Mês</h3>
+          <div className="flex gap-6">
+            <div><div className="text-xs text-slate-500 mb-1">Previsto</div><div className="text-xl font-bold" style={{color:resPrev>=0?'#10b981':'#ef4444'}}>{fmtBRL(resPrev)}</div></div>
+            <div><div className="text-xs text-slate-500 mb-1">Realizado</div><div className="text-xl font-bold" style={{color:resReal>=0?'#10b981':'#ef4444'}}>{fmtBRL(resReal)}</div></div>
+          </div>
+          <ProgressBar label="Entradas realizadas" current={totalRealIn} total={totalExpIn} color="#10b981"/>
+          <ProgressBar label="Saídas pagas" current={totalRealOut} total={totalExpOut} color="#ef4444"/>
+          {!month.closed&&<button onClick={()=>{dispatch({type:'CLOSE_MONTH',payload:{monthKey:mk}});toast('Mês fechado!')}} className="text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1 pt-1"><Check size={12}/> Fechar mês</button>}
+          {month.closed&&<span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle size={12}/> Mês fechado</span>}
+        </div>
+        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <h3 className="text-sm font-semibold text-slate-300 mb-3">Previsto vs Realizado</h3>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={barData} barSize={16}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155"/>
+              <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
+              <Tooltip content={<CTip/>}/>
+              <Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+              <Bar dataKey="Previsto" fill="#3b82f6" radius={[3,3,0,0]}/>
+              <Bar dataKey="Realizado" fill="#10b981" radius={[3,3,0,0]}/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingUp size={14} style={{color:'#10b981'}}/> A Receber ({pendIn.length})</h3>
+          {pendIn.length===0?<p className="text-xs text-slate-500">Tudo recebido!</p>:(
+            <div className="space-y-2">{pendIn.map(e=>(
+              <div key={e.id} className="flex items-center justify-between py-1.5 border-b border-slate-700/50">
+                <div><div className="text-sm text-slate-200">{e.client}</div><div className="text-xs text-slate-500">Dia {e.dueDay}</div></div>
+                <div className="flex items-center gap-2"><span className="text-sm font-medium text-slate-200">{fmtBRL(e.expectedValue)}</span><StatusBadge status={e.status}/></div>
+              </div>
+            ))}</div>
+          )}
+        </div>
+        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingDown size={14} style={{color:'#ef4444'}}/> A Pagar ({pendOut.length})</h3>
+          {pendOut.length===0?<p className="text-xs text-slate-500">Tudo pago!</p>:(
+            <div className="space-y-2">{pendOut.map(e=>(
+              <div key={e.id} className="flex items-center justify-between py-1.5 border-b border-slate-700/50">
+                <div><div className="text-sm text-slate-200">{e.name}</div><div className="text-xs text-slate-500">Dia {e.day} · {e.category}</div></div>
+                <div className="flex items-center gap-2"><span className="text-sm font-medium text-slate-200">{fmtBRL(e.expectedValue)}</span><StatusBadge status={e.status}/></div>
+              </div>
+            ))}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── ENTRADAS ─────────────────────────────────────────────────────────────────
+function EntriesPage({state,dispatch,monthKey:mk,toast}){
+  const month=state.months[mk]||{}
+  const entries=month.entries||[]
+  const [filter,setFilter]=useState('Todos')
+  const [modal,setModal]=useState(null)
+  const [form,setForm]=useState({})
+  const filtered=filter==='Todos'?entries:entries.filter(e=>e.status===filter)
+  const totalExp=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
+  const totalReal=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
+  const totalPend=entries.filter(e=>e.status!=='Recebido').reduce((s,e)=>s+(e.expectedValue||0),0)
+  function openAdd(){setForm({client:'',dueDay:'',expectedValue:'',status:'Previsto',realValue:'',note:''});setModal('add')}
+  function openEdit(e){setForm({...e});setModal(e)}
+  function save(){
+    if(!form.client||!form.expectedValue)return toast('Preencha cliente e valor','error')
+    const entry={...form,expectedValue:parseFloat(form.expectedValue)||0,realValue:parseFloat(form.realValue)||0,dueDay:parseInt(form.dueDay)||0}
+    if(modal==='add')dispatch({type:'ADD_ENTRY',payload:{monthKey:mk,entry}})
+    else dispatch({type:'UPDATE_ENTRY',payload:{monthKey:mk,entry}})
+    toast('Salvo');setModal(null)
+  }
+  function del(id){dispatch({type:'DELETE_ENTRY',payload:{monthKey:mk,id}});toast('Removido','warn')}
+  return(
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-4">
+        <SummaryCard label="Previsto" value={fmtBRL(totalExp)} color="#3b82f6" icon={TrendingUp}/>
+        <SummaryCard label="Recebido" value={fmtBRL(totalReal)} color="#10b981" icon={CheckCircle}/>
+        <SummaryCard label="A Receber" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-2 flex-wrap">
+          {['Todos','Previsto','Cobrado','Recebido'].map(s=>(
+            <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
+              style={{background:filter===s?'#10b981':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #334155'}}>{s}</button>
+          ))}
+        </div>
+        <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
+      </div>
+      <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+        <table className="w-full min-w-[600px]">
+          <thead style={{background:'#0f172a'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th right>Diferença</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+          <tbody>
+            {filtered.map((e,i)=>{
+              const diff=(e.realValue||0)-(e.expectedValue||0)
+              return(
+                <tr key={e.id} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                  <Td>{e.client}</Td><Td muted>{e.dueDay||'—'}</Td>
+                  <Td right>{fmtBRL(e.expectedValue)}</Td>
+                  <Td right color={e.realValue?'#f1f5f9':'#475569'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
+                  <Td right color={diff>0?'#10b981':diff<0?'#ef4444':'#64748b'}>{e.realValue?fmtBRL(diff):'—'}</Td>
+                  <Td><StatusBadge status={e.status}/></Td>
+                  <Td><div className="flex gap-1.5">
+                    <button onClick={()=>openEdit(e)} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
+                    <button onClick={()=>del(e.id)} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button>
+                  </div></Td>
+                </tr>
+              )
+            })}
+            {filtered.length===0&&<tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma entrada</td></tr>}
+          </tbody>
+          <tfoot style={{background:'#0f172a',borderTop:'1px solid #334155'}}>
+            <tr>
+              <td colSpan={2} className="px-3 py-2 text-xs text-slate-400 font-medium">Total ({filtered.length})</td>
+              <td className="px-3 py-2 text-sm text-right font-bold text-slate-200">{fmtBRL(filtered.reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
+              <td className="px-3 py-2 text-sm text-right font-bold text-emerald-400">{fmtBRL(filtered.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0))}</td>
+              <td colSpan={3}/>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {modal&&(
+        <Modal title={modal==='add'?'Nova Entrada':'Editar Entrada'} onClose={()=>setModal(null)}>
+          <div className="space-y-4">
+            <Field label="Cliente / Empresa"><Inp value={form.client} onChange={v=>setForm(f=>({...f,client:v}))} placeholder="Nome do cliente"/></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Dia previsto"><Inp type="number" value={form.dueDay} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field>
+              <Field label="Status"><Sel value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={['Previsto','Cobrado','Recebido']}/></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Valor previsto (R$)"><Inp type="number" value={form.expectedValue} onChange={v=>setForm(f=>({...f,expectedValue:v}))} placeholder="0,00"/></Field>
+              <Field label="Valor recebido (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>
+            </div>
+            <Field label="Observação"><Inp value={form.note} onChange={v=>setForm(f=>({...f,note:v}))} placeholder="Opcional"/></Field>
+            <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={save}><Save size={14}/> Salvar</Btn></div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ─── SAÍDAS ───────────────────────────────────────────────────────────────────
+function ExitsPage({state,dispatch,monthKey:mk,toast}){
+  const month=state.months[mk]||{}
+  const exits=month.exits||[]
+  const cards=state.settings?.cards||[]
+  const [filter,setFilter]=useState('Todos')
+  const [modal,setModal]=useState(null)
+  const [form,setForm]=useState({})
+  const filtered=filter==='Todos'?exits:exits.filter(e=>e.status===filter)
+  const totalExp=exits.reduce((s,e)=>s+(e.expectedValue||0),0)
+  const totalPaid=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
+  const totalPend=exits.filter(e=>e.status!=='Pago').reduce((s,e)=>s+(e.expectedValue||0),0)
+  const catMap={}; exits.forEach(e=>{catMap[e.category]=(catMap[e.category]||0)+(e.expectedValue||0)})
+  const pieData=Object.entries(catMap).map(([name,value])=>({name,value}))
+  function save(){
+    if(!form.name||!form.expectedValue)return toast('Preencha nome e valor','error')
+    const exit={...form,expectedValue:parseFloat(form.expectedValue)||0,realValue:parseFloat(form.realValue)||0,day:parseInt(form.day)||0}
+    if(modal==='add')dispatch({type:'ADD_EXIT',payload:{monthKey:mk,exit}})
+    else dispatch({type:'UPDATE_EXIT',payload:{monthKey:mk,exit}})
+    toast('Salvo');setModal(null)
+  }
+  function del(id){dispatch({type:'DELETE_EXIT',payload:{monthKey:mk,id}});toast('Removido','warn')}
+  const cardName=id=>cards.find(c=>c.id===id)?.name||'—'
+  return(
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-4">
+        <SummaryCard label="Previsto" value={fmtBRL(totalExp)} color="#ef4444" icon={TrendingDown}/>
+        <SummaryCard label="Pago" value={fmtBRL(totalPaid)} color="#10b981" icon={CheckCircle}/>
+        <SummaryCard label="A Pagar" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="rounded-xl p-4" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <h3 className="text-xs font-medium text-slate-400 mb-2">Por Categoria</h3>
+          <ResponsiveContainer width="100%" height={160}>
+            <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2}>
+              {pieData.map((_,i)=><Cell key={i} fill={CAT_COLORS[i%CAT_COLORS.length]}/>)}
+            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'#0f172a',border:'1px solid #334155',borderRadius:8,fontSize:12}}/></PieChart>
+          </ResponsiveContainer>
+          <div className="space-y-1 mt-1">{pieData.slice(0,5).map((d,i)=>(
+            <div key={d.name} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{background:CAT_COLORS[i%CAT_COLORS.length]}}/><span className="text-slate-400">{d.name}</span></div>
+              <span className="text-slate-300">{fmtBRL(d.value)}</span>
+            </div>
+          ))}</div>
+        </div>
+        <div className="lg:col-span-2 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {['Todos','Pendente','Pago'].map(s=>(
+                <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
+                  style={{background:filter===s?'#ef4444':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #334155'}}>{s}</button>
+              ))}
+            </div>
+            <Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setModal('add')}}><Plus size={14}/> Adicionar</Btn>
+          </div>
+          <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+            <table className="w-full min-w-[500px]">
+              <thead style={{background:'#0f172a'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+              <tbody>
+                {filtered.map((e,i)=>(
+                  <tr key={e.id} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                    <Td><div>{e.name}</div>{e.cardId&&<div className="text-xs text-slate-500">{cardName(e.cardId)}</div>}</Td>
+                    <Td muted>{e.category}</Td><Td muted>{e.day||'—'}</Td>
+                    <Td right>{fmtBRL(e.expectedValue)}</Td>
+                    <Td right color={e.realValue?'#f1f5f9':'#475569'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
+                    <Td><StatusBadge status={e.status}/></Td>
+                    <Td><div className="flex gap-1.5">
+                      <button onClick={()=>{setForm({...e});setModal(e)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
+                      <button onClick={()=>del(e.id)} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button>
+                    </div></Td>
+                  </tr>
+                ))}
+                {filtered.length===0&&<tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma saída</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {modal&&(
+        <Modal title={modal==='add'?'Nova Saída':'Editar Saída'} onClose={()=>setModal(null)}>
+          <div className="space-y-4">
+            <Field label="Nome / Fornecedor"><Inp value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Conta de luz"/></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Categoria"><Sel value={form.category} onChange={v=>setForm(f=>({...f,category:v}))} options={CATEGORIES}/></Field>
+              <Field label="Dia"><Inp type="number" value={form.day} onChange={v=>setForm(f=>({...f,day:v}))} placeholder="10"/></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Valor previsto (R$)"><Inp type="number" value={form.expectedValue} onChange={v=>setForm(f=>({...f,expectedValue:v}))} placeholder="0,00"/></Field>
+              <Field label="Valor pago (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Status"><Sel value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={['Pendente','Pago']}/></Field>
+              <Field label="Cartão"><Sel value={form.cardId||''} onChange={v=>setForm(f=>({...f,cardId:v}))} options={[{value:'',label:'Conta corrente'},...cards.map(c=>({value:c.id,label:c.name}))]}/></Field>
+            </div>
+            <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={save}><Save size={14}/> Salvar</Btn></div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ─── FLUXO DE CAIXA ───────────────────────────────────────────────────────────
+function CashFlowPage({state,dispatch,monthKey:mk}){
+  const{year,month}=parseMonthKey(mk)
+  const mData=state.months[mk]||{}
+  const entries=mData.entries||[]
+  const exits=mData.exits||[]
+  const daysInMonth=new Date(year,month,0).getDate()
+  const today=new Date()
+  const isCurr=today.getFullYear()===year&&today.getMonth()+1===month
+  const entriesByDay={};exits;entries.forEach(e=>{if(e.dueDay)entriesByDay[e.dueDay]=(entriesByDay[e.dueDay]||0)+(e.expectedValue||0)})
+  const exitsByDay={};exits.forEach(e=>{if(e.day)exitsByDay[e.day]=(exitsByDay[e.day]||0)+(e.expectedValue||0)})
+  let running=mData.cashBalance||0
+  return(
+    <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+      <table className="w-full min-w-[700px]">
+        <thead style={{background:'#0f172a'}}><tr><Th>Dia</Th><Th right>Ent. Prev.</Th><Th right>Saí. Prev.</Th><Th right>Saldo Esp.</Th><Th right>Saldo Real</Th><Th>Status</Th><Th>Obs.</Th></tr></thead>
+        <tbody>
+          {Array.from({length:daysInMonth},(_,i)=>i+1).map((d,i)=>{
+            const dIn=entriesByDay[d]||0;const dOut=exitsByDay[d]||0;running+=dIn-dOut
+            const realCash=mData.dailyCash?.[String(d)]
+            const isToday=isCurr&&today.getDate()===d
+            const isPast=isCurr?today.getDate()>d:year<today.getFullYear()||(year===today.getFullYear()&&month<today.getMonth()+1)
+            const diff=realCash!=null?realCash-running:null
+            const status=realCash!=null?(Math.abs(diff)<1?'✅':'⚠️'):(isPast?'⏳':'—')
+            return(
+              <tr key={d} className="border-t" style={{borderColor:'#334155',background:isToday?'#1a3a2a':i%2===0?'#1e293b':'#1a2540'}}>
+                <Td><span style={{color:isToday?'#10b981':'#f1f5f9'}}>{d}</span>{isToday&&<span className="ml-1 text-xs text-emerald-500">hoje</span>}</Td>
+                <Td right color={dIn>0?'#10b981':'#475569'}>{dIn>0?fmtBRL(dIn):'—'}</Td>
+                <Td right color={dOut>0?'#ef4444':'#475569'}>{dOut>0?fmtBRL(dOut):'—'}</Td>
+                <Td right color={running>=0?'#f1f5f9':'#ef4444'}>{fmtBRL(running)}</Td>
+                <td className="px-3 py-1.5"><input type="number" defaultValue={realCash??''} placeholder="—"
+                  onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v))dispatch({type:'UPDATE_DAILY_CASH',payload:{monthKey:mk,day:String(d),value:v}})}}
+                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'#0f172a',border:'1px solid #334155',color:'#f1f5f9'}}/></td>
+                <Td>{status}</Td>
+                <td className="px-3 py-1.5"><input defaultValue={mData.dailyNotes?.[String(d)]||''} placeholder="Observação..."
+                  onBlur={e=>dispatch({type:'UPDATE_DAILY_NOTE',payload:{monthKey:mk,day:String(d),note:e.target.value}})}
+                  className="w-full px-2 py-1 rounded text-sm outline-none" style={{background:'transparent',border:'1px solid transparent',color:'#94a3b8'}}/></td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── CARTÕES ──────────────────────────────────────────────────────────────────
+function CardsPage({state,dispatch,monthKey:mk,toast}){
+  const cards=state.settings?.cards||[]
+  const month=state.months[mk]||{}
+  const [sel,setSel]=useState(cards[0]?.id||null)
+  const [modal,setModal]=useState(false)
+  const [form,setForm]=useState({})
+  const card=cards.find(c=>c.id===sel)
+  const expenses=month.cardExpenses?.[sel]||[]
+  const total=expenses.reduce((s,e)=>s+(e.value||0),0)
+  function addExp(){
+    if(!form.description||!form.value)return toast('Preencha campos','error')
+    dispatch({type:'ADD_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,expense:{description:form.description,value:parseFloat(form.value)||0,installments:parseInt(form.installments)||1,currentInstallment:parseInt(form.currentInstallment)||1}}})
+    setForm({});setModal(false);toast('Adicionado')
+  }
+  return(
+    <div className="space-y-5">
+      <div className="flex gap-2 flex-wrap">{cards.map(c=>(
+        <button key={c.id} onClick={()=>setSel(c.id)} className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          style={{background:sel===c.id?'#10b981':'#33415540',color:sel===c.id?'#fff':'#94a3b8',border:`1px solid ${sel===c.id?'#10b981':'#334155'}`}}>
+          <CreditCard size={12} className="inline mr-1.5"/>{c.name}
+        </button>
+      ))}</div>
+      {card&&(
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="rounded-xl p-5 space-y-3" style={{background:'#1e293b',border:'1px solid #334155'}}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg" style={{background:'#10b98120'}}><CreditCard size={18} style={{color:'#10b981'}}/></div>
+              <div><div className="font-semibold text-slate-100">{card.name}</div><div className="text-xs text-slate-500">{card.type} · {card.description}</div></div>
+            </div>
+            {card.limit>0&&<ProgressBar label="Uso estimado" current={total} total={card.limit} color="#f59e0b"/>}
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div><span className="text-slate-500">Fecha:</span> <span className="text-slate-300">dia {card.closeDay}</span></div>
+              <div><span className="text-slate-500">Vence:</span> <span className="text-slate-300">dia {card.dueDay}</span></div>
+            </div>
+            <div className="pt-2 border-t border-slate-700"><div className="text-xs text-slate-500">Fatura estimada</div><div className="text-xl font-bold mt-1" style={{color:'#ef4444'}}>{fmtBRL(total)}</div></div>
+          </div>
+          <div className="lg:col-span-2 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-300">Lançamentos</h3>
+              <Btn onClick={()=>{setForm({description:'',value:'',installments:'1',currentInstallment:'1'});setModal(true)}} small><Plus size={12}/> Novo</Btn>
+            </div>
+            <div className="rounded-xl overflow-hidden" style={{border:'1px solid #334155'}}>
+              <table className="w-full"><thead style={{background:'#0f172a'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
+                <tbody>{expenses.map((e,i)=>(
+                  <tr key={e.id} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                    <Td>{e.description}</Td><Td right>{fmtBRL(e.value)}</Td>
+                    <Td muted>{e.installments>1?`${e.currentInstallment}/${e.installments}`:'1x'}</Td>
+                    <Td><button onClick={()=>dispatch({type:'DELETE_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,id:e.id}})} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button></Td>
+                  </tr>
+                ))}
+                {expenses.length===0&&<tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">Nenhum lançamento</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+      {modal&&<Modal title="Novo Lançamento" onClose={()=>setModal(false)}>
+        <div className="space-y-4">
+          <Field label="Descrição"><Inp value={form.description} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Adobe CC"/></Field>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Valor (R$)"><Inp type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
+            <Field label="Parcelas"><Inp type="number" value={form.installments} onChange={v=>setForm(f=>({...f,installments:v}))} placeholder="1"/></Field>
+            <Field label="Parcela atual"><Inp type="number" value={form.currentInstallment} onChange={v=>setForm(f=>({...f,currentInstallment:v}))} placeholder="1"/></Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(false)}>Cancelar</BtnG><Btn onClick={addExp}><Save size={14}/> Salvar</Btn></div>
+        </div>
+      </Modal>}
+    </div>
+  )
+}
+
+// ─── COLABORADORES ────────────────────────────────────────────────────────────
+function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
+  const collabs=state.settings?.collaborators||[]
+  const month=state.months[mk]||{}
+  const [modal,setModal]=useState(null)
+  const [form,setForm]=useState({})
+  const totalSal=collabs.reduce((s,c)=>s+(c.baseSalary||0),0)
+  const totalExt=collabs.reduce((s,c)=>s+(month.collaboratorExtras?.[c.id]||[]).reduce((ss,e)=>ss+e.value,0),0)
+  return(
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-4">
+        <SummaryCard label="Salários" value={fmtBRL(totalSal)} color="#3b82f6" icon={Users}/>
+        <SummaryCard label="Extras" value={fmtBRL(totalExt)} color="#f59e0b" icon={Plus}/>
+        <SummaryCard label="Total" value={fmtBRL(totalSal+totalExt)} color="#10b981" icon={DollarSign}/>
+      </div>
+      <div className="space-y-4">{collabs.map(c=>{
+        const extras=month.collaboratorExtras?.[c.id]||[]
+        const extTotal=extras.reduce((s,e)=>s+e.value,0)
+        return(
+          <div key={c.id} className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{background:'#10b98130',color:'#10b981'}}>{c.name[0]}</div>
+                <div><div className="font-semibold text-slate-100">{c.name}</div><div className="text-xs text-slate-500">{c.role}</div></div>
+              </div>
+              <div className="text-right"><div className="text-lg font-bold text-slate-100">{fmtBRL(c.baseSalary+extTotal)}</div><div className="text-xs text-slate-500">Base: {fmtBRL(c.baseSalary)}{extTotal>0?` + ${fmtBRL(extTotal)}`:''}</div></div>
+            </div>
+            {extras.length>0&&<div className="border-t border-slate-700 pt-3 mb-3 space-y-1.5">
+              {extras.map(e=><div key={e.id} className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">{e.description}</span>
+                <div className="flex items-center gap-2"><span className="text-slate-300">{fmtBRL(e.value)}</span>
+                  <button onClick={()=>dispatch({type:'DELETE_COLLAB_EXTRA',payload:{monthKey:mk,collabId:c.id,id:e.id}})} className="p-0.5 rounded text-slate-500 hover:text-red-400"><Trash2 size={11}/></button>
+                </div>
+              </div>)}
+            </div>}
+            <button onClick={()=>{setForm({description:'',value:''});setModal(c.id)}} className="text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1"><Plus size={11}/> Adicionar extra</button>
+          </div>
+        )
+      })}</div>
+      {modal&&<Modal title="Novo Extra" onClose={()=>setModal(null)}>
+        <div className="space-y-4">
+          <Field label="Descrição"><Inp value={form.description} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Vale refeição"/></Field>
+          <Field label="Valor (R$)"><Inp type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
+          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG>
+            <Btn onClick={()=>{if(!form.description||!form.value)return toast('Preencha campos','error');dispatch({type:'ADD_COLLAB_EXTRA',payload:{monthKey:mk,collabId:modal,extra:{description:form.description,value:parseFloat(form.value)||0}}});setModal(null);toast('Adicionado')}}><Save size={14}/> Salvar</Btn>
+          </div>
+        </div>
+      </Modal>}
+    </div>
+  )
+}
+
+// ─── PROJEÇÃO ANUAL ───────────────────────────────────────────────────────────
+function AnnualProjectionPage({state}){
+  const today=new Date();const year=today.getFullYear()
+  const rows=Array.from({length:12},(_,i)=>{
+    const mk=monthKey(year,i+1);const m=state.months[mk]||{}
+    const entries=m.entries||[];const exits=m.exits||[]
+    const expIn=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
+    const realIn=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
+    const expOut=exits.reduce((s,e)=>s+(e.expectedValue||0),0)
+    const realOut=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
+    return{mk,month:i+1,name:MONTH_NAMES[i],expIn,realIn,expOut,realOut,isPast:i+1<today.getMonth()+1,isCurrent:i+1===today.getMonth()+1}
+  })
+  let accP=0,accR=0
+  const data=rows.map(r=>{accP+=r.expIn-r.expOut;if(r.isPast||r.isCurrent)accR+=r.realIn-r.realOut;return{...r,accP,accR}})
+  const chartData=data.map(r=>({name:r.name.slice(0,3),'Entradas':r.expIn,'Saídas':r.expOut}))
+  return(
+    <div className="space-y-5">
+      <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <h3 className="text-sm font-semibold text-slate-300 mb-4">Evolução {year}</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="gin" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+              <linearGradient id="gout" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/><stop offset="95%" stopColor="#ef4444" stopOpacity={0}/></linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155"/>
+            <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
+            <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
+            <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+            <Area type="monotone" dataKey="Entradas" stroke="#10b981" fill="url(#gin)" strokeWidth={2}/>
+            <Area type="monotone" dataKey="Saídas" stroke="#ef4444" fill="url(#gout)" strokeWidth={2}/>
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+        <table className="w-full min-w-[800px]">
+          <thead style={{background:'#0f172a'}}><tr><Th>Mês</Th><Th right>Ent.Prev</Th><Th right>Saí.Prev</Th><Th right>Res.Prev</Th><Th right>Ent.Real</Th><Th right>Saí.Real</Th><Th right>Res.Real</Th><Th right>Acumulado</Th></tr></thead>
+          <tbody>{data.map((r,i)=>{
+            const rP=r.expIn-r.expOut;const rR=r.realIn-r.realOut
+            return(
+              <tr key={r.mk} className="border-t" style={{borderColor:'#334155',background:r.isCurrent?'#1a3a2a':i%2===0?'#1e293b':'#1a2540'}}>
+                <Td><span style={{color:r.isCurrent?'#10b981':'#f1f5f9'}}>{r.name}</span>{r.isCurrent&&<span className="ml-1 text-xs text-emerald-500">atual</span>}</Td>
+                <Td right color="#10b981">{fmtBRL(r.expIn)}</Td><Td right color="#ef4444">{fmtBRL(r.expOut)}</Td>
+                <Td right color={rP>=0?'#10b981':'#ef4444'}>{fmtBRL(rP)}</Td>
+                <Td right color={r.realIn>0?'#10b981':'#475569'}>{r.realIn>0?fmtBRL(r.realIn):'—'}</Td>
+                <Td right color={r.realOut>0?'#ef4444':'#475569'}>{r.realOut>0?fmtBRL(r.realOut):'—'}</Td>
+                <Td right color={rR!==0?(rR>=0?'#10b981':'#ef4444'):'#475569'}>{r.realIn>0||r.realOut>0?fmtBRL(rR):'—'}</Td>
+                <Td right color={(r.isPast||r.isCurrent)?r.accR>=0?'#f1f5f9':'#ef4444':r.accP>=0?'#64748b':'#ef4444'}>{fmtBRL((r.isPast||r.isCurrent)?r.accR:r.accP)}</Td>
+              </tr>
+            )
+          })}</tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── SIMULADOR ────────────────────────────────────────────────────────────────
+function SimulatorPage({state,monthKey:mk}){
+  const [type,setType]=useState('expense')
+  const [form,setForm]=useState({name:'',value:'',installments:'1',months:'3'})
+  const [result,setResult]=useState(null)
+  const month=state.months[mk]||{}
+  const baseIn=(month.entries||[]).reduce((s,e)=>s+(e.expectedValue||0),0)
+  const baseOut=(month.exits||[]).reduce((s,e)=>s+(e.expectedValue||0),0)
+  function simulate(){
+    const v=parseFloat(form.value)||0;const inst=parseInt(form.installments)||1;const mo=parseInt(form.months)||3
+    const months=Array.from({length:Math.max(inst,mo)},(_,i)=>{
+      const mIn=type==='client'?baseIn+v:baseIn
+      let mOut=baseOut;if(type==='expense')mOut+=i<inst?v/inst:0;if(type==='hire')mOut+=v
+      return{month:i+1,in:mIn,out:mOut,result:mIn-mOut}
+    })
+    setResult({months,name:form.name})
+  }
+  const chartData=(result?.months||[]).map(m=>({name:`M+${m.month}`,'Com simulação':m.result,'Sem simulação':baseIn-baseOut}))
+  return(
+    <div className="space-y-5">
+      <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <h3 className="text-sm font-semibold text-slate-300 mb-1 flex items-center gap-2"><Zap size={14} style={{color:'#10b981'}}/> Simulador</h3>
+        <p className="text-xs text-slate-500 mb-4">Não altera os dados reais.</p>
+        <div className="flex gap-2 mb-5 flex-wrap">
+          {[['expense','💳 Compra'],['client','🤝 Novo Cliente'],['hire','👤 Contratação']].map(([k,l])=>(
+            <button key={k} onClick={()=>{setType(k);setResult(null)}} className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
+              style={{background:type===k?'#10b981':'#33415540',color:type===k?'#fff':'#94a3b8',border:`1px solid ${type===k?'#10b981':'#334155'}`}}>{l}</button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <Field label="Descrição"><Inp value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Nome"/></Field>
+          <Field label="Valor (R$)"><Inp type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
+          {type==='expense'&&<Field label="Parcelas"><Inp type="number" value={form.installments} onChange={v=>setForm(f=>({...f,installments:v}))} placeholder="1"/></Field>}
+          <Field label="Meses"><Inp type="number" value={form.months} onChange={v=>setForm(f=>({...f,months:v}))} placeholder="3"/></Field>
+        </div>
+        <Btn onClick={simulate}><Zap size={14}/> Simular</Btn>
+      </div>
+      {result&&(
+        <div className="space-y-4">
+          <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+            <h3 className="text-sm font-semibold text-slate-300 mb-3">{result.name||'Simulação'}</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={chartData} barSize={18}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155"/>
+                <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
+                <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+                <Bar dataKey="Sem simulação" fill="#475569" radius={[3,3,0,0]}/>
+                <Bar dataKey="Com simulação" fill="#10b981" radius={[3,3,0,0]}/>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="rounded-xl overflow-hidden" style={{border:'1px solid #334155'}}>
+            <table className="w-full"><thead style={{background:'#0f172a'}}><tr><Th>Mês</Th><Th right>Entradas</Th><Th right>Saídas</Th><Th right>Resultado</Th><Th right>Impacto</Th></tr></thead>
+              <tbody>{result.months.map((m,i)=>{
+                const impact=m.result-(baseIn-baseOut)
+                return<tr key={i} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                  <Td>Mês +{m.month}</Td><Td right color="#10b981">{fmtBRL(m.in)}</Td><Td right color="#ef4444">{fmtBRL(m.out)}</Td>
+                  <Td right color={m.result>=0?'#10b981':'#ef4444'}>{fmtBRL(m.result)}</Td>
+                  <Td right color={impact>=0?'#10b981':'#ef4444'}>{impact!==0?(impact>0?'+':'')+fmtBRL(impact):'—'}</Td>
+                </tr>
+              })}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── CONFIGURAÇÕES ────────────────────────────────────────────────────────────
+function SettingsPage({state,dispatch,monthKey:mk,toast}){
+  const [tab,setTab]=useState('clients')
+  const [modal,setModal]=useState(null)
+  const [form,setForm]=useState({})
+  const tabs=[{id:'clients',label:'Clientes'},{id:'fixedExpenses',label:'Despesas Fixas'},{id:'cards',label:'Cartões'},{id:'collaborators',label:'Colaboradores'}]
+  const cards=state.settings?.cards||[]
+  function save(){
+    const item={...form}
+    for(const k of Object.keys(item))if(['value','baseSalary','limit','dueDay','day','closeDay'].includes(k))item[k]=parseFloat(item[k])||0
+    if(modal==='add')dispatch({type:'ADD_SETTING',payload:{key:tab,item}})
+    else dispatch({type:'UPDATE_SETTING',payload:{key:tab,item}})
+    toast('Salvo');setModal(null)
+  }
+  function del(id){dispatch({type:'DELETE_SETTING',payload:{key:tab,id}});toast('Removido','warn')}
+  function copyPrev(){
+    const{year:y,month:m}=parseMonthKey(mk);const prev=new Date(y,m-2,1)
+    dispatch({type:'COPY_FROM_PREV',payload:{monthKey:mk,prevKey:monthKey(prev.getFullYear(),prev.getMonth()+1)}})
+    toast('Copiado do mês anterior')
+  }
+  function exportData(){
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'})
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='paiol-finance-backup.json';a.click();toast('Exportado')
+  }
+  const items=state.settings?.[tab]||[]
+  const fields={
+    clients:<><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Empresa"/></Field><div className="grid grid-cols-2 gap-3"><Field label="Valor (R$)"><Inp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field><Field label="Dia pgto"><Inp type="number" value={form.dueDay||''} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field></div></>,
+    fixedExpenses:<><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Nome"/></Field><div className="grid grid-cols-2 gap-3"><Field label="Valor (R$)"><Inp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field><Field label="Dia"><Inp type="number" value={form.day||''} onChange={v=>setForm(f=>({...f,day:v}))} placeholder="10"/></Field></div><div className="grid grid-cols-2 gap-3"><Field label="Categoria"><Sel value={form.category||'Outros'} onChange={v=>setForm(f=>({...f,category:v}))} options={CATEGORIES}/></Field><Field label="Cartão"><Sel value={form.cardId||''} onChange={v=>setForm(f=>({...f,cardId:v}))} options={[{value:'',label:'Conta corrente'},...cards.map(c=>({value:c.id,label:c.name}))]}/></Field></div></>,
+    cards:<><div className="grid grid-cols-2 gap-3"><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Nubank PJ"/></Field><Field label="Tipo"><Sel value={form.type||'PJ'} onChange={v=>setForm(f=>({...f,type:v}))} options={['PJ','PF','Casa']}/></Field></div><div className="grid grid-cols-3 gap-3"><Field label="Limite (R$)"><Inp type="number" value={form.limit||''} onChange={v=>setForm(f=>({...f,limit:v}))} placeholder="0"/></Field><Field label="Fecha dia"><Inp type="number" value={form.closeDay||''} onChange={v=>setForm(f=>({...f,closeDay:v}))} placeholder="29"/></Field><Field label="Vence dia"><Inp type="number" value={form.dueDay||''} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field></div><Field label="Descrição"><Inp value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ferramentas..."/></Field></>,
+    collaborators:<><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Nome"/></Field><div className="grid grid-cols-2 gap-3"><Field label="Função"><Inp value={form.role||''} onChange={v=>setForm(f=>({...f,role:v}))} placeholder="Designer"/></Field><Field label="Salário base (R$)"><Inp type="number" value={form.baseSalary||''} onChange={v=>setForm(f=>({...f,baseSalary:v}))} placeholder="0,00"/></Field></div></>,
+  }
+  const rowRender=item=>{
+    if(tab==='clients')return<><Td>{item.name}</Td><Td right color="#10b981">{fmtBRL(item.value)}</Td><Td muted>Dia {item.dueDay}</Td></>
+    if(tab==='fixedExpenses')return<><Td>{item.name}</Td><Td muted>{item.category}</Td><Td right color="#ef4444">{fmtBRL(item.value)}</Td><Td muted>Dia {item.day}</Td></>
+    if(tab==='cards')return<><Td>{item.name}</Td><Td muted>{item.type}</Td><Td right>{item.limit>0?fmtBRL(item.limit):'—'}</Td><Td muted>F:{item.closeDay}/V:{item.dueDay}</Td></>
+    if(tab==='collaborators')return<><Td>{item.name}</Td><Td muted>{item.role}</Td><Td right color="#3b82f6">{fmtBRL(item.baseSalary)}</Td></>
+  }
+  return(
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-3">
+        <BtnG onClick={copyPrev}><Copy size={14}/> Copiar mês anterior</BtnG>
+        <BtnG onClick={exportData}><Download size={14}/> Exportar JSON</BtnG>
+        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'#33415540',color:'#94a3b8',border:'1px solid #334155'}}>
+          <RefreshCw size={14}/> Importar JSON
+          <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{dispatch({type:'IMPORT',payload:{data:JSON.parse(ev.target.result)}});toast('Importado')}catch{toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
+        </label>
+      </div>
+      <div className="flex gap-0 border-b border-slate-700">
+        {tabs.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className="px-4 py-2 text-sm font-medium transition-all -mb-px" style={{color:tab===t.id?'#10b981':'#64748b',borderBottom:tab===t.id?'2px solid #10b981':'2px solid transparent'}}>{t.label}</button>)}
+      </div>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-300">{tabs.find(t=>t.id===tab)?.label}</h3>
+        <Btn onClick={()=>{setForm({});setModal('add')}} small><Plus size={12}/> Adicionar</Btn>
+      </div>
+      <div className="rounded-xl overflow-hidden" style={{border:'1px solid #334155'}}>
+        <table className="w-full"><tbody>
+          {items.map((item,i)=>(
+            <tr key={item.id} className="border-b" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+              {rowRender(item)}
+              <Td><div className="flex gap-1.5">
+                <button onClick={()=>{setForm({...item});setModal(item)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
+                <button onClick={()=>del(item.id)} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button>
+              </div></Td>
+            </tr>
+          ))}
+          {items.length===0&&<tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">Nenhum registro</td></tr>}
+        </tbody></table>
+      </div>
+      {modal&&<Modal title={modal==='add'?'Novo Registro':'Editar'} onClose={()=>setModal(null)}>
+        <div className="space-y-4">{fields[tab]}<div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={save}><Save size={14}/> Salvar</Btn></div></div>
+      </Modal>}
+    </div>
+  )
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+const NAV=[
+  {id:'dashboard',icon:LayoutDashboard,label:'Dashboard'},
+  {id:'cashflow',icon:CalendarDays,label:'Fluxo de Caixa'},
+  {id:'entries',icon:TrendingUp,label:'Entradas'},
+  {id:'exits',icon:TrendingDown,label:'Saídas'},
+  {id:'cards',icon:CreditCard,label:'Cartões'},
+  {id:'collaborators',icon:Users,label:'Colaboradores'},
+  {id:'annual',icon:Target,label:'Projeção Anual'},
+  {id:'simulator',icon:Zap,label:'Simulador'},
+  {id:'settings',icon:Settings,label:'Configurações'},
+]
+
+function Sidebar({activePage,setActivePage,open,setOpen}){
+  return(
+    <>
+      {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'rgba(0,0,0,0.6)'}} onClick={()=>setOpen(false)}/>}
+      <aside className={`fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
+        style={{width:220,background:'#0f172a',borderRight:'1px solid #1e293b'}}>
+        <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'#1e293b'}}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm" style={{background:'#10b981',color:'#fff'}}>P</div>
+            <span className="font-bold text-slate-100 text-sm">PAIOL FINANCE</span>
+          </div>
+          <button onClick={()=>setOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-300"><X size={16}/></button>
+        </div>
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+          {NAV.map(({id,icon:Icon,label})=>(
+            <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
+              style={{background:activePage===id?'#10b98115':'transparent',color:activePage===id?'#10b981':'#64748b',fontWeight:activePage===id?600:400}}>
+              <Icon size={16}/>{label}
+            </button>
+          ))}
+        </nav>
+        <div className="p-4 border-t text-xs text-slate-600" style={{borderColor:'#1e293b'}}>v1.0 · Paiol Mídias</div>
+      </aside>
+    </>
+  )
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function PaiolFinanceApp(){
+  const [state,dispatch]=useReducer(reducer,null,loadState)
+  const [activePage,setActivePage]=useState('dashboard')
+  const [sidebarOpen,setSidebarOpen]=useState(false)
+  const [toasts,setToasts]=useState([])
+  const today=new Date()
+  const [selYear,setSelYear]=useState(today.getFullYear())
+  const [selMonth,setSelMonth]=useState(today.getMonth()+1)
+  const mk=monthKey(selYear,selMonth)
+
+  // Salva localmente imediato + envia para Sheets com debounce de 2s
+  useEffect(()=>{
+    try{localStorage.setItem('paiolfinance_v1',JSON.stringify(state))}catch{}
+    const t=setTimeout(()=>gasPost(state).catch(()=>{}),2000)
+    return()=>clearTimeout(t)
+  },[state])
+
+  // Na inicialização, sincroniza do Sheets (substitui localStorage se houver dado)
+  useEffect(()=>{
+    gasGet().then(data=>{
+      if(data){
+        dispatch({type:'IMPORT',payload:{data}})
+        localStorage.setItem('paiolfinance_v1',JSON.stringify(data))
+      }
+    }).catch(()=>{})
+  },[])
+
+  const toast=useCallback((msg,type='success')=>{
+    const id=uid();setToasts(t=>[...t,{id,msg,type}])
+    setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),3000)
+  },[])
+
+  function prevMonth(){if(selMonth===1){setSelYear(y=>y-1);setSelMonth(12)}else setSelMonth(m=>m-1)}
+  function nextMonth(){if(selMonth===12){setSelYear(y=>y+1);setSelMonth(1)}else setSelMonth(m=>m+1)}
+
+  const pp={state,dispatch,monthKey:mk,toast}
+  const pages={
+    dashboard:<DashboardPage {...pp}/>,cashflow:<CashFlowPage {...pp}/>,entries:<EntriesPage {...pp}/>,
+    exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,collaborators:<CollaboratorsPage {...pp}/>,
+    annual:<AnnualProjectionPage {...pp}/>,simulator:<SimulatorPage {...pp}/>,settings:<SettingsPage {...pp}/>,
+  }
+  const monthData=state.months[mk]||{}
+
+  return(
+    <div className="min-h-screen flex" style={{background:'#1e293b',color:'#f1f5f9',fontFamily:'system-ui,sans-serif'}}>
+      <Sidebar activePage={activePage} setActivePage={setActivePage} open={sidebarOpen} setOpen={setSidebarOpen}/>
+      <div className="flex-1 flex flex-col min-h-screen" style={{marginLeft:0,paddingLeft:0}}>
+        <div className="flex-1 flex flex-col min-h-screen lg:ml-[220px]">
+          {/* Header */}
+          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'#1e293b',borderBottom:'1px solid #334155'}}>
+            <div className="flex items-center gap-3">
+              <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><Menu size={18}/></button>
+              <div className="flex items-center gap-2">
+                <button onClick={prevMonth} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><ChevronLeft size={16}/></button>
+                <span className="text-sm font-semibold text-slate-100 min-w-[130px] text-center">{MONTH_NAMES[selMonth-1]} / {selYear}</span>
+                <button onClick={nextMonth} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><ChevronRight size={16}/></button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {monthData.closed&&<span className="px-2 py-0.5 text-xs rounded-full" style={{background:'#10b98120',color:'#10b981'}}>Fechado</span>}
+              <div className="text-right hidden sm:block"><div className="text-xs text-slate-500">Saldo em caixa</div><div className="text-base font-bold" style={{color:'#10b981'}}>{fmtBRL(monthData.cashBalance)}</div></div>
+              <div className="p-2 rounded-lg" style={{background:'#10b98120'}}><Wallet size={16} style={{color:'#10b981'}}/></div>
+            </div>
+          </header>
+          <div className="px-4 pt-4 pb-2"><h1 className="text-base font-semibold text-slate-200">{NAV.find(n=>n.id===activePage)?.label}</h1></div>
+          <main className="flex-1 px-4 pb-8">{pages[activePage]}</main>
+        </div>
+      </div>
+      <Toast toasts={toasts}/>
+    </div>
+  )
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<PaiolFinanceApp/>)
+</script>
+</body>
+</html>
