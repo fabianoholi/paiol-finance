@@ -65,6 +65,8 @@
     window.ListTodo=ic([p('M3 5h2M3 12h2M3 19h2'),p('M8 5h13M8 12h13M8 19h13')])
     window.Flag=ic([p('M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z'),ln(4,22,4,15)])
     window.CalendarRange=ic([rc(3,4,18,18,2),p('M16 2v4M8 2v4M3 10h18'),p('M8 14h2v4H8z')])
+    window.LogOut=ic([p('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'),pl('16 17 21 12 16 7'),ln(21,12,9,12)])
+    window.KeyRound=ic([ci(7.5,15.5,5.5),p('m21 2-9.6 9.6'),p('m15.5 7.5 3 3L22 7l-3-3'),p('m7 22 3-3')])
   })()
   </script>
   <style>
@@ -1723,14 +1725,126 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t text-xs text-slate-600" style={{borderColor:'#1e293b'}}>v1.0 · Paiol Mídias</div>
+        <div className="p-4 border-t text-xs text-slate-600" style={{borderColor:'#1e293b'}}>v1.1 · Paiol Mídias</div>
       </aside>
     </>
   )
 }
 
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+const USERS=[
+  {id:'fabiano',name:'Fabiano',role:'admin',  color:'#10b981',initials:'FA',roleLabel:'Administrador'},
+  {id:'mainara', name:'Mainara', role:'manager',color:'#8b5cf6',initials:'MA',roleLabel:'Gestora'},
+]
+async function hashPin(pin){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pin+'paiol_salt_2026'))
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')
+}
+const loadSession=()=>{try{const s=sessionStorage.getItem('paiol_sess');return s?JSON.parse(s):null}catch{return null}}
+const saveSession=u=>sessionStorage.setItem('paiol_sess',JSON.stringify({...u,loginAt:Date.now()}))
+const clearSession=()=>sessionStorage.removeItem('paiol_sess')
+const loadPins=()=>{try{const p=localStorage.getItem('paiol_pins');return p?JSON.parse(p):{}}catch{return{}}}
+const savePins=p=>localStorage.setItem('paiol_pins',JSON.stringify(p))
+
+function LoginScreen({onLogin}){
+  const [step,setStep]=useState('select')
+  const [user,setUser]=useState(null)
+  const [pin,setPin]=useState('')
+  const [confirm,setConfirm]=useState('')
+  const [err,setErr]=useState('')
+  const [busy,setBusy]=useState(false)
+  const pins=loadPins()
+
+  function pick(u){setUser(u);setPin('');setConfirm('');setErr('');setStep(pins[u.id]?'pin':'setup')}
+  function back(){setStep('select');setPin('');setConfirm('');setErr('')}
+
+  async function submit(){
+    if(pin.length<4){setErr('PIN deve ter 4 dígitos');return}
+    setBusy(true)
+    const h=await hashPin(pin)
+    if(step==='pin'){
+      if(h===pins[user.id]){saveSession(user);onLogin(user)}
+      else{setErr('PIN incorreto');setPin('')}
+    }else{
+      if(pin!==confirm){setErr('PINs não coincidem');setBusy(false);return}
+      savePins({...loadPins(),[user.id]:h})
+      saveSession(user);onLogin(user)
+    }
+    setBusy(false)
+  }
+
+  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:12,padding:'14px',color:'#f1f5f9',fontSize:22,outline:'none',textAlign:'center',letterSpacing:'0.4em',width:'100%'}
+
+  return(
+    <div className="min-h-screen flex items-center justify-center px-4" style={{background:'#0f172a'}}>
+      <div className="w-full max-w-xs">
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{background:'#10b98120',border:'1px solid #10b98140'}}>
+            <KeyRound size={26} style={{color:'#10b981'}}/>
+          </div>
+          <div className="text-xl font-bold text-slate-100">PAIOL FINANCE</div>
+          <div className="text-xs text-slate-500 mt-1">Paiol Mídias · Área restrita</div>
+        </div>
+
+        {step==='select'&&(
+          <div className="space-y-3">
+            <p className="text-xs text-slate-500 text-center mb-4">Quem está acessando?</p>
+            {USERS.map(u=>(
+              <button key={u.id} onClick={()=>pick(u)} className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{background:'#1e293b',border:'1px solid #334155'}}>
+                <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold shrink-0"
+                  style={{background:u.color+'30',border:`2px solid ${u.color}50`}}>
+                  <span style={{color:u.color,fontSize:14}}>{u.initials}</span>
+                </div>
+                <div className="text-left flex-1">
+                  <div className="font-semibold text-slate-100 text-sm">{u.name}</div>
+                  <div className="text-xs text-slate-500">{u.roleLabel}</div>
+                </div>
+                <ChevronRight size={15} style={{color:'#475569'}}/>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {(step==='pin'||step==='setup')&&(
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-6">
+              <button onClick={back} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">
+                <ChevronLeft size={17}/>
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{background:user?.color+'30',border:`1.5px solid ${user?.color}50`,color:user?.color}}>
+                  {user?.initials}
+                </div>
+                <span className="text-sm font-semibold text-slate-200">{user?.name}</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">{step==='setup'?'Crie seu PIN de 4 dígitos':'Digite seu PIN'}</p>
+            <input type="password" inputMode="numeric" maxLength={4} autoFocus
+              value={pin} onChange={e=>{setPin(e.target.value.replace(/\D/g,''));setErr('')}}
+              onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="••••" style={inputSt}/>
+            {step==='setup'&&(
+              <input type="password" inputMode="numeric" maxLength={4}
+                value={confirm} onChange={e=>{setConfirm(e.target.value.replace(/\D/g,''));setErr('')}}
+                onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="Confirme o PIN" style={inputSt}/>
+            )}
+            {err&&<p className="text-xs text-red-400 text-center">{err}</p>}
+            <button onClick={submit} disabled={busy} className="w-full py-3 rounded-xl text-sm font-semibold text-white"
+              style={{background:'#10b981',opacity:busy?.7:1,marginTop:8}}>
+              {busy?'Verificando...':(step==='pin'?'Entrar':'Criar PIN e Entrar')}
+            </button>
+          </div>
+        )}
+        <p className="text-center text-xs text-slate-700 mt-8">v1.1 · Paiol Mídias</p>
+      </div>
+    </div>
+  )
+}
+
 // ─── APP ──────────────────────────────────────────────────────────────────────
-function PaiolFinanceApp(){
+function PaiolFinanceApp({currentUser,onLogout}){
   const [state,dispatch]=useReducer(reducer,null,loadState)
   const [activePage,setActivePage]=useState('dashboard')
   const [sidebarOpen,setSidebarOpen]=useState(false)
@@ -1792,10 +1906,22 @@ function PaiolFinanceApp(){
                 <button onClick={nextMonth} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><ChevronRight size={16}/></button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {monthData.closed&&<span className="px-2 py-0.5 text-xs rounded-full" style={{background:'#10b98120',color:'#10b981'}}>Fechado</span>}
-              <div className="text-right hidden sm:block"><div className="text-xs text-slate-500">Saldo em caixa</div><div className="text-base font-bold" style={{color:'#10b981'}}>{fmtBRL(monthData.cashBalance)}</div></div>
-              <div className="p-2 rounded-lg" style={{background:'#10b98120'}}><Wallet size={16} style={{color:'#10b981'}}/></div>
+              <div className="text-right hidden sm:block"><div className="text-xs text-slate-500">Saldo em caixa</div><div className="text-sm font-bold" style={{color:'#10b981'}}>{fmtBRL(monthData.cashBalance)}</div></div>
+              <div className="p-1.5 rounded-lg hidden sm:block" style={{background:'#10b98120'}}><Wallet size={15} style={{color:'#10b981'}}/></div>
+              {/* Avatar do usuário */}
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-700">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                  style={{background:(currentUser.color||'#10b981')+'30',border:`1.5px solid ${currentUser.color||'#10b981'}50`,color:currentUser.color||'#10b981'}}>
+                  {currentUser.initials||currentUser.name?.slice(0,2).toUpperCase()}
+                </div>
+                <span className="text-xs font-medium text-slate-300 hidden sm:block">{currentUser.name}</span>
+                <button onClick={onLogout} title="Sair"
+                  className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors">
+                  <LogOut size={14}/>
+                </button>
+              </div>
             </div>
           </header>
           <div className="px-4 pt-4 pb-2"><h1 className="text-base font-semibold text-slate-200">{NAV.find(n=>n.id===activePage)?.label}</h1></div>
@@ -1807,7 +1933,12 @@ function PaiolFinanceApp(){
   )
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<PaiolFinanceApp/>)
+function App(){
+  const [currentUser,setCurrentUser]=useState(loadSession)
+  if(!currentUser) return <LoginScreen onLogin={u=>setCurrentUser(u)}/>
+  return <PaiolFinanceApp currentUser={currentUser} onLogout={()=>{clearSession();setCurrentUser(null)}}/>
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>)
 </script>
 </body>
 </html>
