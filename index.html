@@ -97,12 +97,8 @@ const CAT_COLORS=['#10b981','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#
 const SEED={
   settings:{
     clients:[
-      {id:'c1',name:'Involt',value:2000,dueDay:5},
-      {id:'c2',name:'SA Hair',value:1300,dueDay:10},
-      {id:'c3',name:'Angel',value:1500,dueDay:12},
-      {id:'c4',name:'Marmoraria',value:1000,dueDay:10},
-      {id:'c5',name:'M1 Dist',value:1500,dueDay:14},
-      {id:'c6',name:'GWD Adv',value:3500,dueDay:14},
+      {id:'c1',name:'Involt',value:2000,dueDay:5,startDate:'2025-11-01',duration:24,endDate:'',contractNote:'Reativado em nov/2025 com novo valor. Antes pagava R$750/mês.',phone:'',email:'',permuteValue:0},
+      {id:'c2',name:'SA Hair',value:1300,dueDay:10,startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0},
     ],
     fixedExpenses:[
       {id:'e1',name:'Santander PJ',value:3600,category:'Cartão',day:10,cardId:'k1'},
@@ -125,16 +121,53 @@ const SEED={
     ],
   },
   months:{
+    '2025-10':{
+      cashBalance:0,closed:false,snapshot:null,
+      entries:[
+        {id:uid(),client:'GWD Adv',dueDay:14,expectedValue:4800,status:'Cobrado',realValue:0,note:'Cliente encerrou contrato em out/2025 — dívida de R$4.800 não paga'},
+      ],
+      exits:[],cardExpenses:{k1:[],k2:[],k3:[],k4:[]},collaboratorExtras:{col1:[],col2:[],col3:[]},dailyNotes:{},dailyCash:{},
+    },
+    '2025-11':{
+      cashBalance:0,closed:false,snapshot:null,
+      entries:[
+        {id:uid(),client:'Involt',dueDay:5,expectedValue:2000,status:'Recebido',realValue:2000,note:'Novo contrato — valor atualizado de R$750 para R$2.000'},
+      ],
+      exits:[],cardExpenses:{k1:[],k2:[],k3:[],k4:[]},collaboratorExtras:{col1:[],col2:[],col3:[]},dailyNotes:{},dailyCash:{},
+    },
+    '2025-12':{
+      cashBalance:0,closed:false,snapshot:null,
+      entries:[
+        {id:uid(),client:'Involt',dueDay:5,expectedValue:2000,status:'Recebido',realValue:2000,note:''},
+        {id:uid(),client:'M1 Dist',dueDay:14,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
+      ],
+      exits:[],cardExpenses:{k1:[],k2:[],k3:[],k4:[]},collaboratorExtras:{col1:[],col2:[],col3:[]},dailyNotes:{},dailyCash:{},
+    },
+    '2026-01':{
+      cashBalance:0,closed:false,snapshot:null,
+      entries:[
+        {id:uid(),client:'Involt',dueDay:5,expectedValue:2000,status:'Recebido',realValue:2000,note:''},
+        {id:uid(),client:'M1 Dist',dueDay:14,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
+        {id:uid(),client:'Angel',dueDay:12,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
+      ],
+      exits:[],cardExpenses:{k1:[],k2:[],k3:[],k4:[]},collaboratorExtras:{col1:[],col2:[],col3:[]},dailyNotes:{},dailyCash:{},
+    },
+    '2026-02':{
+      cashBalance:0,closed:false,snapshot:null,
+      entries:[
+        {id:uid(),client:'Involt',dueDay:5,expectedValue:2000,status:'Recebido',realValue:2000,note:''},
+        {id:uid(),client:'M1 Dist',dueDay:14,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
+        {id:uid(),client:'Angel',dueDay:12,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
+      ],
+      exits:[],cardExpenses:{k1:[],k2:[],k3:[],k4:[]},collaboratorExtras:{col1:[],col2:[],col3:[]},dailyNotes:{},dailyCash:{},
+    },
     '2026-03':{
       cashBalance:8450,closed:false,snapshot:null,
       entries:[
         {id:uid(),client:'Involt',dueDay:5,expectedValue:2000,status:'Recebido',realValue:2000,note:''},
         {id:uid(),client:'SA Hair',dueDay:10,expectedValue:1300,status:'Recebido',realValue:1300,note:''},
-        {id:uid(),client:'Angel',dueDay:12,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
-        {id:uid(),client:'Marmoraria',dueDay:10,expectedValue:1000,status:'Recebido',realValue:1000,note:''},
-        {id:uid(),client:'M1 Dist',dueDay:14,expectedValue:1500,status:'Cobrado',realValue:0,note:'Aguardando confirmação'},
-        {id:uid(),client:'GWD Adv',dueDay:14,expectedValue:3500,status:'Previsto',realValue:0,note:''},
-        {id:uid(),client:'Job Avulso',dueDay:20,expectedValue:800,status:'Previsto',realValue:0,note:'Arte para redes sociais'},
+        {id:uid(),client:'Angel',dueDay:12,expectedValue:1500,status:'Recebido',realValue:1500,note:'Última parcela — contrato encerrado'},
+        {id:uid(),client:'M1 Dist',dueDay:14,expectedValue:1500,status:'Cobrado',realValue:0,note:'Contrato encerrado em 15/03/2026 — sem pagamento'},
       ],
       exits:[
         {id:uid(),name:'Santander PJ',category:'Cartão',day:10,cardId:'k1',expectedValue:3600,status:'Pago',realValue:3600,note:''},
@@ -165,7 +198,7 @@ const SEED={
         col2:[{id:uid(),description:'Combustível',value:180}],
         col3:[],
       },
-      dailyNotes:{'10':'Dia de muitos pagamentos fixos','14':'Aguardando M1 e GWD'},
+      dailyNotes:{'10':'Dia de muitos pagamentos fixos'},
       dailyCash:{},
     },
   },
@@ -235,7 +268,7 @@ function reducer(state,action){
 
 function loadState(){
   try{
-    const s=localStorage.getItem('paiolfinance_v1')
+    const s=localStorage.getItem('paiolfinance_v2')
     const data=s?JSON.parse(s):SEED
     if(data.settings?.clients){
       data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,...c}))
@@ -1856,7 +1889,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
 
   // Salva localmente imediato + envia para Sheets com debounce de 2s
   useEffect(()=>{
-    try{localStorage.setItem('paiolfinance_v1',JSON.stringify(state))}catch{}
+    try{localStorage.setItem('paiolfinance_v2',JSON.stringify(state))}catch{}
     const t=setTimeout(()=>gasPost(state).catch(()=>{}),2000)
     return()=>clearTimeout(t)
   },[state])
@@ -1866,7 +1899,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
     gasGet().then(data=>{
       if(data){
         dispatch({type:'IMPORT',payload:{data}})
-        localStorage.setItem('paiolfinance_v1',JSON.stringify(data))
+        localStorage.setItem('paiolfinance_v2',JSON.stringify(data))
       }
     }).catch(()=>{})
   },[])
