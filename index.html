@@ -334,7 +334,7 @@ function reducer(state,action){
 
 function loadState(){
   try{
-    const s=localStorage.getItem('paiolfinance_v2')
+    const s=localStorage.getItem('paiolfinance_v3')
     const data=s?JSON.parse(s):SEED
     if(data.settings?.clients){
       data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,...c}))
@@ -1955,7 +1955,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
 
   // Salva localmente imediato + envia para Sheets com debounce de 2s
   useEffect(()=>{
-    try{localStorage.setItem('paiolfinance_v2',JSON.stringify(state))}catch{}
+    try{localStorage.setItem('paiolfinance_v3',JSON.stringify(state))}catch{}
     const t=setTimeout(()=>gasPost(state).catch(()=>{}),2000)
     return()=>clearTimeout(t)
   },[state])
@@ -1965,7 +1965,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
     gasGet().then(data=>{
       if(data){
         dispatch({type:'IMPORT',payload:{data}})
-        localStorage.setItem('paiolfinance_v2',JSON.stringify(data))
+        localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
       }
     }).catch(()=>{})
   },[])
