@@ -85,7 +85,7 @@
   ['paiolfinance_v1','paiolfinance_v2'].forEach(function(k){localStorage.removeItem(k)})
   try{
     var d=JSON.parse(localStorage.getItem('paiolfinance_v3')||'{}')
-    if(!d.months||!d.months['2025-01'])localStorage.removeItem('paiolfinance_v3')
+    if(!d.months||!d.months['2025-01']||!d.months['2026-03'])localStorage.removeItem('paiolfinance_v3')
   }catch(e){localStorage.removeItem('paiolfinance_v3')}
 })()
 </script>
@@ -198,7 +198,7 @@ const SEED={
       cashBalance:0,closed:false,snapshot:null,
       entries:[
         {id:uid(),client:'Angel',dueDay:12,expectedValue:1500,status:'Recebido',realValue:1500,note:''},
-        {id:uid(),client:'GWD Adv',dueDay:14,expectedValue:4800,status:'Cobrado',realValue:0,note:'Cliente encerrou contrato em out/2025 — dívida de R$4.800 não paga'},
+        {id:uid(),client:'GWD Adv',dueDay:14,expectedValue:4800,status:'Cobrado',realValue:0,note:'Cliente encerrou contrato — dívida não paga'},
       ],
       exits:[],cardExpenses:{k1:[],k2:[],k3:[],k4:[]},collaboratorExtras:{col1:[],col2:[],col3:[]},dailyNotes:{},dailyCash:{},
     },
