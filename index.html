@@ -4,7 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PAIOL FINANCE</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231e293b'/%3E%3Cpolyline points='4,24 10,16 16,19 22,10 28,8' fill='none' stroke='%2322c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpolyline points='22,8 28,8 28,14' fill='none' stroke='%2322c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -56,6 +55,16 @@
     window.Save=ic([p('M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'),p('M17 21v-8H7v8M7 3v5h8')])
     window.Minus=ic([ln(5,12,19,12)])
     window.PieChart=ic([p('M21.21 15.89A10 10 0 1 1 8 2.83'),p('M22 12A10 10 0 0 0 12 2v10z')])
+    window.Briefcase=ic([rc(2,7,20,14,2),p('M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2'),ln(8,14,16,14)])
+    window.CalendarCheck=ic([rc(3,4,18,18,2),p('M16 2v4M8 2v4M3 10h18'),p('m9 16 2 2 4-4')])
+    window.Phone=ic([p('M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.5 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z')])
+    window.Mail=ic([rc(2,4,20,16,2),p('m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7')])
+    window.FileText=ic([p('M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'),p('M14 2v4a2 2 0 0 0 2 2h4'),p('M10 9H8'),p('M16 13H8'),p('M16 17H8')])
+    window.ArrowLeftRight=ic([p('M8 3 4 7l4 4'),p('M4 7h16'),p('M16 21l4-4-4-4'),p('M20 17H4')])
+    window.ShoppingBag=ic([p('M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z'),ln(3,6,21,6),p('M16 10a4 4 0 0 1-8 0')])
+    window.ListTodo=ic([p('M3 5h2M3 12h2M3 19h2'),p('M8 5h13M8 12h13M8 19h13')])
+    window.Flag=ic([p('M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z'),ln(4,22,4,15)])
+    window.CalendarRange=ic([rc(3,4,18,18,2),p('M16 2v4M8 2v4M3 10h18'),p('M8 14h2v4H8z')])
   })()
   </script>
   <style>
@@ -184,15 +193,57 @@ function reducer(state,action){
       if(!prev)return state
       return updMonth(payload.monthKey,m=>({...m,entries:prev.entries.map(e=>({...e,id:uid(),status:'Previsto',realValue:0,note:''})),exits:prev.exits.map(e=>({...e,id:uid(),status:'Pendente',realValue:0,note:''}))}))
     }
+    case'GENERATE_CONTRACT_ENTRIES':{
+      const client=state.settings.clients.find(c=>c.id===payload.clientId)
+      if(!client||!client.startDate||!client.duration)return state
+      let next={...state,months:{...state.months}}
+      const dur=parseInt(client.duration)||12
+      const start=new Date(client.startDate+'T12:00:00')
+      for(let i=0;i<dur;i++){
+        const d=new Date(start.getFullYear(),start.getMonth()+i,1)
+        const mk=monthKey(d.getFullYear(),d.getMonth()+1)
+        const month=next.months[mk]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}}
+        const exists=(month.entries||[]).find(e=>e.clientId===payload.clientId||e.client===client.name)
+        if(!exists){
+          const entry={id:uid(),client:client.name,clientId:payload.clientId,dueDay:client.dueDay,expectedValue:client.value,status:'Previsto',realValue:0,note:'Gerado pelo contrato'}
+          next.months[mk]={...month,entries:[...(month.entries||[]),entry]}
+        }
+      }
+      return next
+    }
+    case'ADD_TASK':return{...state,tasks:[...(state.tasks||[]),{...payload.task,id:uid(),createdAt:new Date().toISOString()}]}
+    case'UPDATE_TASK':return{...state,tasks:(state.tasks||[]).map(t=>t.id===payload.task.id?{...payload.task,updatedAt:new Date().toISOString()}:t)}
+    case'DELETE_TASK':return{...state,tasks:(state.tasks||[]).filter(t=>t.id!==payload.id)}
+    case'ADD_PERMUTE_USAGE':return{...state,settings:{...state.settings,permuteUsages:[...(state.settings.permuteUsages||[]),{...payload.usage,id:uid()}]}}
+    case'DELETE_PERMUTE_USAGE':return{...state,settings:{...state.settings,permuteUsages:(state.settings.permuteUsages||[]).filter(u=>u.id!==payload.id)}}
+    case'SELL_PERMUTE':{
+      const {usage,entry,entryMonthKey}=payload
+      const nextUsages=[...(state.settings.permuteUsages||[]),{...usage,id:uid(),type:'sale'}]
+      const month=state.months[entryMonthKey]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}}
+      const newEntry={...entry,id:uid(),status:'Previsto',realValue:0}
+      return{...state,settings:{...state.settings,permuteUsages:nextUsages},months:{...state.months,[entryMonthKey]:{...month,entries:[...(month.entries||[]),newEntry]}}}
+    }
     case'ADD_SETTING':return{...state,settings:{...state.settings,[payload.key]:[...(state.settings[payload.key]||[]),{...payload.item,id:uid()}]}}
     case'UPDATE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].map(i=>i.id===payload.item.id?payload.item:i)}}
     case'DELETE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].filter(i=>i.id!==payload.id)}}
-    case'IMPORT':return payload.data
+    case'IMPORT':{const d=payload.data;if(!d.settings)d.settings={};if(!d.settings.permuteUsages)d.settings.permuteUsages=[];if(!d.tasks)d.tasks=[];return d}
     default:return state
   }
 }
 
-function loadState(){try{const s=localStorage.getItem('paiolfinance_v1');return s?JSON.parse(s):SEED}catch{return SEED}}
+function loadState(){
+  try{
+    const s=localStorage.getItem('paiolfinance_v1')
+    const data=s?JSON.parse(s):SEED
+    if(data.settings?.clients){
+      data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,...c}))
+    }
+    if(!data.settings)data.settings={}
+    if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
+    if(!data.tasks)data.tasks=[]
+    return data
+  }catch{return SEED}
+}
 
 // ─── GOOGLE SHEETS BACKEND ────────────────────────────────────────────────────
 const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
@@ -349,6 +400,29 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
           </ResponsiveContainer>
         </div>
       </div>
+
+      {(()=>{
+        const todayD=new Date()
+        const alertas=(state.settings?.clients||[]).filter(c=>{
+          if(!c.endDate)return false
+          return Math.floor((new Date(c.endDate+'T12:00:00')-todayD)/86400000)<=30
+        }).map(c=>({...c,daysLeft:Math.floor((new Date(c.endDate+'T12:00:00')-todayD)/86400000)})).sort((a,b)=>a.daysLeft-b.daysLeft)
+        if(alertas.length===0)return null
+        return(
+          <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #f59e0b40'}}>
+            <h3 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2"><AlertCircle size={14}/> Contratos Vencendo</h3>
+            <div className="space-y-2">{alertas.map(c=>(
+              <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-slate-700/50">
+                <div><div className="text-sm text-slate-200">{c.name}</div><div className="text-xs text-slate-500">{fmtBRL(c.value)}/mês · dia {c.dueDay}</div></div>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={{background:c.daysLeft<0?'#ef444420':'#f59e0b20',color:c.daysLeft<0?'#ef4444':'#f59e0b'}}>
+                  {c.daysLeft<0?`Venceu há ${Math.abs(c.daysLeft)}d`:c.daysLeft===0?'Vence hoje':`Vence em ${c.daysLeft}d`}
+                </span>
+              </div>
+            ))}</div>
+          </div>
+        )
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
@@ -943,6 +1017,643 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
   )
 }
 
+// ─── CLIENTES ─────────────────────────────────────────────────────────────────
+function ClientsPage({state,dispatch,toast}){
+  const clients=state.settings?.clients||[]
+  const [modal,setModal]=useState(null)
+  const [form,setForm]=useState({})
+  const todayD=new Date()
+
+  function getDaysLeft(endDate){
+    if(!endDate)return null
+    return Math.floor((new Date(endDate+'T12:00:00')-todayD)/86400000)
+  }
+  function getCS(c){
+    if(!c.startDate||!c.endDate)return'no_contract'
+    const d=getDaysLeft(c.endDate)
+    if(d<0)return'expired';if(d<=30)return'expiring';return'active'
+  }
+  function computeEnd(startDate,duration){
+    if(!startDate||!duration)return''
+    const d=new Date(startDate+'T12:00:00')
+    d.setMonth(d.getMonth()+parseInt(duration));d.setDate(d.getDate()-1)
+    return d.toISOString().slice(0,10)
+  }
+  function countReceived(c){
+    if(!c.startDate||!c.duration)return{r:0,t:0}
+    const dur=parseInt(c.duration)||0,start=new Date(c.startDate+'T12:00:00')
+    let r=0
+    for(let i=0;i<dur;i++){
+      const d=new Date(start.getFullYear(),start.getMonth()+i,1)
+      const mk=monthKey(d.getFullYear(),d.getMonth()+1)
+      const m=state.months[mk]
+      if(m&&(m.entries||[]).find(e=>(e.clientId===c.id||e.client===c.name)&&e.status==='Recebido'))r++
+    }
+    return{r,t:dur}
+  }
+  function openAdd(){setForm({name:'',value:'',dueDay:'',startDate:'',duration:'12',endDate:'',contractNote:'',phone:'',email:'',permuteValue:''});setModal('add')}
+  function openEdit(c){setForm({...c});setModal(c)}
+  function save(){
+    if(!form.name||!form.value)return toast('Preencha nome e valor','error')
+    const item={...form,value:parseFloat(form.value)||0,dueDay:parseInt(form.dueDay)||1,duration:parseInt(form.duration)||12,endDate:computeEnd(form.startDate,form.duration),permuteValue:parseFloat(form.permuteValue)||0}
+    if(modal==='add')dispatch({type:'ADD_SETTING',payload:{key:'clients',item}})
+    else dispatch({type:'UPDATE_SETTING',payload:{key:'clients',item}})
+    toast('Salvo');setModal(null)
+  }
+  function del(id){dispatch({type:'DELETE_SETTING',payload:{key:'clients',id}});toast('Removido','warn')}
+  function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas para todos os meses ✓')}
+
+  const scMap={active:{label:'Ativo',c:'#10b981',b:'#10b98120'},expiring:{label:'Vencendo',c:'#f59e0b',b:'#f59e0b20'},expired:{label:'Vencido',c:'#ef4444',b:'#ef444420'},no_contract:{label:'Sem contrato',c:'#64748b',b:'#64748b20'}}
+  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
+  const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
+  const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
+
+  return(
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard label="Total de Clientes" value={clients.length} color="#3b82f6" icon={Briefcase}/>
+        <SummaryCard label="Receita Mensal" value={fmtBRL(clients.reduce((s,c)=>s+(c.value||0),0))} color="#10b981" icon={TrendingUp}/>
+        <SummaryCard label="Contratos Ativos" value={clients.filter(c=>getCS(c)==='active').length} color="#10b981" icon={CheckCircle}/>
+        <SummaryCard label="Vencendo (30d)" value={clients.filter(c=>['expiring','expired'].includes(getCS(c))).length} color="#f59e0b" icon={AlertCircle}/>
+      </div>
+      <div className="flex justify-end">
+        <button onClick={openAdd} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}>
+          <Plus size={14}/> Novo Cliente
+        </button>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        {clients.map(c=>{
+          const cs=getCS(c),sc=scMap[cs],dl=getDaysLeft(c.endDate),{r,t}=countReceived(c)
+          return(
+            <div key={c.id} className="rounded-xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'#334155'}`}}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-semibold text-slate-100">{c.name}</div>
+                  <div className="text-xl font-bold mt-0.5" style={{color:'#10b981'}}>{fmtBRL(c.value)}<span className="text-xs text-slate-500 font-normal">/mês</span></div>
+                  {c.permuteValue>0&&<div className="text-xs mt-0.5" style={{color:'#a78bfa'}}>+ {fmtBRL(c.permuteValue)} permuta/mês</div>}
+                </div>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{background:sc.b,color:sc.c}}>{sc.label}</span>
+              </div>
+              {c.startDate&&(
+                <div className="space-y-1 text-xs text-slate-400">
+                  <div className="flex items-center gap-2"><CalendarCheck size={12}/><span>Início: {c.startDate.split('-').reverse().join('/')} · {c.duration} meses</span></div>
+                  {c.endDate&&<div className="flex items-center gap-2" style={{color:dl!==null&&dl<=30?sc.c:'#94a3b8'}}><Clock size={12}/><span>Venc: {c.endDate.split('-').reverse().join('/')}{dl!==null&&(dl>=0?` (${dl}d)`:` (venceu há ${Math.abs(dl)}d)`)}</span></div>}
+                  {t>0&&<div>
+                    <div className="flex justify-between text-xs text-slate-500 mb-1"><span>Meses recebidos</span><span>{r}/{t}</span></div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{background:'#334155'}}><div className="h-full rounded-full" style={{width:`${(r/t)*100}%`,background:'#10b981'}}/></div>
+                  </div>}
+                </div>
+              )}
+              {(c.phone||c.email)&&<div className="space-y-1 text-xs text-slate-500">
+                {c.phone&&<div className="flex items-center gap-1.5"><Phone size={11}/>{c.phone}</div>}
+                {c.email&&<div className="flex items-center gap-1.5"><Mail size={11}/>{c.email}</div>}
+              </div>}
+              {c.contractNote&&<div className="text-xs text-slate-500 flex items-start gap-1.5"><FileText size={11} className="mt-0.5 shrink-0"/>{c.contractNote}</div>}
+              <div className="flex items-center gap-2 pt-1">
+                <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#334155',color:'#94a3b8'}}><Pencil size={11}/> Editar</button>
+                {c.startDate&&c.duration&&<button onClick={()=>genEntries(c.id)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}><CalendarCheck size={11}/> Gerar meses</button>}
+                <button onClick={()=>del(c.id)} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{background:'#ef444420',color:'#ef4444'}}><Trash2 size={11}/></button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {modal&&(
+        <Modal title={modal==='add'?'Novo Cliente':`Editar — ${form.name}`} onClose={()=>setModal(null)} wide>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Fld label="Nome do cliente"><Inp2 value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Empresa ABC"/></Fld>
+              <Fld label="Valor mensal (R$)"><Inp2 type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Fld>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Fld label="Dia de pagamento"><Inp2 type="number" value={form.dueDay||''} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Fld>
+              <Fld label="Telefone"><Inp2 value={form.phone||''} onChange={v=>setForm(f=>({...f,phone:v}))} placeholder="(11) 99999-9999"/></Fld>
+            </div>
+            <Fld label="E-mail"><Inp2 value={form.email||''} onChange={v=>setForm(f=>({...f,email:v}))} placeholder="contato@empresa.com"/></Fld>
+            <div className="border-t border-slate-700 pt-3">
+              <p className="text-xs mb-3 font-semibold uppercase tracking-wider" style={{color:'#a78bfa'}}>Permuta</p>
+              <Fld label="Valor em permuta por mês (R$) — deixe 0 se não houver permuta">
+                <Inp2 type="number" value={form.permuteValue||''} onChange={v=>setForm(f=>({...f,permuteValue:v}))} placeholder="0,00"/>
+              </Fld>
+              <p className="text-xs text-slate-500 mt-1">Ex: cliente paga R$500 + R$300 em permuta → coloque 300 aqui e 500 em "Valor mensal"</p>
+            </div>
+            <div className="border-t border-slate-700 pt-3">
+              <p className="text-xs text-slate-400 mb-3 font-semibold uppercase tracking-wider">Contrato</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Fld label="Data de início"><Inp2 type="date" value={form.startDate||''} onChange={v=>{const e=computeEnd(v,form.duration);setForm(f=>({...f,startDate:v,endDate:e}))}}/></Fld>
+                <Fld label="Duração"><Sel2 value={String(form.duration||'12')} onChange={v=>{const e=computeEnd(form.startDate,v);setForm(f=>({...f,duration:v,endDate:e}))}} opts={[{v:'3',l:'3 meses'},{v:'6',l:'6 meses'},{v:'12',l:'12 meses'},{v:'24',l:'24 meses'}]}/></Fld>
+              </div>
+              {form.endDate&&<p className="text-xs text-slate-500 mt-1">Término: {form.endDate.split('-').reverse().join('/')}</p>}
+            </div>
+            <Fld label="Observações (link Drive, notas...)"><Inp2 value={form.contractNote||''} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Ex: https://drive.google.com/..."/></Fld>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'#33415540',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ─── PERMUTA ──────────────────────────────────────────────────────────────────
+function PermutaPage({state,dispatch,toast}){
+  const clients=(state.settings?.clients||[]).filter(c=>c.permuteValue>0)
+  const usages=state.settings?.permuteUsages||[]
+  const [modal,setModal]=useState(null) // null | {clientId, type:'use'|'sale'}
+  const [form,setForm]=useState({})
+  const todayStr=new Date().toISOString().slice(0,10)
+  const curMk=monthKey(new Date().getFullYear(),new Date().getMonth()+1)
+
+  function getBalance(c){
+    const earned=Object.values(state.months||{}).reduce((sum,month)=>{
+      const e=(month.entries||[]).find(en=>(en.clientId===c.id||en.client===c.name)&&en.status==='Recebido')
+      return sum+(e?(c.permuteValue||0):0)
+    },0)
+    const used=usages.filter(u=>u.clientId===c.id).reduce((s,u)=>s+u.value,0)
+    return{earned,used,balance:earned-used}
+  }
+
+  function openModal(clientId,type){
+    setForm({clientId,clientName:(state.settings.clients.find(c=>c.id===clientId)||{}).name||'',person:'',description:'',value:'',date:todayStr,monthKey:curMk,type})
+    setModal({clientId,type})
+  }
+
+  function save(){
+    if(!form.value||!form.description)return toast('Preencha descrição e valor','error')
+    const usage={clientId:form.clientId,clientName:form.clientName,person:form.person,description:form.description,value:parseFloat(form.value)||0,date:form.date,monthKey:form.monthKey,type:form.type}
+    if(form.type==='sale'){
+      const entry={client:`Venda Permuta — ${form.clientName}`,dueDay:new Date(form.date).getDate(),expectedValue:parseFloat(form.value)||0,note:`Permuta vendida para: ${form.person||'—'}`}
+      dispatch({type:'SELL_PERMUTE',payload:{usage,entry,entryMonthKey:form.monthKey}})
+      toast('Permuta vendida! Entrada criada no mês ✓')
+    }else{
+      dispatch({type:'ADD_PERMUTE_USAGE',payload:{usage}})
+      toast('Uso registrado ✓')
+    }
+    setModal(null)
+  }
+
+  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
+  const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
+
+  const totalPermuta=clients.reduce((s,c)=>s+(c.permuteValue||0),0)
+  const totalUsed=usages.reduce((s,u)=>s+u.value,0)
+  const totalSales=usages.filter(u=>u.type==='sale').reduce((s,u)=>s+u.value,0)
+
+  // Gerar opções de meses disponíveis (últimos 6 + próximos 6)
+  const monthOpts=Array.from({length:12},(_,i)=>{
+    const d=new Date();d.setMonth(d.getMonth()-6+i)
+    const mk2=monthKey(d.getFullYear(),d.getMonth()+1)
+    return{v:mk2,l:`${MONTH_NAMES[d.getMonth()]}/${d.getFullYear()}`}
+  })
+
+  return(
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <SummaryCard label="Permuta/mês em carteira" value={fmtBRL(totalPermuta)} color="#a78bfa" icon={ArrowLeftRight}/>
+        <SummaryCard label="Total consumido" value={fmtBRL(totalUsed)} color="#f59e0b" icon={ShoppingBag}/>
+        <SummaryCard label="Vendas em dinheiro" value={fmtBRL(totalSales)} color="#10b981" icon={DollarSign}/>
+      </div>
+
+      {/* Cards por cliente */}
+      {clients.length===0?(
+        <div className="rounded-xl p-8 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <ArrowLeftRight size={32} className="mx-auto mb-3 opacity-30"/>
+          <p className="text-sm">Nenhum cliente com permuta cadastrado.</p>
+          <p className="text-xs mt-1">Edite um cliente e adicione um valor em "Permuta por mês".</p>
+        </div>
+      ):(
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          {clients.map(c=>{
+            const{earned,used,balance}=getBalance(c)
+            const pct=earned>0?Math.min((used/earned)*100,100):0
+            const neg=balance<0
+            return(
+              <div key={c.id} className="rounded-xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${neg?'#ef444440':'#334155'}`}}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-semibold text-slate-100">{c.name}</div>
+                    <div className="text-sm mt-0.5" style={{color:'#a78bfa'}}>{fmtBRL(c.permuteValue)}/mês em permuta</div>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{background:neg?'#ef444420':balance===0?'#f59e0b20':'#10b98120',color:neg?'#ef4444':balance===0?'#f59e0b':'#10b981'}}>
+                    {neg?'Negativo':balance===0?'Zerado':'Disponível'}
+                  </span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between text-slate-400"><span>Ganho ({Math.round(earned/Math.max(c.permuteValue,1))} meses)</span><span>{fmtBRL(earned)}</span></div>
+                  <div className="flex justify-between text-slate-400"><span>Consumido</span><span style={{color:'#f59e0b'}}>{fmtBRL(used)}</span></div>
+                  <div className="flex justify-between font-semibold"><span className="text-slate-300">Saldo</span><span style={{color:neg?'#ef4444':'#10b981'}}>{fmtBRL(balance)}</span></div>
+                  <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{background:'#334155'}}>
+                    <div className="h-full rounded-full transition-all" style={{width:`${pct}%`,background:neg?'#ef4444':'#a78bfa'}}/>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={()=>openModal(c.id,'use')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'#334155',color:'#94a3b8'}}>
+                    <ShoppingBag size={11}/> Registrar uso
+                  </button>
+                  <button onClick={()=>openModal(c.id,'sale')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
+                    <DollarSign size={11}/> Vender
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Histórico */}
+      {usages.length>0&&(
+        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <h3 className="text-sm font-semibold text-slate-300 mb-4">Histórico de usos</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="border-b border-slate-700">
+                <th className="text-left py-2 pr-3 text-slate-500 font-medium">Data</th>
+                <th className="text-left py-2 pr-3 text-slate-500 font-medium">Cliente</th>
+                <th className="text-left py-2 pr-3 text-slate-500 font-medium">Pessoa</th>
+                <th className="text-left py-2 pr-3 text-slate-500 font-medium">Descrição</th>
+                <th className="text-right py-2 pr-3 text-slate-500 font-medium">Valor</th>
+                <th className="text-center py-2 text-slate-500 font-medium">Tipo</th>
+                <th className="text-center py-2 text-slate-500 font-medium"></th>
+              </tr></thead>
+              <tbody>{[...usages].sort((a,b)=>b.date.localeCompare(a.date)).map(u=>(
+                <tr key={u.id} className="border-b border-slate-700/40 hover:bg-slate-700/20">
+                  <td className="py-2 pr-3 text-slate-400">{u.date.split('-').reverse().join('/')}</td>
+                  <td className="py-2 pr-3 text-slate-300">{u.clientName}</td>
+                  <td className="py-2 pr-3 text-slate-400">{u.person||'—'}</td>
+                  <td className="py-2 pr-3 text-slate-300">{u.description}</td>
+                  <td className="py-2 pr-3 text-right font-medium" style={{color:u.type==='sale'?'#10b981':'#f59e0b'}}>{fmtBRL(u.value)}</td>
+                  <td className="py-2 text-center">
+                    <span className="px-2 py-0.5 rounded-full text-xs" style={{background:u.type==='sale'?'#10b98120':'#a78bfa20',color:u.type==='sale'?'#10b981':'#a78bfa'}}>
+                      {u.type==='sale'?'Venda':'Uso'}
+                    </span>
+                  </td>
+                  <td className="py-2 text-center">
+                    <button onClick={()=>{dispatch({type:'DELETE_PERMUTE_USAGE',payload:{id:u.id}});toast('Removido','warn')}} style={{color:'#ef4444',background:'none',border:'none',cursor:'pointer',padding:4}}>
+                      <Trash2 size={12}/>
+                    </button>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal */}
+      {modal&&(
+        <Modal title={form.type==='sale'?`💰 Vender Permuta — ${form.clientName}`:`🛍 Registrar Uso — ${form.clientName}`} onClose={()=>setModal(null)}>
+          <div className="space-y-4">
+            <Fld label="Quem usou / quem comprou"><Inp2 value={form.person||''} onChange={v=>setForm(f=>({...f,person:v}))} placeholder="Ex: Mainara, Thays, João..."/></Fld>
+            <Fld label="Descrição"><Inp2 value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder={form.type==='sale'?'Ex: Vendido para evento de empresa':'Ex: 2 hambúrgueres carnaval'}/></Fld>
+            <div className="grid grid-cols-2 gap-3">
+              <Fld label="Valor (R$)"><Inp2 type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Fld>
+              <Fld label="Data"><Inp2 type="date" value={form.date||''} onChange={v=>setForm(f=>({...f,date:v}))}/></Fld>
+            </div>
+            {form.type==='sale'&&(
+              <Fld label="Lançar no mês financeiro">
+                <select value={form.monthKey||curMk} onChange={e=>setForm(f=>({...f,monthKey:e.target.value}))} style={inputSt}>
+                  {monthOpts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
+                </select>
+              </Fld>
+            )}
+            {form.type==='sale'&&<p className="text-xs text-slate-500 flex items-start gap-1"><CheckCircle size={11} style={{marginTop:2,color:'#10b981',flexShrink:0}}/> Uma entrada "Venda Permuta — {form.clientName}" será criada automaticamente no mês escolhido.</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'#33415540',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:form.type==='sale'?'#10b981':'#a78bfa',color:'#fff'}}><Save size={14}/> Salvar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ─── TAREFAS ──────────────────────────────────────────────────────────────────
+function TasksPage({state,dispatch,toast}){
+  const tasks=state.tasks||[]
+  const clients=state.settings?.clients||[]
+  const [filterAssignee,setFilterAssignee]=useState('todos')
+  const [filterPriority,setFilterPriority]=useState('todos')
+  const [modal,setModal]=useState(null)
+  const [form,setForm]=useState({})
+  const [dragging,setDragging]=useState(null)
+
+  const COLUMNS=[
+    {id:'todo',label:'A Fazer',color:'#64748b',bg:'#64748b15'},
+    {id:'doing',label:'Em Andamento',color:'#3b82f6',bg:'#3b82f615'},
+    {id:'done',label:'Concluído',color:'#10b981',bg:'#10b98115'},
+  ]
+  const PRIORITIES={high:{label:'Alta',c:'#ef4444',b:'#ef444420'},medium:{label:'Média',c:'#f59e0b',b:'#f59e0b20'},low:{label:'Baixa',c:'#64748b',b:'#64748b20'}}
+  const ASSIGNEES=[{v:'todos',l:'Todos'},{v:'fabiano',l:'Fabiano'},{v:'mainara',l:'Mainara'},{v:'',l:'Sem responsável'}]
+
+  const filtered=tasks.filter(t=>{
+    if(filterAssignee!=='todos'&&t.assignee!==filterAssignee)return false
+    if(filterPriority!=='todos'&&t.priority!==filterPriority)return false
+    return true
+  })
+
+  function openAdd(status='todo'){
+    setForm({title:'',description:'',assignee:'',priority:'medium',dueDate:'',relatedClientId:'',status})
+    setModal('add')
+  }
+  function openEdit(t){setForm({...t});setModal(t)}
+  function save(){
+    if(!form.title)return toast('Digite o título da tarefa','error')
+    if(modal==='add')dispatch({type:'ADD_TASK',payload:{task:{...form}}})
+    else dispatch({type:'UPDATE_TASK',payload:{task:{...form}}})
+    toast('Salvo');setModal(null)
+  }
+  function del(id){dispatch({type:'DELETE_TASK',payload:{id}});toast('Removido','warn')}
+  function moveTask(taskId,newStatus){
+    const t=tasks.find(x=>x.id===taskId)
+    if(t)dispatch({type:'UPDATE_TASK',payload:{task:{...t,status:newStatus}}})
+  }
+
+  const todoCount=tasks.filter(t=>t.status!=='done').length
+
+  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
+  const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
+  const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
+
+  return(
+    <div className="space-y-4">
+      {/* Filtros + botão */}
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <div className="flex flex-wrap gap-2">
+          {/* Filtro responsável */}
+          {ASSIGNEES.map(a=>(
+            <button key={a.v} onClick={()=>setFilterAssignee(a.v)}
+              className="px-3 py-1.5 text-xs rounded-lg transition-all"
+              style={{background:filterAssignee===a.v?'#3b82f6':'#33415530',color:filterAssignee===a.v?'#fff':'#94a3b8',fontWeight:filterAssignee===a.v?600:400}}>
+              {a.l}
+            </button>
+          ))}
+          <div className="w-px bg-slate-700 mx-1"/>
+          {/* Filtro prioridade */}
+          {[{v:'todos',l:'Todas'},{v:'high',l:'Alta'},{v:'medium',l:'Média'},{v:'low',l:'Baixa'}].map(p=>(
+            <button key={p.v} onClick={()=>setFilterPriority(p.v)}
+              className="px-3 py-1.5 text-xs rounded-lg transition-all"
+              style={{background:filterPriority===p.v?(PRIORITIES[p.v]?.b||'#3b82f615'):'#33415530',color:filterPriority===p.v?(PRIORITIES[p.v]?.c||'#3b82f6'):'#94a3b8',fontWeight:filterPriority===p.v?600:400}}>
+              {p.l}
+            </button>
+          ))}
+        </div>
+        <button onClick={()=>openAdd()} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap" style={{background:'#10b981',color:'#fff'}}>
+          <Plus size={14}/> Nova Tarefa
+        </button>
+      </div>
+
+      {/* Kanban */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {COLUMNS.map(col=>{
+          const colTasks=filtered.filter(t=>t.status===col.id)
+          return(
+            <div key={col.id} className="rounded-xl flex flex-col min-h-[300px]"
+              style={{background:col.bg,border:`1px solid ${col.color}30`}}
+              onDragOver={e=>{e.preventDefault()}}
+              onDrop={e=>{e.preventDefault();if(dragging)moveTask(dragging,col.id);setDragging(null)}}>
+              {/* Header coluna */}
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={{borderColor:col.color+'30'}}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{background:col.color}}/>
+                  <span className="text-sm font-semibold" style={{color:col.color}}>{col.label}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{background:col.color+'20',color:col.color}}>{colTasks.length}</span>
+                </div>
+                <button onClick={()=>openAdd(col.id)} className="text-slate-500 hover:text-slate-300 transition-colors" title="Adicionar nesta coluna">
+                  <Plus size={14}/>
+                </button>
+              </div>
+              {/* Cards */}
+              <div className="flex-1 p-3 space-y-2">
+                {colTasks.map(t=>{
+                  const pr=PRIORITIES[t.priority||'medium']
+                  const relClient=clients.find(c=>c.id===t.relatedClientId)
+                  const overdue=t.dueDate&&new Date(t.dueDate+'T23:59:59')<new Date()&&t.status!=='done'
+                  return(
+                    <div key={t.id} draggable onDragStart={()=>setDragging(t.id)} onDragEnd={()=>setDragging(null)}
+                      className="rounded-lg p-3 space-y-2 cursor-grab active:cursor-grabbing"
+                      style={{background:'#1e293b',border:`1px solid ${overdue?'#ef444440':'#334155'}`,opacity:dragging===t.id?0.5:1}}>
+                      {/* Prioridade + título */}
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{background:pr.b,color:pr.c,whiteSpace:'nowrap'}}>{pr.label}</span>
+                        {t.assignee&&<span className="text-xs text-slate-500 shrink-0">{t.assignee==='fabiano'?'👨‍💼 Fab':'👩‍💼 Mai'}</span>}
+                      </div>
+                      <div className="text-sm font-medium text-slate-100 leading-snug">{t.title}</div>
+                      {t.description&&<div className="text-xs text-slate-500 leading-relaxed line-clamp-2">{t.description}</div>}
+                      {/* Rodapé */}
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-2">
+                          {t.dueDate&&<span className="text-xs flex items-center gap-1" style={{color:overdue?'#ef4444':'#64748b'}}>
+                            <Clock size={10}/>{t.dueDate.split('-').reverse().join('/')}
+                          </span>}
+                          {relClient&&<span className="text-xs text-slate-600 flex items-center gap-1"><Briefcase size={10}/>{relClient.name}</span>}
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={()=>openEdit(t)} className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"><Pencil size={11}/></button>
+                          <button onClick={()=>del(t.id)} className="p-1 rounded text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={11}/></button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {colTasks.length===0&&(
+                  <div className="flex items-center justify-center h-20 text-xs text-slate-600 rounded-lg border border-dashed" style={{borderColor:col.color+'20'}}>
+                    Arraste tarefas aqui
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Modal */}
+      {modal&&(
+        <Modal title={modal==='add'?'Nova Tarefa':'Editar Tarefa'} onClose={()=>setModal(null)} wide>
+          <div className="space-y-4">
+            <Fld label="Título *"><Inp2 value={form.title||''} onChange={v=>setForm(f=>({...f,title:v}))} placeholder="O que precisa ser feito?"/></Fld>
+            <Fld label="Descrição"><textarea value={form.description||''} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Detalhes opcionais..." rows={3} style={{...inputSt,resize:'vertical'}}/></Fld>
+            <div className="grid grid-cols-2 gap-3">
+              <Fld label="Responsável">
+                <Sel2 value={form.assignee||''} onChange={v=>setForm(f=>({...f,assignee:v}))} opts={[{v:'',l:'Sem responsável'},{v:'fabiano',l:'Fabiano'},{v:'mainara',l:'Mainara'}]}/>
+              </Fld>
+              <Fld label="Prioridade">
+                <Sel2 value={form.priority||'medium'} onChange={v=>setForm(f=>({...f,priority:v}))} opts={[{v:'high',l:'🔴 Alta'},{v:'medium',l:'🟡 Média'},{v:'low',l:'🔵 Baixa'}]}/>
+              </Fld>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Fld label="Status">
+                <Sel2 value={form.status||'todo'} onChange={v=>setForm(f=>({...f,status:v}))} opts={[{v:'todo',l:'A Fazer'},{v:'doing',l:'Em Andamento'},{v:'done',l:'Concluído'}]}/>
+              </Fld>
+              <Fld label="Prazo"><Inp2 type="date" value={form.dueDate||''} onChange={v=>setForm(f=>({...f,dueDate:v}))}/></Fld>
+            </div>
+            <Fld label="Cliente relacionado (opcional)">
+              <Sel2 value={form.relatedClientId||''} onChange={v=>setForm(f=>({...f,relatedClientId:v}))} opts={[{v:'',l:'Nenhum'},...clients.map(c=>({v:c.id,l:c.name}))]}/>
+            </Fld>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'#33415540',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ─── CALENDÁRIO ───────────────────────────────────────────────────────────────
+function CalendarPage({state,dispatch,monthKey:mk,toast}){
+  const {year:curYear,month:curMonth}=parseMonthKey(mk)
+  const [selDay,setSelDay]=useState(null)
+
+  const monthData=state.months[mk]||{}
+  const entries=monthData.entries||[]
+  const exits=monthData.exits||[]
+  const tasks=state.tasks||[]
+  const clients=state.settings?.clients||[]
+  const permuteUsages=state.settings?.permuteUsages||[]
+
+  // Construir mapa dia → eventos
+  const eventsByDay={}
+  function addEv(day,ev){if(!day)return;if(!eventsByDay[day])eventsByDay[day]=[];eventsByDay[day].push(ev)}
+
+  entries.forEach(e=>{
+    const d=parseInt(e.dueDay||0)
+    if(d)addEv(d,{type:'entry',color:'#10b981',label:e.client,value:e.expectedValue,status:e.status,id:e.id})
+  })
+  exits.forEach(e=>{
+    const d=parseInt(e.day||0)
+    if(d)addEv(d,{type:'exit',color:'#ef4444',label:e.name,value:e.expectedValue,status:e.status,id:e.id})
+  })
+  tasks.forEach(t=>{
+    if(!t.dueDate)return
+    const tp=parseMonthKey(t.dueDate.slice(0,7))
+    if(tp.year===curYear&&tp.month===curMonth){
+      const d=parseInt(t.dueDate.slice(8,10))
+      addEv(d,{type:'task',color:t.status==='done'?'#10b981':t.priority==='high'?'#ef4444':'#3b82f6',label:t.title,status:t.status,id:t.id,assignee:t.assignee})
+    }
+  })
+  clients.forEach(c=>{
+    if(!c.endDate)return
+    const ep=parseMonthKey(c.endDate.slice(0,7))
+    if(ep.year===curYear&&ep.month===curMonth){
+      const d=parseInt(c.endDate.slice(8,10))
+      addEv(d,{type:'contract',color:'#f59e0b',label:`Vence: ${c.name}`,id:c.id})
+    }
+  })
+  permuteUsages.forEach(u=>{
+    if(!u.date)return
+    const up=parseMonthKey(u.date.slice(0,7))
+    if(up.year===curYear&&up.month===curMonth){
+      const d=parseInt(u.date.slice(8,10))
+      addEv(d,{type:'permuta',color:'#a78bfa',label:`${u.type==='sale'?'💰':'🛍'} ${u.clientName}`,value:u.value,id:u.id})
+    }
+  })
+
+  // Grade do mês
+  const firstDay=new Date(curYear,curMonth-1,1).getDay()
+  const daysInMonth=new Date(curYear,curMonth,0).getDate()
+  const todayObj=new Date()
+  const isToday=(d)=>todayObj.getFullYear()===curYear&&todayObj.getMonth()+1===curMonth&&todayObj.getDate()===d
+
+  const typeLabels={entry:'Entrada',exit:'Saída',task:'Tarefa',contract:'Contrato',permuta:'Permuta'}
+  const DOW=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+
+  const selEvs=selDay?eventsByDay[selDay]||[]:[]
+
+  return(
+    <div className="space-y-4">
+      {/* Legenda */}
+      <div className="flex flex-wrap gap-3 text-xs">
+        {[['#10b981','Entradas'],['#ef4444','Saídas'],['#3b82f6','Tarefas'],['#f59e0b','Contratos'],['#a78bfa','Permuta']].map(([c,l])=>(
+          <span key={l} className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{background:c}}/><span className="text-slate-400">{l}</span></span>
+        ))}
+      </div>
+
+      <div className={`gap-4 ${selDay?'grid grid-cols-1 lg:grid-cols-3':'block'}`}>
+        {/* Grade */}
+        <div className={selDay?'lg:col-span-2':''}>
+          <div className="rounded-xl overflow-hidden" style={{background:'#1e293b',border:'1px solid #334155'}}>
+            {/* Cabeçalho dias da semana */}
+            <div className="grid grid-cols-7 border-b" style={{borderColor:'#334155'}}>
+              {DOW.map(d=><div key={d} className="py-2 text-center text-xs font-semibold text-slate-500">{d}</div>)}
+            </div>
+            {/* Células */}
+            <div className="grid grid-cols-7">
+              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} className="min-h-[80px] border-r border-b" style={{borderColor:'#334155'}}/>)}
+              {Array.from({length:daysInMonth}).map((_,i)=>{
+                const d=i+1
+                const evs=eventsByDay[d]||[]
+                const sel=selDay===d
+                const today=isToday(d)
+                return(
+                  <div key={d} onClick={()=>setSelDay(sel?null:d)}
+                    className="min-h-[80px] p-1.5 border-r border-b cursor-pointer transition-colors"
+                    style={{borderColor:'#334155',background:sel?'#334155':today?'#10b98108':'transparent'}}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold flex items-center justify-center w-6 h-6 rounded-full"
+                        style={{background:today?'#10b981':'transparent',color:today?'#fff':sel?'#f1f5f9':'#64748b'}}>
+                        {d}
+                      </span>
+                    </div>
+                    {/* Dots e labels */}
+                    <div className="space-y-0.5">
+                      {evs.slice(0,3).map((ev,ei)=>(
+                        <div key={ei} className="text-xs px-1 py-0.5 rounded truncate leading-tight"
+                          style={{background:ev.color+'20',color:ev.color,fontSize:10}}>
+                          {ev.label}
+                        </div>
+                      ))}
+                      {evs.length>3&&<div className="text-xs text-slate-500 pl-1" style={{fontSize:10}}>+{evs.length-3} mais</div>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Painel lateral do dia */}
+        {selDay&&(
+          <div className="rounded-xl p-4 space-y-3" style={{background:'#1e293b',border:'1px solid #334155'}}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-slate-100">
+                {selDay} de {MONTH_NAMES[curMonth-1]}
+                {isToday(selDay)&&<span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{background:'#10b98120',color:'#10b981'}}>Hoje</span>}
+              </h3>
+              <button onClick={()=>setSelDay(null)} className="text-slate-500 hover:text-slate-300"><X size={16}/></button>
+            </div>
+            {selEvs.length===0?(
+              <p className="text-xs text-slate-500 py-4 text-center">Nenhum evento neste dia</p>
+            ):(
+              <div className="space-y-2">
+                {selEvs.map((ev,i)=>(
+                  <div key={i} className="rounded-lg p-3 space-y-1" style={{background:ev.color+'12',border:`1px solid ${ev.color}30`}}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{background:ev.color}}/>
+                      <span className="text-xs font-semibold" style={{color:ev.color}}>{typeLabels[ev.type]}</span>
+                      {ev.status&&<span className="text-xs text-slate-500 ml-auto">{ev.status}</span>}
+                    </div>
+                    <div className="text-sm text-slate-200 pl-4">{ev.label}</div>
+                    {ev.value!=null&&<div className="text-sm font-semibold pl-4" style={{color:ev.color}}>{fmtBRL(ev.value)}</div>}
+                    {ev.assignee&&<div className="text-xs text-slate-500 pl-4">{ev.assignee==='fabiano'?'👨‍💼 Fabiano':'👩‍💼 Mainara'}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
   {id:'dashboard',icon:LayoutDashboard,label:'Dashboard'},
@@ -951,12 +1662,29 @@ const NAV=[
   {id:'exits',icon:TrendingDown,label:'Saídas'},
   {id:'cards',icon:CreditCard,label:'Cartões'},
   {id:'collaborators',icon:Users,label:'Colaboradores'},
+  {id:'clients',icon:Briefcase,label:'Clientes'},
+  {id:'permuta',icon:ArrowLeftRight,label:'Permuta'},
+  {id:'tasks',icon:ListTodo,label:'Tarefas'},
+  {id:'calendar',icon:CalendarRange,label:'Calendário'},
   {id:'annual',icon:Target,label:'Projeção Anual'},
   {id:'simulator',icon:Zap,label:'Simulador'},
   {id:'settings',icon:Settings,label:'Configurações'},
 ]
 
-function Sidebar({activePage,setActivePage,open,setOpen}){
+function Sidebar({activePage,setActivePage,open,setOpen,state}){
+  const todayD=new Date()
+  const expCount=(state?.settings?.clients||[]).filter(c=>{
+    if(!c.endDate)return false
+    return Math.floor((new Date(c.endDate+'T12:00:00')-todayD)/86400000)<=30
+  }).length
+  const openTasksCount=(state?.tasks||[]).filter(t=>t.status!=='done').length
+  const overdueCount=(state?.tasks||[]).filter(t=>t.status!=='done'&&t.dueDate&&new Date(t.dueDate+'T23:59:59')<new Date()).length
+  const permuteNegCount=(state?.settings?.clients||[]).filter(c=>{
+    if(!c.permuteValue)return false
+    const earned=Object.values(state?.months||{}).reduce((s,m)=>{const e=(m.entries||[]).find(en=>(en.clientId===c.id||en.client===c.name)&&en.status==='Recebido');return s+(e?c.permuteValue:0)},0)
+    const used=(state?.settings?.permuteUsages||[]).filter(u=>u.clientId===c.id).reduce((s,u)=>s+u.value,0)
+    return(earned-used)<0
+  }).length
   return(
     <>
       {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'rgba(0,0,0,0.6)'}} onClick={()=>setOpen(false)}/>}
@@ -974,6 +1702,9 @@ function Sidebar({activePage,setActivePage,open,setOpen}){
             <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
               style={{background:activePage===id?'#10b98115':'transparent',color:activePage===id?'#10b981':'#64748b',fontWeight:activePage===id?600:400}}>
               <Icon size={16}/>{label}
+              {id==='clients'&&expCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#f59e0b',color:'#000',fontSize:10}}>{expCount}</span>}
+              {id==='permuta'&&permuteNegCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#ef4444',color:'#fff',fontSize:10}}>!</span>}
+              {id==='tasks'&&openTasksCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:overdueCount>0?'#ef4444':'#3b82f6',color:'#fff',fontSize:10}}>{openTasksCount}</span>}
             </button>
           ))}
         </nav>
@@ -1023,13 +1754,17 @@ function PaiolFinanceApp(){
   const pages={
     dashboard:<DashboardPage {...pp}/>,cashflow:<CashFlowPage {...pp}/>,entries:<EntriesPage {...pp}/>,
     exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,collaborators:<CollaboratorsPage {...pp}/>,
+    clients:<ClientsPage state={state} dispatch={dispatch} toast={toast}/>,
+    permuta:<PermutaPage state={state} dispatch={dispatch} toast={toast}/>,
+    tasks:<TasksPage state={state} dispatch={dispatch} toast={toast}/>,
+    calendar:<CalendarPage state={state} dispatch={dispatch} monthKey={mk} toast={toast}/>,
     annual:<AnnualProjectionPage {...pp}/>,simulator:<SimulatorPage {...pp}/>,settings:<SettingsPage {...pp}/>,
   }
   const monthData=state.months[mk]||{}
 
   return(
     <div className="min-h-screen flex" style={{background:'#1e293b',color:'#f1f5f9',fontFamily:'system-ui,sans-serif'}}>
-      <Sidebar activePage={activePage} setActivePage={setActivePage} open={sidebarOpen} setOpen={setSidebarOpen}/>
+      <Sidebar activePage={activePage} setActivePage={setActivePage} open={sidebarOpen} setOpen={setSidebarOpen} state={state}/>
       <div className="flex-1 flex flex-col min-h-screen" style={{marginLeft:0,paddingLeft:0}}>
         <div className="flex-1 flex flex-col min-h-screen lg:ml-[220px]">
           {/* Header */}
