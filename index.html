@@ -602,9 +602,9 @@ function Toast({toasts}){
   )
 }
 
-function SummaryCard({label,value,sub,color,icon:Icon}){
+function SummaryCard({label,value,sub,color,icon:Icon,onClick}){
   return(
-    <div className="rounded-3xl p-5 transition-all" style={{background:'rgba(255,255,255,0.05)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',border:'1px solid rgba(255,255,255,0.1)',boxShadow:'0 4px 24px rgba(0,0,0,0.3),inset 0 0.5px 0 rgba(255,255,255,0.15)'}}>
+    <div onClick={onClick} className="rounded-3xl p-5 transition-all" style={{background:'rgba(255,255,255,0.05)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',border:'1px solid rgba(255,255,255,0.1)',boxShadow:'0 4px 24px rgba(0,0,0,0.3),inset 0 0.5px 0 rgba(255,255,255,0.15)',cursor:onClick?'pointer':'default'}}>
       <div className="flex items-start justify-between mb-4">
         <span className="text-xs font-medium uppercase tracking-widest" style={{color:'rgba(235,235,245,0.5)'}}>{label}</span>
         {Icon&&<div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{background:`${color}20`,border:`1px solid ${color}35`}}><Icon size={16} style={{color}}/></div>}
@@ -655,7 +655,7 @@ const CTip=({active,payload,label})=>{
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashboardPage({state,dispatch,monthKey:mk,toast}){
+function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
   const month=state.months[mk]||{}
   const entries=month.entries||[]
   const exits=month.exits||[]
@@ -702,8 +702,8 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
             </button>
           )}
         </div>
-        <SummaryCard label="Entradas Previstas" value={fmtBRL(totalExpIn)} sub={`Realizadas: ${fmtBRL(totalRealIn)}`} color="#10b981" icon={TrendingUp}/>
-        <SummaryCard label="Saídas Previstas" value={fmtBRL(totalExpOut)} sub={`Pagas: ${fmtBRL(totalRealOut)}`} color="#ef4444" icon={TrendingDown}/>
+        <SummaryCard label="Entradas Previstas" value={fmtBRL(totalExpIn)} sub={`Realizadas: ${fmtBRL(totalRealIn)}`} color="#10b981" icon={TrendingUp} onClick={setActivePage?()=>setActivePage('entries'):undefined}/>
+        <SummaryCard label="Saídas Previstas" value={fmtBRL(totalExpOut)} sub={`Pagas: ${fmtBRL(totalRealOut)}`} color="#ef4444" icon={TrendingDown} onClick={setActivePage?()=>setActivePage('exits'):undefined}/>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -2348,7 +2348,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
 
   const pp={state,dispatch,monthKey:mk,toast}
   const pages={
-    dashboard:<DashboardPage {...pp}/>,cashflow:<CashFlowPage {...pp}/>,entries:<EntriesPage {...pp}/>,
+    dashboard:<DashboardPage {...pp} setActivePage={setActivePage}/>,cashflow:<CashFlowPage {...pp}/>,entries:<EntriesPage {...pp}/>,
     exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,collaborators:<CollaboratorsPage {...pp}/>,
     clients:<ClientsPage state={state} dispatch={dispatch} toast={toast}/>,
     permuta:<PermutaPage state={state} dispatch={dispatch} toast={toast}/>,
