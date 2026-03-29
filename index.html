@@ -824,6 +824,8 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
   const totalExp=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
   const totalReal=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
   const totalPend=entries.filter(e=>e.status!=='Recebido').reduce((s,e)=>s+(e.expectedValue||0),0)
+  const clientMap={};entries.forEach(e=>{clientMap[e.client]=(clientMap[e.client]||0)+(e.expectedValue||0)})
+  const pieData=Object.entries(clientMap).map(([name,value])=>({name,value}))
   function openAdd(){setForm({client:'',dueDay:'',expectedValue:'',status:'Previsto',realValue:'',note:''});setModal('add')}
   function openEdit(e){setForm({...e});setModal(e)}
   function save(){
@@ -841,46 +843,62 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
         <SummaryCard label="Recebido" value={fmtBRL(totalReal)} color="#10b981" icon={CheckCircle}/>
         <SummaryCard label="A Receber" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2 flex-wrap">
-          {['Todos','Previsto','Cobrado','Recebido'].map(s=>(
-            <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-              style={{background:filter===s?'#10b981':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid var(--border)'}}>{s}</button>
-          ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Gráfico por cliente */}
+        <div className="rounded-2xl p-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
+          <h3 className="text-xs font-medium mb-2" style={{color:'var(--text-3)'}}>Por Cliente</h3>
+          <ResponsiveContainer width="100%" height={160}>
+            <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2}>
+              {pieData.map((_,i)=><Cell key={i} fill={CAT_COLORS[i%CAT_COLORS.length]}/>)}
+            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,fontSize:12}}/></PieChart>
+          </ResponsiveContainer>
+          <div className="space-y-1 mt-1">{pieData.slice(0,6).map((d,i)=>(
+            <div key={d.name} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{background:CAT_COLORS[i%CAT_COLORS.length]}}/><span style={{color:'var(--text-2)'}}>{d.name}</span></div>
+              <span style={{color:'var(--text)'}}>{fmtBRL(d.value)}</span>
+            </div>
+          ))}</div>
         </div>
-        <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
-      </div>
-      <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
-        <table className="w-full min-w-[600px]">
-          <thead style={{background:'var(--bg)'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th right>Diferença</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
-          <tbody>
-            {filtered.map((e,i)=>{
-              const diff=(e.realValue||0)-(e.expectedValue||0)
-              return(
-                <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
-                  <Td>{e.client}</Td><Td muted>{e.dueDay||'—'}</Td>
-                  <Td right>{fmtBRL(e.expectedValue)}</Td>
-                  <Td right color={e.realValue?'#f1f5f9':'#475569'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
-                  <Td right color={diff>0?'#10b981':diff<0?'#ef4444':'#64748b'}>{e.realValue?fmtBRL(diff):'—'}</Td>
-                  <Td><StatusBadge status={e.status}/></Td>
-                  <Td><div className="flex gap-1.5">
-                    <button onClick={()=>openEdit(e)} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
-                    <button onClick={()=>del(e.id)} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button>
-                  </div></Td>
+        {/* Tabela */}
+        <div className="lg:col-span-2 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {['Todos','Previsto','Cobrado','Recebido'].map(s=>(
+                <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
+                  style={{background:filter===s?'#10b981':'var(--bg-input)',color:filter===s?'#fff':'var(--text-2)',border:'1px solid var(--border)'}}>{s}</button>
+              ))}
+            </div>
+            <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
+          </div>
+          <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
+            <table className="w-full min-w-[500px]">
+              <thead style={{background:'var(--bg)'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+              <tbody>
+                {filtered.map((e,i)=>(
+                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
+                    <Td>{e.client}</Td><Td muted>{e.dueDay||'—'}</Td>
+                    <Td right>{fmtBRL(e.expectedValue)}</Td>
+                    <Td right color={e.realValue?'var(--text)':'var(--text-3)'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
+                    <Td><StatusBadge status={e.status}/></Td>
+                    <Td><div className="flex gap-1.5">
+                      <button onClick={()=>openEdit(e)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Pencil size={13}/></button>
+                      <button onClick={()=>del(e.id)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Trash2 size={13}/></button>
+                    </div></Td>
+                  </tr>
+                ))}
+                {filtered.length===0&&<tr><td colSpan={6} className="px-3 py-8 text-center text-sm" style={{color:'var(--text-3)'}}>Nenhuma entrada</td></tr>}
+              </tbody>
+              <tfoot style={{background:'var(--bg)',borderTop:'1px solid var(--border)'}}>
+                <tr>
+                  <td colSpan={2} className="px-3 py-2 text-xs font-medium" style={{color:'var(--text-3)'}}>Total ({filtered.length})</td>
+                  <td className="px-3 py-2 text-sm text-right font-bold" style={{color:'var(--text)'}}>{fmtBRL(filtered.reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
+                  <td className="px-3 py-2 text-sm text-right font-bold" style={{color:'#10b981'}}>{fmtBRL(filtered.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0))}</td>
+                  <td colSpan={2}/>
                 </tr>
-              )
-            })}
-            {filtered.length===0&&<tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma entrada</td></tr>}
-          </tbody>
-          <tfoot style={{background:'var(--bg)',borderTop:'1px solid var(--border)'}}>
-            <tr>
-              <td colSpan={2} className="px-3 py-2 text-xs text-slate-400 font-medium">Total ({filtered.length})</td>
-              <td className="px-3 py-2 text-sm text-right font-bold text-slate-200">{fmtBRL(filtered.reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
-              <td className="px-3 py-2 text-sm text-right font-bold text-emerald-400">{fmtBRL(filtered.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0))}</td>
-              <td colSpan={3}/>
-            </tr>
-          </tfoot>
-        </table>
+              </tfoot>
+            </table>
+          </div>
+        </div>
       </div>
       {modal&&(
         <Modal title={modal==='add'?'Nova Entrada':'Editar Entrada'} onClose={()=>setModal(null)}>
@@ -963,11 +981,11 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
               <thead style={{background:'var(--bg)'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
               <tbody>
                 {filtered.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
+                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
                     <Td><div>{e.name}</div>{e.cardId&&<div className="text-xs text-slate-500">{cardName(e.cardId)}</div>}</Td>
                     <Td muted>{e.category}</Td><Td muted>{e.day||'—'}</Td>
                     <Td right>{fmtBRL(e.expectedValue)}</Td>
-                    <Td right color={e.realValue?'#f1f5f9':'#475569'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
+                    <Td right color={e.realValue?'var(--text)':'var(--text-3)'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
                     <Td><StatusBadge status={e.status}/></Td>
                     <Td><div className="flex gap-1.5">
                       <button onClick={()=>{setForm({...e});setModal(e)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
@@ -1058,12 +1076,12 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
             return(
               <tr key={d} className="border-t" style={{borderColor:'var(--sep)',background:isToday?'var(--row-hi)':i%2===0?'transparent':'var(--row-alt)'}}>
                 <Td><span style={{color:isToday?'#10b981':'var(--text)'}}>{d}</span>{isToday&&<span className="ml-1 text-xs text-emerald-500">hoje</span>}</Td>
-                <Td right color={dIn>0?'#10b981':'#475569'}>{dIn>0?fmtBRL(dIn):'—'}</Td>
-                <Td right color={dOut>0?'#ef4444':'#475569'}>{dOut>0?fmtBRL(dOut):'—'}</Td>
-                <Td right color={running>=0?'#f1f5f9':'#ef4444'}>{fmtBRL(running)}</Td>
+                <Td right color={dIn>0?'#10b981':'var(--text-3)'}>{dIn>0?fmtBRL(dIn):'—'}</Td>
+                <Td right color={dOut>0?'#ef4444':'var(--text-3)'}>{dOut>0?fmtBRL(dOut):'—'}</Td>
+                <Td right color={running>=0?'var(--text)':'#ef4444'}>{fmtBRL(running)}</Td>
                 <td className="px-3 py-1.5"><input type="number" defaultValue={realCash??''} placeholder="—"
                   onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v))dispatch({type:'UPDATE_DAILY_CASH',payload:{monthKey:mk,day:String(d),value:v}})}}
-                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'var(--bg)',border:'1px solid var(--border)',color:'#f1f5f9'}}/></td>
+                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'var(--bg)',border:'1px solid var(--border)',color:'var(--text)'}}/></td>
                 <Td>{status}</Td>
                 <td className="px-3 py-1.5"><input defaultValue={mData.dailyNotes?.[String(d)]||''} placeholder="Observação..."
                   onBlur={e=>dispatch({type:'UPDATE_DAILY_NOTE',payload:{monthKey:mk,day:String(d),note:e.target.value}})}
@@ -1123,7 +1141,7 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
             <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
               <table className="w-full"><thead style={{background:'var(--bg)'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
                 <tbody>{expenses.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
+                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
                     <Td>{e.description}</Td><Td right>{fmtBRL(e.value)}</Td>
                     <Td muted>{e.installments>1?`${e.currentInstallment}/${e.installments}`:'1x'}</Td>
                     <Td><button onClick={()=>dispatch({type:'DELETE_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,id:e.id}})} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button></Td>
@@ -1316,7 +1334,7 @@ function SimulatorPage({state,monthKey:mk}){
             <table className="w-full"><thead style={{background:'var(--bg)'}}><tr><Th>Mês</Th><Th right>Entradas</Th><Th right>Saídas</Th><Th right>Resultado</Th><Th right>Impacto</Th></tr></thead>
               <tbody>{result.months.map((m,i)=>{
                 const impact=m.result-(baseIn-baseOut)
-                return<tr key={i} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
+                return<tr key={i} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
                   <Td>Mês +{m.month}</Td><Td right color="#10b981">{fmtBRL(m.in)}</Td><Td right color="#ef4444">{fmtBRL(m.out)}</Td>
                   <Td right color={m.result>=0?'#10b981':'#ef4444'}>{fmtBRL(m.result)}</Td>
                   <Td right color={impact>=0?'#10b981':'#ef4444'}>{impact!==0?(impact>0?'+':'')+fmtBRL(impact):'—'}</Td>
@@ -1387,7 +1405,7 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
       <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
         <table className="w-full"><tbody>
           {items.map((item,i)=>(
-            <tr key={item.id} className="border-b" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
+            <tr key={item.id} className="border-b" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
               {rowRender(item)}
               <Td><div className="flex gap-1.5">
                 <button onClick={()=>{setForm({...item});setModal(item)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
@@ -1452,7 +1470,7 @@ function ClientsPage({state,dispatch,toast}){
   function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas para todos os meses ✓')}
 
   const scMap={active:{label:'Ativo',c:'#10b981',b:'#10b98120'},expiring:{label:'Vencendo',c:'#f59e0b',b:'#f59e0b20'},expired:{label:'Vencido',c:'#ef4444',b:'#ef444420'},no_contract:{label:'Sem contrato',c:'#64748b',b:'#64748b20'}}
-  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
@@ -1584,7 +1602,7 @@ function PermutaPage({state,dispatch,toast}){
     setModal(null)
   }
 
-  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
 
@@ -1765,7 +1783,7 @@ function TasksPage({state,dispatch,toast}){
 
   const todoCount=tasks.filter(t=>t.status!=='done').length
 
-  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
@@ -2002,7 +2020,7 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
                     style={{borderColor:'var(--sep)',background:sel?'rgba(255,255,255,0.07)':today?'#10b98108':'transparent'}}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold flex items-center justify-center w-6 h-6 rounded-full"
-                        style={{background:today?'#10b981':'transparent',color:today?'#fff':sel?'#f1f5f9':'#64748b'}}>
+                        style={{background:today?'#10b981':'transparent',color:today?'#fff':sel?'var(--text)':'#64748b'}}>
                         {d}
                       </span>
                     </div>
