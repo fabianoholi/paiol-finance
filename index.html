@@ -83,6 +83,7 @@
       --text:#ffffff;--text-2:rgba(235,235,245,0.6);--text-3:rgba(235,235,245,0.38);--text-4:rgba(235,235,245,0.22);
       --border:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.06);--sep:rgba(255,255,255,0.07);
       --inner:rgba(255,255,255,0.15);--modal-bg:rgba(0,0,0,0.72);
+      --row-alt:rgba(255,255,255,0.025);--row-hi:rgba(16,185,129,0.1);
     }
     body.light{
       color-scheme:light;
@@ -91,6 +92,7 @@
       --text:#1c1c1e;--text-2:rgba(60,60,67,0.6);--text-3:rgba(60,60,67,0.45);--text-4:rgba(60,60,67,0.25);
       --border:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.07);--sep:rgba(0,0,0,0.08);
       --inner:rgba(255,255,255,0.7);--modal-bg:rgba(0,0,0,0.45);
+      --row-alt:rgba(0,0,0,0.03);--row-hi:rgba(16,185,129,0.07);
     }
     body{margin:0;background:var(--bg);font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv02','cv03','cv04','cv11';font-variant-numeric:tabular-nums}
     ::-webkit-scrollbar{width:5px;height:5px}
@@ -1014,9 +1016,35 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
   const isCurr=today.getFullYear()===year&&today.getMonth()+1===month
   const entriesByDay={};exits;entries.forEach(e=>{if(e.dueDay)entriesByDay[e.dueDay]=(entriesByDay[e.dueDay]||0)+(e.expectedValue||0)})
   const exitsByDay={};exits.forEach(e=>{if(e.day)exitsByDay[e.day]=(exitsByDay[e.day]||0)+(e.expectedValue||0)})
+  // Build chart data
+  let runProj=mData.cashBalance||0
+  const chartData=Array.from({length:daysInMonth},(_,i)=>{
+    const d=i+1;runProj+=(entriesByDay[d]||0)-(exitsByDay[d]||0)
+    const real=mData.dailyCash?.[String(d)]
+    return{name:d,'Projetado':runProj,'Real':real??undefined}
+  })
   let running=mData.cashBalance||0
   return(
-    <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
+    <div className="space-y-4">
+      <div className="rounded-2xl p-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
+        <h3 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{color:'var(--text-3)'}}>Evolução do Saldo — {MONTH_NAMES[month-1]}</h3>
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={chartData} margin={{top:4,right:4,left:0,bottom:0}}>
+            <defs>
+              <linearGradient id="gProj" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+              <linearGradient id="gReal" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--sep)"/>
+            <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} interval={4}/>
+            <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`} width={32}/>
+            <Tooltip content={<CTip/>}/>
+            <Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+            <Area type="monotone" dataKey="Projetado" stroke="#10b981" fill="url(#gProj)" strokeWidth={2} dot={false}/>
+            <Area type="monotone" dataKey="Real" stroke="#3b82f6" fill="url(#gReal)" strokeWidth={2} dot={false} connectNulls={false}/>
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
       <table className="w-full min-w-[700px]">
         <thead style={{background:'var(--bg)'}}><tr><Th>Dia</Th><Th right>Ent. Prev.</Th><Th right>Saí. Prev.</Th><Th right>Saldo Esp.</Th><Th right>Saldo Real</Th><Th>Status</Th><Th>Obs.</Th></tr></thead>
         <tbody>
@@ -1028,8 +1056,8 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
             const diff=realCash!=null?realCash-running:null
             const status=realCash!=null?(Math.abs(diff)<1?'✅':'⚠️'):(isPast?'⏳':'—')
             return(
-              <tr key={d} className="border-t" style={{borderColor:'var(--sep)',background:isToday?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
-                <Td><span style={{color:isToday?'#10b981':'#f1f5f9'}}>{d}</span>{isToday&&<span className="ml-1 text-xs text-emerald-500">hoje</span>}</Td>
+              <tr key={d} className="border-t" style={{borderColor:'var(--sep)',background:isToday?'var(--row-hi)':i%2===0?'transparent':'var(--row-alt)'}}>
+                <Td><span style={{color:isToday?'#10b981':'var(--text)'}}>{d}</span>{isToday&&<span className="ml-1 text-xs text-emerald-500">hoje</span>}</Td>
                 <Td right color={dIn>0?'#10b981':'#475569'}>{dIn>0?fmtBRL(dIn):'—'}</Td>
                 <Td right color={dOut>0?'#ef4444':'#475569'}>{dOut>0?fmtBRL(dOut):'—'}</Td>
                 <Td right color={running>=0?'#f1f5f9':'#ef4444'}>{fmtBRL(running)}</Td>
@@ -1045,6 +1073,7 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
           })}
         </tbody>
       </table>
+    </div>
     </div>
   )
 }
@@ -1175,8 +1204,8 @@ function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
 }
 
 // ─── PROJEÇÃO ANUAL ───────────────────────────────────────────────────────────
-function AnnualProjectionPage({state}){
-  const today=new Date();const year=today.getFullYear()
+function AnnualProjectionPage({state,selYear}){
+  const today=new Date();const year=selYear||today.getFullYear()
   const rows=Array.from({length:12},(_,i)=>{
     const mk=monthKey(year,i+1);const m=state.months[mk]||{}
     const entries=m.entries||[];const exits=m.exits||[]
@@ -1192,7 +1221,7 @@ function AnnualProjectionPage({state}){
   return(
     <div className="space-y-5">
       <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
-        <h3 className="text-sm font-semibold text-slate-300 mb-4">Evolução {year}</h3>
+        <h3 className="text-sm font-semibold mb-4" style={{color:'var(--text-2)'}}>Evolução {year}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={chartData}>
             <defs>
@@ -1214,14 +1243,14 @@ function AnnualProjectionPage({state}){
           <tbody>{data.map((r,i)=>{
             const rP=r.expIn-r.expOut;const rR=r.realIn-r.realOut
             return(
-              <tr key={r.mk} className="border-t" style={{borderColor:'var(--sep)',background:r.isCurrent?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
-                <Td><span style={{color:r.isCurrent?'#10b981':'#f1f5f9'}}>{r.name}</span>{r.isCurrent&&<span className="ml-1 text-xs text-emerald-500">atual</span>}</Td>
+              <tr key={r.mk} className="border-t" style={{borderColor:'var(--sep)',background:r.isCurrent?'var(--row-hi)':i%2===0?'transparent':'var(--row-alt)'}}>
+                <Td><span style={{color:r.isCurrent?'#10b981':'var(--text)'}}>{r.name}</span>{r.isCurrent&&<span className="ml-1 text-xs text-emerald-500">atual</span>}</Td>
                 <Td right color="#10b981">{fmtBRL(r.expIn)}</Td><Td right color="#ef4444">{fmtBRL(r.expOut)}</Td>
                 <Td right color={rP>=0?'#10b981':'#ef4444'}>{fmtBRL(rP)}</Td>
-                <Td right color={r.realIn>0?'#10b981':'#475569'}>{r.realIn>0?fmtBRL(r.realIn):'—'}</Td>
-                <Td right color={r.realOut>0?'#ef4444':'#475569'}>{r.realOut>0?fmtBRL(r.realOut):'—'}</Td>
-                <Td right color={rR!==0?(rR>=0?'#10b981':'#ef4444'):'#475569'}>{r.realIn>0||r.realOut>0?fmtBRL(rR):'—'}</Td>
-                <Td right color={(r.isPast||r.isCurrent)?r.accR>=0?'#f1f5f9':'#ef4444':r.accP>=0?'#64748b':'#ef4444'}>{fmtBRL((r.isPast||r.isCurrent)?r.accR:r.accP)}</Td>
+                <Td right color={r.realIn>0?'#10b981':'var(--text-3)'}>{r.realIn>0?fmtBRL(r.realIn):'—'}</Td>
+                <Td right color={r.realOut>0?'#ef4444':'var(--text-3)'}>{r.realOut>0?fmtBRL(r.realOut):'—'}</Td>
+                <Td right color={rR!==0?(rR>=0?'#10b981':'#ef4444'):'var(--text-3)'}>{r.realIn>0||r.realOut>0?fmtBRL(rR):'—'}</Td>
+                <Td right color={(r.isPast||r.isCurrent)?r.accR>=0?'var(--text)':'#ef4444':r.accP>=0?'var(--text-3)':'#ef4444'}>{fmtBRL((r.isPast||r.isCurrent)?r.accR:r.accP)}</Td>
               </tr>
             )
           })}</tbody>
@@ -2380,6 +2409,8 @@ function PaiolFinanceApp({currentUser,onLogout}){
 
   function prevMonth(){if(selMonth===1){setSelYear(y=>y-1);setSelMonth(12)}else setSelMonth(m=>m-1)}
   function nextMonth(){if(selMonth===12){setSelYear(y=>y+1);setSelMonth(1)}else setSelMonth(m=>m+1)}
+  function prevYear(){setSelYear(y=>y-1)}
+  function nextYear(){setSelYear(y=>y+1)}
 
   const pp={state,dispatch,monthKey:mk,toast}
   const pages={
@@ -2390,7 +2421,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
     objetivos:<GoalsPage state={state} dispatch={dispatch} toast={toast}/>,
     tasks:<TasksPage state={state} dispatch={dispatch} toast={toast}/>,
     calendar:<CalendarPage state={state} dispatch={dispatch} monthKey={mk} toast={toast}/>,
-    annual:<AnnualProjectionPage {...pp}/>,simulator:<SimulatorPage {...pp}/>,settings:<SettingsPage {...pp}/>,
+    annual:<AnnualProjectionPage state={state} selYear={selYear}/>,simulator:<SimulatorPage {...pp}/>,settings:<SettingsPage {...pp}/>,
   }
   const monthData=state.months[mk]||{}
 
@@ -2403,10 +2434,16 @@ function PaiolFinanceApp({currentUser,onLogout}){
           <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'var(--bg-header)',borderBottom:'1px solid var(--sep)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)'}}>
             <div className="flex items-center gap-3">
               <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><Menu size={18}/></button>
-              {activePage!=='annual'&&(
+              {activePage==='annual'?(
+                <div className="flex items-center gap-1.5">
+                  <button onClick={prevYear} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronLeft size={16}/></button>
+                  <span className="text-sm font-semibold min-w-[80px] text-center tracking-tight" style={{color:'var(--text)'}}>{selYear}</span>
+                  <button onClick={nextYear} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronRight size={16}/></button>
+                </div>
+              ):(
                 <div className="flex items-center gap-1.5">
                   <button onClick={prevMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronLeft size={16}/></button>
-                  <span className="text-sm font-semibold text-white min-w-[130px] text-center tracking-tight">{MONTH_NAMES[selMonth-1]} · {selYear}</span>
+                  <span className="text-sm font-semibold min-w-[130px] text-center tracking-tight" style={{color:'var(--text)'}}>{MONTH_NAMES[selMonth-1]} · {selYear}</span>
                   <button onClick={nextMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronRight size={16}/></button>
                 </div>
               )}
