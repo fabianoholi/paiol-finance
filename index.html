@@ -4,6 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PAIOL FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -71,13 +74,17 @@
   </script>
   <style>
     *{box-sizing:border-box}
-    body{margin:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
+    body{margin:0;background:#000;font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv02','cv03','cv04','cv11';font-variant-numeric:tabular-nums}
     ::-webkit-scrollbar{width:5px;height:5px}
-    ::-webkit-scrollbar-track{background:#0a1628}
-    ::-webkit-scrollbar-thumb{background:#2d3f55;border-radius:4px}
-    ::-webkit-scrollbar-thumb:hover{background:#334155}
-    select option{background:#1e293b;color:#f1f5f9}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:10px}
+    ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.2)}
+    select option{background:#1a1a1a;color:#f1f5f9}
     input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:0.3}
+    .glass{background:rgba(255,255,255,0.06);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 0.5px 0 rgba(255,255,255,0.18)}
+    .glass-card{background:rgba(28,28,30,0.75);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.35),inset 0 0.5px 0 rgba(255,255,255,0.12)}
+    .glass-input{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#f1f5f9}
+    .glass-input:focus{outline:none;border-color:rgba(16,185,129,0.5);box-shadow:0 0 0 3px rgba(16,185,129,0.12)}
   </style>
 </head>
 <body>
@@ -570,11 +577,11 @@ async function gasPost(data){await fetch(GAS_URL,{method:'POST',body:JSON.string
 // ─── UI BASE ──────────────────────────────────────────────────────────────────
 function Modal({title,onClose,children,wide}){
   return(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(4px)'}} onClick={onClose}>
-      <div className={`relative rounded-2xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'#1e293b',border:'1px solid #2d3f55',boxShadow:'0 25px 50px rgba(0,0,0,0.5)'}} onClick={e=>e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.7)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)'}} onClick={onClose}>
+      <div className={`relative rounded-3xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'rgba(20,20,20,0.92)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',border:'1px solid rgba(255,255,255,0.12)',boxShadow:'0 32px 80px rgba(0,0,0,0.7),inset 0 0.5px 0 rgba(255,255,255,0.18)'}} onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-base font-semibold text-slate-100">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-700 transition-all"><X size={16}/></button>
+          <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'rgba(255,255,255,0.08)',color:'rgba(255,255,255,0.6)'}}><X size={15}/></button>
         </div>
         {children}
       </div>
@@ -586,8 +593,8 @@ function Toast({toasts}){
   return(
     <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
       {toasts.map(t=>(
-        <div key={t.id} className="flex items-center gap-2.5 px-4 py-3 rounded-2xl text-sm font-semibold shadow-2xl backdrop-blur"
-          style={{background:t.type==='error'?'#ef4444ee':t.type==='warn'?'#f59e0bee':'#10b981ee',color:'#fff',minWidth:220,border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div key={t.id} className="flex items-center gap-2.5 px-4 py-3 text-sm font-semibold"
+          style={{background:t.type==='error'?'rgba(239,68,68,0.9)':t.type==='warn'?'rgba(245,158,11,0.9)':'rgba(16,185,129,0.9)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',color:'#fff',minWidth:220,borderRadius:14,border:'1px solid rgba(255,255,255,0.2)',boxShadow:'0 8px 32px rgba(0,0,0,0.4)'}}>
           {t.type==='error'?<AlertCircle size={15}/>:<CheckCircle size={15}/>}{t.msg}
         </div>
       ))}
@@ -597,13 +604,13 @@ function Toast({toasts}){
 
 function SummaryCard({label,value,sub,color,icon:Icon}){
   return(
-    <div className="rounded-2xl p-5 transition-all hover:brightness-105" style={{background:'#1e293b',border:'1px solid #2d3f55',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}>
+    <div className="rounded-3xl p-5 transition-all" style={{background:'rgba(255,255,255,0.05)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',border:'1px solid rgba(255,255,255,0.1)',boxShadow:'0 4px 24px rgba(0,0,0,0.3),inset 0 0.5px 0 rgba(255,255,255,0.15)'}}>
       <div className="flex items-start justify-between mb-4">
-        <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">{label}</span>
-        {Icon&&<div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{background:`linear-gradient(135deg,${color}25,${color}10)`,border:`1px solid ${color}30`}}><Icon size={16} style={{color}}/></div>}
+        <span className="text-xs font-medium uppercase tracking-widest" style={{color:'rgba(235,235,245,0.5)'}}>{label}</span>
+        {Icon&&<div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{background:`${color}20`,border:`1px solid ${color}35`}}><Icon size={16} style={{color}}/></div>}
       </div>
-      <div className="text-2xl font-bold tracking-tight mb-1" style={{color:color||'#f1f5f9'}}>{value}</div>
-      {sub&&<div className="text-xs text-slate-500">{sub}</div>}
+      <div className="text-2xl font-bold tracking-tight mb-1" style={{color:color||'#ffffff'}}>{value}</div>
+      {sub&&<div className="text-xs" style={{color:'rgba(235,235,245,0.4)'}}>{sub}</div>}
     </div>
   )
 }
@@ -624,27 +631,27 @@ function ProgressBar({label,current,total,color}){
   return(
     <div>
       <div className="flex justify-between text-xs text-slate-500 mb-1.5"><span>{label}</span><span className="font-medium" style={{color:color||'#10b981'}}>{Math.round(pct)}%</span></div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'#2d3f55'}}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.1)'}}>
         <div className="h-full rounded-full transition-all duration-500" style={{width:`${pct}%`,background:`linear-gradient(90deg,${color||'#10b981'},${color||'#10b981'}aa)`}}/>
       </div>
     </div>
   )
 }
 
-function Field({label,children}){return <div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>}
-const iCls="w-full px-3.5 py-2.5 rounded-xl text-sm text-slate-100 outline-none transition-all focus:ring-2 focus:ring-emerald-500/30"
-const iSty={background:'#0f172a',border:'1px solid #2d3f55'}
+function Field({label,children}){return <div><label className="block text-xs font-medium mb-1.5" style={{color:'rgba(235,235,245,0.5)',letterSpacing:'0.02em'}}>{label}</label>{children}</div>}
+const iCls="w-full px-3.5 py-2.5 rounded-2xl text-sm outline-none transition-all glass-input"
+const iSty={background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#ffffff'}
 function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
 function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
-function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold rounded-xl transition-all hover:brightness-110 active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:`linear-gradient(135deg,${color},${color}dd)`,color:'#fff',boxShadow:`0 2px 8px ${color}40`}}>{children}</button>}
-function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 rounded-xl transition-all hover:bg-slate-600 active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'#2d3f55',color:'#94a3b8',border:'1px solid #2d3f55'}}>{children}</button>}
+function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 4px 12px ${color}55`}}>{children}</button>}
+function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'rgba(255,255,255,0.07)',color:'rgba(235,235,245,0.7)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10}}>{children}</button>}
 
-function Th({children,right}){return <th className={`px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-widest ${right?'text-right':'text-left'}`}>{children}</th>}
-function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 text-sm border-b border-slate-800 ${right?'text-right':''} ${muted?'text-slate-500':''}`} style={{color:color||undefined}}>{children}</td>}
+function Th({children,right}){return <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-widest ${right?'text-right':'text-left'}`} style={{color:'rgba(235,235,245,0.35)'}}>{children}</th>}
+function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 text-sm ${right?'text-right':''}`} style={{color:color||(muted?'rgba(235,235,245,0.35)':'rgba(235,235,245,0.85)'),borderBottom:'1px solid rgba(255,255,255,0.05)'}}>{children}</td>}
 
 const CTip=({active,payload,label})=>{
   if(!active||!payload?.length)return null
-  return <div className="rounded-lg p-3 text-sm" style={{background:'#0f172a',border:'1px solid #2d3f55'}}><p className="text-slate-400 mb-1">{label}</p>{payload.map((p,i)=><p key={i} style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
+  return <div className="rounded-2xl p-3 text-sm" style={{background:'rgba(20,20,20,0.95)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:'1px solid rgba(255,255,255,0.12)',boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}><p className="mb-1" style={{color:'rgba(235,235,245,0.5)'}}>{label}</p>{payload.map((p,i)=><p key={i} className="font-medium" style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -700,7 +707,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl p-5 space-y-4" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-5 space-y-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <h3 className="text-sm font-semibold text-slate-300">Resultado do Mês</h3>
           <div className="flex gap-6">
             <div><div className="text-xs text-slate-500 mb-1">Previsto</div><div className="text-xl font-bold" style={{color:resPrev>=0?'#10b981':'#ef4444'}}>{fmtBRL(resPrev)}</div></div>
@@ -711,7 +718,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
           {!month.closed&&<button onClick={()=>{dispatch({type:'CLOSE_MONTH',payload:{monthKey:mk}});toast('Mês fechado!')}} className="text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1 pt-1"><Check size={12}/> Fechar mês</button>}
           {month.closed&&<span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle size={12}/> Mês fechado</span>}
         </div>
-        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3">Previsto vs Realizado</h3>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={barData} barSize={16}>
@@ -735,7 +742,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
         }).map(c=>({...c,daysLeft:Math.floor((new Date(c.endDate+'T12:00:00')-todayD)/86400000)})).sort((a,b)=>a.daysLeft-b.daysLeft)
         if(alertas.length===0)return null
         return(
-          <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #f59e0b40'}}>
+          <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid #f59e0b40'}}>
             <h3 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2"><AlertCircle size={14}/> Contratos Vencendo</h3>
             <div className="space-y-2">{alertas.map(c=>(
               <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-slate-700/50">
@@ -751,7 +758,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
       })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingUp size={14} style={{color:'#10b981'}}/> A Receber ({pendIn.length})</h3>
           {pendIn.length===0?<p className="text-xs text-slate-500">Tudo recebido!</p>:(
             <div className="space-y-2">{pendIn.map(e=>(
@@ -762,7 +769,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
             ))}</div>
           )}
         </div>
-        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingDown size={14} style={{color:'#ef4444'}}/> A Pagar ({pendOut.length})</h3>
           {pendOut.length===0?<p className="text-xs text-slate-500">Tudo pago!</p>:(
             <div className="space-y-2">{pendOut.map(e=>(
@@ -810,19 +817,19 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
         <div className="flex gap-2 flex-wrap">
           {['Todos','Previsto','Cobrado','Recebido'].map(s=>(
             <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-              style={{background:filter===s?'#10b981':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #2d3f55'}}>{s}</button>
+              style={{background:filter===s?'#10b981':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid rgba(255,255,255,0.1)'}}>{s}</button>
           ))}
         </div>
         <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
       </div>
-      <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
+      <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
         <table className="w-full min-w-[600px]">
-          <thead style={{background:'#0f172a'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th right>Diferença</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+          <thead style={{background:'#000000'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th right>Diferença</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
           <tbody>
             {filtered.map((e,i)=>{
               const diff=(e.realValue||0)-(e.expectedValue||0)
               return(
-                <tr key={e.id} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                <tr key={e.id} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
                   <Td>{e.client}</Td><Td muted>{e.dueDay||'—'}</Td>
                   <Td right>{fmtBRL(e.expectedValue)}</Td>
                   <Td right color={e.realValue?'#f1f5f9':'#475569'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
@@ -837,7 +844,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
             })}
             {filtered.length===0&&<tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma entrada</td></tr>}
           </tbody>
-          <tfoot style={{background:'#0f172a',borderTop:'1px solid #2d3f55'}}>
+          <tfoot style={{background:'#000000',borderTop:'1px solid rgba(255,255,255,0.1)'}}>
             <tr>
               <td colSpan={2} className="px-3 py-2 text-xs text-slate-400 font-medium">Total ({filtered.length})</td>
               <td className="px-3 py-2 text-sm text-right font-bold text-slate-200">{fmtBRL(filtered.reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
@@ -899,12 +906,12 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
         <SummaryCard label="A Pagar" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-2xl p-4" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <h3 className="text-xs font-medium text-slate-400 mb-2">Por Categoria</h3>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2}>
               {pieData.map((_,i)=><Cell key={i} fill={CAT_COLORS[i%CAT_COLORS.length]}/>)}
-            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,fontSize:12}}/></PieChart>
+            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,fontSize:12}}/></PieChart>
           </ResponsiveContainer>
           <div className="space-y-1 mt-1">{pieData.slice(0,5).map((d,i)=>(
             <div key={d.name} className="flex items-center justify-between text-xs">
@@ -918,17 +925,17 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
             <div className="flex gap-2 flex-wrap">
               {['Todos','Pendente','Pago'].map(s=>(
                 <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-                  style={{background:filter===s?'#ef4444':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #2d3f55'}}>{s}</button>
+                  style={{background:filter===s?'#ef4444':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid rgba(255,255,255,0.1)'}}>{s}</button>
               ))}
             </div>
             <Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setModal('add')}}><Plus size={14}/> Adicionar</Btn>
           </div>
-          <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
+          <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
             <table className="w-full min-w-[500px]">
-              <thead style={{background:'#0f172a'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+              <thead style={{background:'#000000'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
               <tbody>
                 {filtered.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                  <tr key={e.id} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
                     <Td><div>{e.name}</div>{e.cardId&&<div className="text-xs text-slate-500">{cardName(e.cardId)}</div>}</Td>
                     <Td muted>{e.category}</Td><Td muted>{e.day||'—'}</Td>
                     <Td right>{fmtBRL(e.expectedValue)}</Td>
@@ -983,9 +990,9 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
   const exitsByDay={};exits.forEach(e=>{if(e.day)exitsByDay[e.day]=(exitsByDay[e.day]||0)+(e.expectedValue||0)})
   let running=mData.cashBalance||0
   return(
-    <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
+    <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
       <table className="w-full min-w-[700px]">
-        <thead style={{background:'#0f172a'}}><tr><Th>Dia</Th><Th right>Ent. Prev.</Th><Th right>Saí. Prev.</Th><Th right>Saldo Esp.</Th><Th right>Saldo Real</Th><Th>Status</Th><Th>Obs.</Th></tr></thead>
+        <thead style={{background:'#000000'}}><tr><Th>Dia</Th><Th right>Ent. Prev.</Th><Th right>Saí. Prev.</Th><Th right>Saldo Esp.</Th><Th right>Saldo Real</Th><Th>Status</Th><Th>Obs.</Th></tr></thead>
         <tbody>
           {Array.from({length:daysInMonth},(_,i)=>i+1).map((d,i)=>{
             const dIn=entriesByDay[d]||0;const dOut=exitsByDay[d]||0;running+=dIn-dOut
@@ -995,14 +1002,14 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
             const diff=realCash!=null?realCash-running:null
             const status=realCash!=null?(Math.abs(diff)<1?'✅':'⚠️'):(isPast?'⏳':'—')
             return(
-              <tr key={d} className="border-t" style={{borderColor:'#334155',background:isToday?'#1a3a2a':i%2===0?'#1e293b':'#1a2540'}}>
+              <tr key={d} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:isToday?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
                 <Td><span style={{color:isToday?'#10b981':'#f1f5f9'}}>{d}</span>{isToday&&<span className="ml-1 text-xs text-emerald-500">hoje</span>}</Td>
                 <Td right color={dIn>0?'#10b981':'#475569'}>{dIn>0?fmtBRL(dIn):'—'}</Td>
                 <Td right color={dOut>0?'#ef4444':'#475569'}>{dOut>0?fmtBRL(dOut):'—'}</Td>
                 <Td right color={running>=0?'#f1f5f9':'#ef4444'}>{fmtBRL(running)}</Td>
                 <td className="px-3 py-1.5"><input type="number" defaultValue={realCash??''} placeholder="—"
                   onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v))dispatch({type:'UPDATE_DAILY_CASH',payload:{monthKey:mk,day:String(d),value:v}})}}
-                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'#0f172a',border:'1px solid #2d3f55',color:'#f1f5f9'}}/></td>
+                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'#000000',border:'1px solid rgba(255,255,255,0.1)',color:'#f1f5f9'}}/></td>
                 <Td>{status}</Td>
                 <td className="px-3 py-1.5"><input defaultValue={mData.dailyNotes?.[String(d)]||''} placeholder="Observação..."
                   onBlur={e=>dispatch({type:'UPDATE_DAILY_NOTE',payload:{monthKey:mk,day:String(d),note:e.target.value}})}
@@ -1035,13 +1042,13 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
     <div className="space-y-5">
       <div className="flex gap-2 flex-wrap">{cards.map(c=>(
         <button key={c.id} onClick={()=>setSel(c.id)} className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={{background:sel===c.id?'#10b981':'#33415540',color:sel===c.id?'#fff':'#94a3b8',border:`1px solid ${sel===c.id?'#10b981':'#334155'}`}}>
+          style={{background:sel===c.id?'#10b981':'rgba(255,255,255,0.06)',color:sel===c.id?'#fff':'#94a3b8',border:`1px solid ${sel===c.id?'#10b981':'rgba(255,255,255,0.07)'}`}}>
           <CreditCard size={12} className="inline mr-1.5"/>{c.name}
         </button>
       ))}</div>
       {card&&(
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-2xl p-5 space-y-3" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+          <div className="rounded-2xl p-5 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg" style={{background:'#10b98120'}}><CreditCard size={18} style={{color:'#10b981'}}/></div>
               <div><div className="font-semibold text-slate-100">{card.name}</div><div className="text-xs text-slate-500">{card.type} · {card.description}</div></div>
@@ -1058,10 +1065,10 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
               <h3 className="text-sm font-semibold text-slate-300">Lançamentos</h3>
               <Btn onClick={()=>{setForm({description:'',value:'',installments:'1',currentInstallment:'1'});setModal(true)}} small><Plus size={12}/> Novo</Btn>
             </div>
-            <div className="rounded-2xl overflow-hidden" style={{border:'1px solid #2d3f55'}}>
-              <table className="w-full"><thead style={{background:'#0f172a'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
+            <div className="rounded-2xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+              <table className="w-full"><thead style={{background:'#000000'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
                 <tbody>{expenses.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                  <tr key={e.id} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
                     <Td>{e.description}</Td><Td right>{fmtBRL(e.value)}</Td>
                     <Td muted>{e.installments>1?`${e.currentInstallment}/${e.installments}`:'1x'}</Td>
                     <Td><button onClick={()=>dispatch({type:'DELETE_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,id:e.id}})} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button></Td>
@@ -1108,7 +1115,7 @@ function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
         const extras=month.collaboratorExtras?.[c.id]||[]
         const extTotal=extras.reduce((s,e)=>s+e.value,0)
         return(
-          <div key={c.id} className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+          <div key={c.id} className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{background:'#10b98130',color:'#10b981'}}>{c.name[0]}</div>
@@ -1158,7 +1165,7 @@ function AnnualProjectionPage({state}){
   const chartData=data.map(r=>({name:r.name.slice(0,3),'Entradas':r.expIn,'Saídas':r.expOut}))
   return(
     <div className="space-y-5">
-      <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+      <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
         <h3 className="text-sm font-semibold text-slate-300 mb-4">Evolução {year}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={chartData}>
@@ -1175,13 +1182,13 @@ function AnnualProjectionPage({state}){
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
+      <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
         <table className="w-full min-w-[800px]">
-          <thead style={{background:'#0f172a'}}><tr><Th>Mês</Th><Th right>Ent.Prev</Th><Th right>Saí.Prev</Th><Th right>Res.Prev</Th><Th right>Ent.Real</Th><Th right>Saí.Real</Th><Th right>Res.Real</Th><Th right>Acumulado</Th></tr></thead>
+          <thead style={{background:'#000000'}}><tr><Th>Mês</Th><Th right>Ent.Prev</Th><Th right>Saí.Prev</Th><Th right>Res.Prev</Th><Th right>Ent.Real</Th><Th right>Saí.Real</Th><Th right>Res.Real</Th><Th right>Acumulado</Th></tr></thead>
           <tbody>{data.map((r,i)=>{
             const rP=r.expIn-r.expOut;const rR=r.realIn-r.realOut
             return(
-              <tr key={r.mk} className="border-t" style={{borderColor:'#334155',background:r.isCurrent?'#1a3a2a':i%2===0?'#1e293b':'#1a2540'}}>
+              <tr key={r.mk} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:r.isCurrent?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
                 <Td><span style={{color:r.isCurrent?'#10b981':'#f1f5f9'}}>{r.name}</span>{r.isCurrent&&<span className="ml-1 text-xs text-emerald-500">atual</span>}</Td>
                 <Td right color="#10b981">{fmtBRL(r.expIn)}</Td><Td right color="#ef4444">{fmtBRL(r.expOut)}</Td>
                 <Td right color={rP>=0?'#10b981':'#ef4444'}>{fmtBRL(rP)}</Td>
@@ -1218,13 +1225,13 @@ function SimulatorPage({state,monthKey:mk}){
   const chartData=(result?.months||[]).map(m=>({name:`M+${m.month}`,'Com simulação':m.result,'Sem simulação':baseIn-baseOut}))
   return(
     <div className="space-y-5">
-      <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+      <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
         <h3 className="text-sm font-semibold text-slate-300 mb-1 flex items-center gap-2"><Zap size={14} style={{color:'#10b981'}}/> Simulador</h3>
         <p className="text-xs text-slate-500 mb-4">Não altera os dados reais.</p>
         <div className="flex gap-2 mb-5 flex-wrap">
           {[['expense','💳 Compra'],['client','🤝 Novo Cliente'],['hire','👤 Contratação']].map(([k,l])=>(
             <button key={k} onClick={()=>{setType(k);setResult(null)}} className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
-              style={{background:type===k?'#10b981':'#33415540',color:type===k?'#fff':'#94a3b8',border:`1px solid ${type===k?'#10b981':'#334155'}`}}>{l}</button>
+              style={{background:type===k?'#10b981':'rgba(255,255,255,0.06)',color:type===k?'#fff':'#94a3b8',border:`1px solid ${type===k?'#10b981':'rgba(255,255,255,0.07)'}`}}>{l}</button>
           ))}
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -1237,7 +1244,7 @@ function SimulatorPage({state,monthKey:mk}){
       </div>
       {result&&(
         <div className="space-y-4">
-          <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+          <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
             <h3 className="text-sm font-semibold text-slate-300 mb-3">{result.name||'Simulação'}</h3>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} barSize={18}>
@@ -1250,11 +1257,11 @@ function SimulatorPage({state,monthKey:mk}){
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="rounded-2xl overflow-hidden" style={{border:'1px solid #2d3f55'}}>
-            <table className="w-full"><thead style={{background:'#0f172a'}}><tr><Th>Mês</Th><Th right>Entradas</Th><Th right>Saídas</Th><Th right>Resultado</Th><Th right>Impacto</Th></tr></thead>
+          <div className="rounded-2xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+            <table className="w-full"><thead style={{background:'#000000'}}><tr><Th>Mês</Th><Th right>Entradas</Th><Th right>Saídas</Th><Th right>Resultado</Th><Th right>Impacto</Th></tr></thead>
               <tbody>{result.months.map((m,i)=>{
                 const impact=m.result-(baseIn-baseOut)
-                return<tr key={i} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+                return<tr key={i} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
                   <Td>Mês +{m.month}</Td><Td right color="#10b981">{fmtBRL(m.in)}</Td><Td right color="#ef4444">{fmtBRL(m.out)}</Td>
                   <Td right color={m.result>=0?'#10b981':'#ef4444'}>{fmtBRL(m.result)}</Td>
                   <Td right color={impact>=0?'#10b981':'#ef4444'}>{impact!==0?(impact>0?'+':'')+fmtBRL(impact):'—'}</Td>
@@ -1310,7 +1317,7 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
       <div className="flex flex-wrap gap-3">
         <BtnG onClick={copyPrev}><Copy size={14}/> Copiar mês anterior</BtnG>
         <BtnG onClick={exportData}><Download size={14}/> Exportar JSON</BtnG>
-        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'#33415540',color:'#94a3b8',border:'1px solid #2d3f55'}}>
+        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8',border:'1px solid rgba(255,255,255,0.1)'}}>
           <RefreshCw size={14}/> Importar JSON
           <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{dispatch({type:'IMPORT',payload:{data:JSON.parse(ev.target.result)}});toast('Importado')}catch{toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
         </label>
@@ -1322,10 +1329,10 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
         <h3 className="text-sm font-semibold text-slate-300">{tabs.find(t=>t.id===tab)?.label}</h3>
         <Btn onClick={()=>{setForm({});setModal('add')}} small><Plus size={12}/> Adicionar</Btn>
       </div>
-      <div className="rounded-2xl overflow-hidden" style={{border:'1px solid #2d3f55'}}>
+      <div className="rounded-2xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
         <table className="w-full"><tbody>
           {items.map((item,i)=>(
-            <tr key={item.id} className="border-b" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
+            <tr key={item.id} className="border-b" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
               {rowRender(item)}
               <Td><div className="flex gap-1.5">
                 <button onClick={()=>{setForm({...item});setModal(item)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
@@ -1390,7 +1397,7 @@ function ClientsPage({state,dispatch,toast}){
   function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas para todos os meses ✓')}
 
   const scMap={active:{label:'Ativo',c:'#10b981',b:'#10b98120'},expiring:{label:'Vencendo',c:'#f59e0b',b:'#f59e0b20'},expired:{label:'Vencido',c:'#ef4444',b:'#ef444420'},no_contract:{label:'Sem contrato',c:'#64748b',b:'#64748b20'}}
-  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
@@ -1412,7 +1419,7 @@ function ClientsPage({state,dispatch,toast}){
         {clients.map(c=>{
           const cs=getCS(c),sc=scMap[cs],dl=getDaysLeft(c.endDate),{r,t}=countReceived(c)
           return(
-            <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'#334155'}`}}>
+            <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'rgba(255,255,255,0.07)'}`}}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-semibold text-slate-100">{c.name}</div>
@@ -1427,7 +1434,7 @@ function ClientsPage({state,dispatch,toast}){
                   {c.endDate&&<div className="flex items-center gap-2" style={{color:dl!==null&&dl<=30?sc.c:'#94a3b8'}}><Clock size={12}/><span>Venc: {c.endDate.split('-').reverse().join('/')}{dl!==null&&(dl>=0?` (${dl}d)`:` (venceu há ${Math.abs(dl)}d)`)}</span></div>}
                   {t>0&&<div>
                     <div className="flex justify-between text-xs text-slate-500 mb-1"><span>Meses recebidos</span><span>{r}/{t}</span></div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{background:'#334155'}}><div className="h-full rounded-full" style={{width:`${(r/t)*100}%`,background:'#10b981'}}/></div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.07)'}}><div className="h-full rounded-full" style={{width:`${(r/t)*100}%`,background:'#10b981'}}/></div>
                   </div>}
                 </div>
               )}
@@ -1437,7 +1444,7 @@ function ClientsPage({state,dispatch,toast}){
               </div>}
               {c.contractNote&&<div className="text-xs text-slate-500 flex items-start gap-1.5"><FileText size={11} className="mt-0.5 shrink-0"/>{c.contractNote}</div>}
               <div className="flex items-center gap-2 pt-1">
-                <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#334155',color:'#94a3b8'}}><Pencil size={11}/> Editar</button>
+                <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'rgba(255,255,255,0.07)',color:'#94a3b8'}}><Pencil size={11}/> Editar</button>
                 {c.startDate&&c.duration&&<button onClick={()=>genEntries(c.id)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}><CalendarCheck size={11}/> Gerar meses</button>}
                 <button onClick={()=>del(c.id)} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{background:'#ef444420',color:'#ef4444'}}><Trash2 size={11}/></button>
               </div>
@@ -1474,7 +1481,7 @@ function ClientsPage({state,dispatch,toast}){
             </div>
             <Fld label="Observações (link Drive, notas...)"><Inp2 value={form.contractNote||''} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Ex: https://drive.google.com/..."/></Fld>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'#33415540',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -1522,7 +1529,7 @@ function PermutaPage({state,dispatch,toast}){
     setModal(null)
   }
 
-  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
 
@@ -1548,7 +1555,7 @@ function PermutaPage({state,dispatch,toast}){
 
       {/* Cards por cliente */}
       {clients.length===0?(
-        <div className="rounded-2xl p-8 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-8 text-center text-slate-500" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <ArrowLeftRight size={32} className="mx-auto mb-3 opacity-30"/>
           <p className="text-sm">Nenhum cliente com permuta cadastrado.</p>
           <p className="text-xs mt-1">Edite um cliente e adicione um valor em "Permuta por mês".</p>
@@ -1560,7 +1567,7 @@ function PermutaPage({state,dispatch,toast}){
             const pct=earned>0?Math.min((used/earned)*100,100):0
             const neg=balance<0
             return(
-              <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${neg?'#ef444440':'#334155'}`}}>
+              <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${neg?'#ef444440':'rgba(255,255,255,0.07)'}`}}>
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-semibold text-slate-100">{c.name}</div>
@@ -1574,12 +1581,12 @@ function PermutaPage({state,dispatch,toast}){
                   <div className="flex justify-between text-slate-400"><span>Ganho ({Math.round(earned/Math.max(c.permuteValue,1))} meses)</span><span>{fmtBRL(earned)}</span></div>
                   <div className="flex justify-between text-slate-400"><span>Consumido</span><span style={{color:'#f59e0b'}}>{fmtBRL(used)}</span></div>
                   <div className="flex justify-between font-semibold"><span className="text-slate-300">Saldo</span><span style={{color:neg?'#ef4444':'#10b981'}}>{fmtBRL(balance)}</span></div>
-                  <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{background:'#334155'}}>
+                  <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{background:'rgba(255,255,255,0.07)'}}>
                     <div className="h-full rounded-full transition-all" style={{width:`${pct}%`,background:neg?'#ef4444':'#a78bfa'}}/>
                   </div>
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button onClick={()=>openModal(c.id,'use')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'#334155',color:'#94a3b8'}}>
+                  <button onClick={()=>openModal(c.id,'use')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'rgba(255,255,255,0.07)',color:'#94a3b8'}}>
                     <ShoppingBag size={11}/> Registrar uso
                   </button>
                   <button onClick={()=>openModal(c.id,'sale')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
@@ -1594,7 +1601,7 @@ function PermutaPage({state,dispatch,toast}){
 
       {/* Histórico */}
       {usages.length>0&&(
-        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-4">Histórico de usos</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -1650,7 +1657,7 @@ function PermutaPage({state,dispatch,toast}){
             )}
             {form.type==='sale'&&<p className="text-xs text-slate-500 flex items-start gap-1"><CheckCircle size={11} style={{marginTop:2,color:'#10b981',flexShrink:0}}/> Uma entrada "Venda Permuta — {form.clientName}" será criada automaticamente no mês escolhido.</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'#33415540',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:form.type==='sale'?'#10b981':'#a78bfa',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -1703,7 +1710,7 @@ function TasksPage({state,dispatch,toast}){
 
   const todoCount=tasks.filter(t=>t.status!=='done').length
 
-  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
@@ -1765,7 +1772,7 @@ function TasksPage({state,dispatch,toast}){
                   return(
                     <div key={t.id} draggable onDragStart={()=>setDragging(t.id)} onDragEnd={()=>setDragging(null)}
                       className="rounded-lg p-3 space-y-2 cursor-grab active:cursor-grabbing"
-                      style={{background:'#1e293b',border:`1px solid ${overdue?'#ef444440':'#334155'}`,opacity:dragging===t.id?0.5:1}}>
+                      style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${overdue?'#ef444440':'rgba(255,255,255,0.07)'}`,opacity:dragging===t.id?0.5:1}}>
                       {/* Prioridade + título */}
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-xs px-1.5 py-0.5 rounded" style={{background:pr.b,color:pr.c,whiteSpace:'nowrap'}}>{pr.label}</span>
@@ -1839,7 +1846,7 @@ function TasksPage({state,dispatch,toast}){
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'#33415540',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -1921,14 +1928,14 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
       <div className={`gap-4 ${selDay?'grid grid-cols-1 lg:grid-cols-3':'block'}`}>
         {/* Grade */}
         <div className={selDay?'lg:col-span-2':''}>
-          <div className="rounded-2xl overflow-hidden" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+          <div className="rounded-2xl overflow-hidden" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
             {/* Cabeçalho dias da semana */}
-            <div className="grid grid-cols-7 border-b" style={{borderColor:'#334155'}}>
+            <div className="grid grid-cols-7 border-b" style={{borderColor:'rgba(255,255,255,0.07)'}}>
               {DOW.map(d=><div key={d} className="py-2 text-center text-xs font-semibold text-slate-500">{d}</div>)}
             </div>
             {/* Células */}
             <div className="grid grid-cols-7">
-              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} className="min-h-[80px] border-r border-b" style={{borderColor:'#334155'}}/>)}
+              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} className="min-h-[80px] border-r border-b" style={{borderColor:'rgba(255,255,255,0.07)'}}/>)}
               {Array.from({length:daysInMonth}).map((_,i)=>{
                 const d=i+1
                 const evs=eventsByDay[d]||[]
@@ -1937,7 +1944,7 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
                 return(
                   <div key={d} onClick={()=>setSelDay(sel?null:d)}
                     className="min-h-[80px] p-1.5 border-r border-b cursor-pointer transition-colors"
-                    style={{borderColor:'#334155',background:sel?'#334155':today?'#10b98108':'transparent'}}>
+                    style={{borderColor:'rgba(255,255,255,0.07)',background:sel?'rgba(255,255,255,0.07)':today?'#10b98108':'transparent'}}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold flex items-center justify-center w-6 h-6 rounded-full"
                         style={{background:today?'#10b981':'transparent',color:today?'#fff':sel?'#f1f5f9':'#64748b'}}>
@@ -1963,7 +1970,7 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
 
         {/* Painel lateral do dia */}
         {selDay&&(
-          <div className="rounded-2xl p-4 space-y-3" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+          <div className="rounded-2xl p-4 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-slate-100">
                 {selDay} de {MONTH_NAMES[curMonth-1]}
@@ -2044,7 +2051,7 @@ function GoalsPage({state,dispatch,toast}){
           {['Todos',...GOAL_STATUSES].map(s=>(
             <button key={s} onClick={()=>setFilterStatus(s)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-              style={{background:filterStatus===s?'#10b981':'#33415540',color:filterStatus===s?'#fff':'#94a3b8',border:filterStatus===s?'none':'1px solid #334155'}}>
+              style={{background:filterStatus===s?'#10b981':'rgba(255,255,255,0.06)',color:filterStatus===s?'#fff':'#94a3b8',border:filterStatus===s?'none':'1px solid rgba(255,255,255,0.07)'}}>
               {s}
             </button>
           ))}
@@ -2054,7 +2061,7 @@ function GoalsPage({state,dispatch,toast}){
 
       {/* Lista de objetivos */}
       {filtered.length===0?(
-        <div className="rounded-2xl p-10 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
+        <div className="rounded-2xl p-10 text-center text-slate-500" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
           <Target size={36} className="mx-auto mb-3 opacity-20"/>
           <p className="text-sm">Nenhum objetivo {filterStatus!=='Todos'?`com status "${filterStatus}"`:'cadastrado'}.</p>
           {filterStatus==='Todos'&&<p className="text-xs mt-1 text-slate-600">Comece adicionando um objetivo de negócio, equipamento ou viagem.</p>}
@@ -2068,7 +2075,7 @@ function GoalsPage({state,dispatch,toast}){
             const staColor=GOAL_STA_COLORS[g.status]||'#64748b'
             const done=g.status==='Concluído'
             return(
-              <div key={g.id} className="rounded-2xl overflow-hidden transition-all" style={{background:'#1e293b',border:`1px solid ${done?'#10b98130':'#334155'}`}}>
+              <div key={g.id} className="rounded-2xl overflow-hidden transition-all" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${done?'#10b98130':'rgba(255,255,255,0.07)'}`}}>
                 <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={()=>setExpanded(e=>({...e,[g.id]:!e[g.id]}))}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -2158,33 +2165,33 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
   }).length
   return(
     <>
-      {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'rgba(0,0,0,0.6)'}} onClick={()=>setOpen(false)}/>}
+      {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)'}} onClick={()=>setOpen(false)}/>}
       <aside className={`fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
-        style={{width:220,background:'#0a1628',borderRight:'1px solid #1e293b'}}>
-        <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'#1e293b'}}>
+        style={{width:220,background:'rgba(10,10,10,0.88)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',borderRight:'1px solid rgba(255,255,255,0.06)'}}>
+        <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'rgba(255,255,255,0.06)'}}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm" style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',boxShadow:'0 2px 8px #10b98150'}}>P</div>
+            <div className="w-8 h-8 rounded-2xl flex items-center justify-center font-bold text-sm" style={{background:'#10b981',color:'#fff',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.25),0 4px 12px #10b98155'}}>P</div>
             <div>
-              <span className="font-bold text-slate-100 text-sm tracking-tight">Paiol Finance</span>
-              <div className="text-xs text-slate-600 leading-none">Paiol Mídias</div>
+              <span className="font-semibold text-white text-sm tracking-tight">Paiol Finance</span>
+              <div className="text-xs leading-none" style={{color:'rgba(235,235,245,0.35)'}}>Paiol Mídias</div>
             </div>
           </div>
-          <button onClick={()=>setOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-300"><X size={16}/></button>
+          <button onClick={()=>setOpen(false)} className="lg:hidden" style={{color:'rgba(235,235,245,0.4)'}}><X size={16}/></button>
         </div>
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto">
           {NAV.map(({id,icon:Icon,label})=>(
-            <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
-              style={{background:activePage===id?'linear-gradient(135deg,#10b98118,#10b98108)':'transparent',color:activePage===id?'#10b981':'#64748b',fontWeight:activePage===id?600:400}}>
-              <Icon size={16}/>{label}
+            <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left"
+              style={{background:activePage===id?'rgba(255,255,255,0.1)':'transparent',color:activePage===id?'#ffffff':'rgba(235,235,245,0.45)',fontWeight:activePage===id?600:400}}>
+              <span style={{color:activePage===id?'#10b981':'rgba(235,235,245,0.3)'}}><Icon size={16}/></span>{label}
               {id==='clients'&&expCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#f59e0b',color:'#000',fontSize:10}}>{expCount}</span>}
               {id==='permuta'&&permuteNegCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#ef4444',color:'#fff',fontSize:10}}>!</span>}
               {id==='tasks'&&openTasksCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:overdueCount>0?'#ef4444':'#3b82f6',color:'#fff',fontSize:10}}>{openTasksCount}</span>}
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t text-xs text-slate-700 flex items-center gap-2" style={{borderColor:'#1e293b'}}>
+        <div className="p-4 border-t flex items-center gap-2" style={{borderColor:'rgba(255,255,255,0.06)'}}>
           <div className="w-1.5 h-1.5 rounded-full" style={{background:'#10b981'}}></div>
-          v1.2 · Paiol Finance
+          <span className="text-xs" style={{color:'rgba(235,235,245,0.25)'}}>v1.2 · Paiol Finance</span>
         </div>
       </aside>
     </>
@@ -2233,35 +2240,35 @@ function LoginScreen({onLogin}){
     setBusy(false)
   }
 
-  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:12,padding:'14px',color:'#f1f5f9',fontSize:22,outline:'none',textAlign:'center',letterSpacing:'0.4em',width:'100%'}
+  const inputSt={background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:16,padding:'16px',color:'#ffffff',fontSize:24,outline:'none',textAlign:'center',letterSpacing:'0.5em',width:'100%',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}
 
   return(
-    <div className="min-h-screen flex items-center justify-center px-4" style={{background:'#0f172a'}}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{background:'#000000'}}>
       <div className="w-full max-w-xs">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{background:'#10b98120',border:'1px solid #10b98140'}}>
-            <KeyRound size={26} style={{color:'#10b981'}}/>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl mb-5" style={{background:'rgba(16,185,129,0.15)',border:'1px solid rgba(16,185,129,0.3)',boxShadow:'0 8px 32px rgba(16,185,129,0.2)',backdropFilter:'blur(20px)'}}>
+            <KeyRound size={28} style={{color:'#10b981'}}/>
           </div>
-          <div className="text-xl font-bold text-slate-100">PAIOL FINANCE</div>
-          <div className="text-xs text-slate-500 mt-1">Paiol Mídias · Área restrita</div>
+          <div className="text-2xl font-bold text-white tracking-tight">Paiol Finance</div>
+          <div className="text-sm mt-1" style={{color:'rgba(235,235,245,0.4)'}}>Paiol Mídias · Área restrita</div>
         </div>
 
         {step==='select'&&(
           <div className="space-y-3">
-            <p className="text-xs text-slate-500 text-center mb-4">Quem está acessando?</p>
+            <p className="text-xs text-center mb-4" style={{color:'rgba(235,235,245,0.4)'}}>Quem está acessando?</p>
             {USERS.map(u=>(
-              <button key={u.id} onClick={()=>pick(u)} className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
-                <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold shrink-0"
-                  style={{background:u.color+'30',border:`2px solid ${u.color}50`}}>
-                  <span style={{color:u.color,fontSize:14}}>{u.initials}</span>
+              <button key={u.id} onClick={()=>pick(u)} className="w-full flex items-center gap-3 p-4 rounded-2xl transition-all active:scale-[0.98]"
+                style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',boxShadow:'inset 0 0.5px 0 rgba(255,255,255,0.15)'}}>
+                <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold shrink-0"
+                  style={{background:u.color+'25',border:`1.5px solid ${u.color}40`}}>
+                  <span style={{color:u.color,fontSize:13}}>{u.initials}</span>
                 </div>
                 <div className="text-left flex-1">
-                  <div className="font-semibold text-slate-100 text-sm">{u.name}</div>
-                  <div className="text-xs text-slate-500">{u.roleLabel}</div>
+                  <div className="font-semibold text-white text-sm">{u.name}</div>
+                  <div className="text-xs mt-0.5" style={{color:'rgba(235,235,245,0.4)'}}>{u.roleLabel}</div>
                 </div>
-                <ChevronRight size={15} style={{color:'#475569'}}/>
+                <ChevronRight size={15} style={{color:'rgba(235,235,245,0.25)'}}/>
               </button>
             ))}
           </div>
@@ -2270,18 +2277,18 @@ function LoginScreen({onLogin}){
         {(step==='pin'||step==='setup')&&(
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-6">
-              <button onClick={back} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">
+              <button onClick={back} className="p-2 rounded-xl" style={{background:'rgba(255,255,255,0.06)',color:'rgba(235,235,245,0.6)'}}>
                 <ChevronLeft size={17}/>
               </button>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{background:user?.color+'30',border:`1.5px solid ${user?.color}50`,color:user?.color}}>
+                  style={{background:user?.color+'25',border:`1.5px solid ${user?.color}40`,color:user?.color}}>
                   {user?.initials}
                 </div>
-                <span className="text-sm font-semibold text-slate-200">{user?.name}</span>
+                <span className="text-sm font-semibold text-white">{user?.name}</span>
               </div>
             </div>
-            <p className="text-xs text-slate-400">{step==='setup'?'Crie seu PIN de 4 dígitos':'Digite seu PIN'}</p>
+            <p className="text-xs" style={{color:'rgba(235,235,245,0.5)'}}>{step==='setup'?'Crie seu PIN de 4 dígitos':'Digite seu PIN'}</p>
             <input type="password" inputMode="numeric" maxLength={4} autoFocus
               value={pin} onChange={e=>{setPin(e.target.value.replace(/\D/g,''));setErr('')}}
               onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="••••" style={inputSt}/>
@@ -2291,13 +2298,13 @@ function LoginScreen({onLogin}){
                 onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="Confirme o PIN" style={inputSt}/>
             )}
             {err&&<p className="text-xs text-red-400 text-center">{err}</p>}
-            <button onClick={submit} disabled={busy} className="w-full py-3 rounded-xl text-sm font-semibold text-white"
-              style={{background:'#10b981',opacity:busy?.7:1,marginTop:8}}>
+            <button onClick={submit} disabled={busy} className="w-full py-3.5 text-sm font-semibold text-white"
+              style={{background:'#10b981',borderRadius:12,opacity:busy?.7:1,marginTop:8,boxShadow:'inset 0 1px 0 rgba(255,255,255,0.2),0 4px 16px rgba(16,185,129,0.4)'}}>
               {busy?'Verificando...':(step==='pin'?'Entrar':'Criar PIN e Entrar')}
             </button>
           </div>
         )}
-        <p className="text-center text-xs text-slate-700 mt-8">v1.1 · Paiol Mídias</p>
+        <p className="text-center text-xs mt-8" style={{color:'rgba(235,235,245,0.2)'}}>v1.2 · Paiol Mídias</p>
       </div>
     </div>
   )
@@ -2353,40 +2360,41 @@ function PaiolFinanceApp({currentUser,onLogout}){
   const monthData=state.months[mk]||{}
 
   return(
-    <div className="min-h-screen flex" style={{background:'#1e293b',color:'#f1f5f9',fontFamily:'system-ui,sans-serif'}}>
+    <div className="min-h-screen flex" style={{background:'#000000',color:'#ffffff'}}>
       <Sidebar activePage={activePage} setActivePage={setActivePage} open={sidebarOpen} setOpen={setSidebarOpen} state={state}/>
       <div className="flex-1 flex flex-col min-h-screen" style={{marginLeft:0,paddingLeft:0}}>
         <div className="flex-1 flex flex-col min-h-screen lg:ml-[220px]">
           {/* Header */}
-          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'#0a1628',borderBottom:'1px solid #1e293b',backdropFilter:'blur(12px)'}}>
+          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'rgba(0,0,0,0.8)',borderBottom:'1px solid rgba(255,255,255,0.07)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)'}}>
             <div className="flex items-center gap-3">
-              <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><Menu size={18}/></button>
-              <div className="flex items-center gap-2">
-                <button onClick={prevMonth} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><ChevronLeft size={16}/></button>
-                <span className="text-sm font-semibold text-slate-100 min-w-[130px] text-center">{MONTH_NAMES[selMonth-1]} / {selYear}</span>
-                <button onClick={nextMonth} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><ChevronRight size={16}/></button>
+              <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl transition-colors" style={{color:'rgba(235,235,245,0.5)'}}><Menu size={18}/></button>
+              <div className="flex items-center gap-1.5">
+                <button onClick={prevMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'rgba(235,235,245,0.5)'}}><ChevronLeft size={16}/></button>
+                <span className="text-sm font-semibold text-white min-w-[130px] text-center tracking-tight">{MONTH_NAMES[selMonth-1]} · {selYear}</span>
+                <button onClick={nextMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'rgba(235,235,245,0.5)'}}><ChevronRight size={16}/></button>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              {monthData.closed&&<span className="px-2 py-0.5 text-xs rounded-full" style={{background:'#10b98120',color:'#10b981'}}>Fechado</span>}
-              <div className="text-right hidden sm:block"><div className="text-xs text-slate-500">Saldo em caixa</div><div className="text-sm font-bold" style={{color:'#10b981'}}>{fmtBRL(monthData.cashBalance)}</div></div>
-              <div className="p-1.5 rounded-lg hidden sm:block" style={{background:'#10b98120'}}><Wallet size={15} style={{color:'#10b981'}}/></div>
-              {/* Avatar do usuário */}
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-700">
+              {monthData.closed&&<span className="px-2.5 py-1 text-xs font-medium rounded-full" style={{background:'rgba(16,185,129,0.15)',color:'#10b981',border:'1px solid rgba(16,185,129,0.3)'}}>Fechado</span>}
+              <div className="text-right hidden sm:block">
+                <div className="text-xs" style={{color:'rgba(235,235,245,0.4)'}}>Saldo em caixa</div>
+                <div className="text-sm font-bold" style={{color:'#10b981'}}>{fmtBRL(monthData.cashBalance)}</div>
+              </div>
+              <div className="p-1.5 rounded-xl hidden sm:block" style={{background:'rgba(16,185,129,0.12)'}}><Wallet size={15} style={{color:'#10b981'}}/></div>
+              <div className="flex items-center gap-2 pl-2" style={{borderLeft:'1px solid rgba(255,255,255,0.1)'}}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                  style={{background:(currentUser.color||'#10b981')+'30',border:`1.5px solid ${currentUser.color||'#10b981'}50`,color:currentUser.color||'#10b981'}}>
+                  style={{background:(currentUser.color||'#10b981')+'25',border:`1.5px solid ${currentUser.color||'#10b981'}45`,color:currentUser.color||'#10b981'}}>
                   {currentUser.initials||currentUser.name?.slice(0,2).toUpperCase()}
                 </div>
-                <span className="text-xs font-medium text-slate-300 hidden sm:block">{currentUser.name}</span>
-                <button onClick={onLogout} title="Sair"
-                  className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors">
+                <span className="text-xs font-medium hidden sm:block" style={{color:'rgba(235,235,245,0.7)'}}>{currentUser.name}</span>
+                <button onClick={onLogout} title="Sair" className="p-1 rounded-lg transition-colors" style={{color:'rgba(235,235,245,0.35)'}}>
                   <LogOut size={14}/>
                 </button>
               </div>
             </div>
           </header>
-          <div className="px-4 pt-4 pb-2"><h1 className="text-base font-semibold text-slate-200">{NAV.find(n=>n.id===activePage)?.label}</h1></div>
-          <main className="flex-1 px-4 pb-8">{pages[activePage]}</main>
+          <div className="px-5 pt-5 pb-2"><h1 className="text-lg font-semibold text-white tracking-tight">{NAV.find(n=>n.id===activePage)?.label}</h1></div>
+          <main className="flex-1 px-5 pb-8">{pages[activePage]}</main>
         </div>
       </div>
       <Toast toasts={toasts}/>
