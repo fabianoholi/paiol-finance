@@ -75,17 +75,42 @@
   </script>
   <style>
     *{box-sizing:border-box}
-    body{margin:0;background:#000;font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv02','cv03','cv04','cv11';font-variant-numeric:tabular-nums}
+    /* ── CSS Variables ────────────────────────────── */
+    :root{
+      color-scheme:dark;
+      --bg:#000000;--bg-sidebar:rgba(10,10,10,0.9);--bg-header:rgba(0,0,0,0.82);
+      --bg-card:rgba(255,255,255,0.05);--bg-input:rgba(255,255,255,0.06);--bg-overlay:rgba(255,255,255,0.08);
+      --text:#ffffff;--text-2:rgba(235,235,245,0.6);--text-3:rgba(235,235,245,0.38);--text-4:rgba(235,235,245,0.22);
+      --border:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.06);--sep:rgba(255,255,255,0.07);
+      --inner:rgba(255,255,255,0.15);--modal-bg:rgba(0,0,0,0.72);
+    }
+    body.light{
+      color-scheme:light;
+      --bg:#f2f2f7;--bg-sidebar:rgba(242,242,247,0.92);--bg-header:rgba(242,242,247,0.88);
+      --bg-card:rgba(255,255,255,0.82);--bg-input:rgba(0,0,0,0.05);--bg-overlay:rgba(0,0,0,0.06);
+      --text:#1c1c1e;--text-2:rgba(60,60,67,0.6);--text-3:rgba(60,60,67,0.45);--text-4:rgba(60,60,67,0.25);
+      --border:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.07);--sep:rgba(0,0,0,0.08);
+      --inner:rgba(255,255,255,0.7);--modal-bg:rgba(0,0,0,0.45);
+    }
+    body{margin:0;background:var(--bg);font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv02','cv03','cv04','cv11';font-variant-numeric:tabular-nums}
     ::-webkit-scrollbar{width:5px;height:5px}
     ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:10px}
-    ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.2)}
-    select option{background:#1a1a1a;color:#f1f5f9}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--text-3)}
+    select option{background:var(--bg);color:var(--text)}
     input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:0.3}
-    .glass{background:rgba(255,255,255,0.06);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 0.5px 0 rgba(255,255,255,0.18)}
-    .glass-card{background:rgba(28,28,30,0.75);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 24px rgba(0,0,0,0.35),inset 0 0.5px 0 rgba(255,255,255,0.12)}
-    .glass-input{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#f1f5f9}
+    .glass{background:var(--bg-card);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 0.5px 0 var(--inner)}
+    .glass-card{background:var(--bg-card);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.2),inset 0 0.5px 0 var(--inner)}
+    .glass-input{background:var(--bg-input);border:1px solid var(--border);color:var(--text)}
     .glass-input:focus{outline:none;border-color:rgba(16,185,129,0.5);box-shadow:0 0 0 3px rgba(16,185,129,0.12)}
+    /* Tailwind text/bg overrides for light mode */
+    body.light .text-white{color:var(--text)!important}
+    body.light .text-slate-100,body.light .text-slate-200{color:rgba(28,28,30,0.9)!important}
+    body.light .text-slate-300,body.light .text-slate-400{color:var(--text-2)!important}
+    body.light .text-slate-500,body.light .text-slate-600,body.light .text-slate-700{color:var(--text-3)!important}
+    body.light .border-slate-700,body.light .border-slate-800{border-color:var(--border)!important}
+    body.light .bg-slate-700,body.light .bg-slate-800{background:var(--bg-overlay)!important}
+    body.light .hover\:bg-slate-600:hover,body.light .hover\:bg-slate-700:hover{background:var(--bg-overlay)!important}
   </style>
 </head>
 <body>
@@ -578,11 +603,11 @@ async function gasPost(data){await fetch(GAS_URL,{method:'POST',body:JSON.string
 // ─── UI BASE ──────────────────────────────────────────────────────────────────
 function Modal({title,onClose,children,wide}){
   return(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.7)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)'}} onClick={onClose}>
-      <div className={`relative rounded-3xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'rgba(20,20,20,0.92)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',border:'1px solid rgba(255,255,255,0.12)',boxShadow:'0 32px 80px rgba(0,0,0,0.7),inset 0 0.5px 0 rgba(255,255,255,0.18)'}} onClick={e=>e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'var(--modal-bg)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)'}} onClick={onClose}>
+      <div className={`relative rounded-3xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'rgba(20,20,20,0.92)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',border:'1px solid var(--border)',boxShadow:'0 32px 80px rgba(0,0,0,0.7),inset 0 0.5px 0 var(--inner)'}} onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'rgba(255,255,255,0.08)',color:'rgba(255,255,255,0.6)'}}><X size={15}/></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'var(--bg-overlay)',color:'rgba(255,255,255,0.6)'}}><X size={15}/></button>
         </div>
         {children}
       </div>
@@ -605,13 +630,13 @@ function Toast({toasts}){
 
 function SummaryCard({label,value,sub,color,icon:Icon,onClick}){
   return(
-    <div onClick={onClick} className="rounded-3xl p-5 transition-all" style={{background:'rgba(255,255,255,0.05)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',border:'1px solid rgba(255,255,255,0.1)',boxShadow:'0 4px 24px rgba(0,0,0,0.3),inset 0 0.5px 0 rgba(255,255,255,0.15)',cursor:onClick?'pointer':'default'}}>
+    <div onClick={onClick} className="rounded-2xl p-4 transition-all" style={{background:'var(--bg-card)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',border:'1px solid var(--border)',boxShadow:'0 4px 24px rgba(0,0,0,0.3),inset 0 0.5px 0 var(--inner)',cursor:onClick?'pointer':'default'}}>
       <div className="flex items-start justify-between mb-4">
-        <span className="text-xs font-medium uppercase tracking-widest" style={{color:'rgba(235,235,245,0.5)'}}>{label}</span>
+        <span className="text-xs font-medium uppercase tracking-widest" style={{color:'var(--text-2)'}}>{label}</span>
         {Icon&&<div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{background:`${color}20`,border:`1px solid ${color}35`}}><Icon size={16} style={{color}}/></div>}
       </div>
-      <div className="text-2xl font-bold tracking-tight mb-1" style={{color:color||'#ffffff'}}>{value}</div>
-      {sub&&<div className="text-xs" style={{color:'rgba(235,235,245,0.4)'}}>{sub}</div>}
+      <div className="text-lg sm:text-xl font-bold tracking-tight mb-1" style={{color:color||'var(--text)'}}>{value}</div>
+      {sub&&<div className="text-xs" style={{color:'var(--text-3)'}}>{sub}</div>}
     </div>
   )
 }
@@ -632,27 +657,27 @@ function ProgressBar({label,current,total,color}){
   return(
     <div>
       <div className="flex justify-between text-xs text-slate-500 mb-1.5"><span>{label}</span><span className="font-medium" style={{color:color||'#10b981'}}>{Math.round(pct)}%</span></div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.1)'}}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'var(--bg-overlay)'}}>
         <div className="h-full rounded-full transition-all duration-500" style={{width:`${pct}%`,background:`linear-gradient(90deg,${color||'#10b981'},${color||'#10b981'}aa)`}}/>
       </div>
     </div>
   )
 }
 
-function Field({label,children}){return <div><label className="block text-xs font-medium mb-1.5" style={{color:'rgba(235,235,245,0.5)',letterSpacing:'0.02em'}}>{label}</label>{children}</div>}
+function Field({label,children}){return <div><label className="block text-xs font-medium mb-1.5" style={{color:'var(--text-2)',letterSpacing:'0.02em'}}>{label}</label>{children}</div>}
 const iCls="w-full px-3.5 py-2.5 rounded-2xl text-sm outline-none transition-all glass-input"
-const iSty={background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#ffffff'}
+const iSty={background:'var(--bg-input)',border:'1px solid var(--border)',color:'#ffffff'}
 function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
 function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
 function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 4px 12px ${color}55`}}>{children}</button>}
-function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'rgba(255,255,255,0.07)',color:'rgba(235,235,245,0.7)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10}}>{children}</button>}
+function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'var(--bg-overlay)',color:'rgba(235,235,245,0.7)',border:'1px solid var(--border)',borderRadius:10}}>{children}</button>}
 
-function Th({children,right}){return <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-widest ${right?'text-right':'text-left'}`} style={{color:'rgba(235,235,245,0.35)'}}>{children}</th>}
+function Th({children,right}){return <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-widest ${right?'text-right':'text-left'}`} style={{color:'var(--text-3)'}}>{children}</th>}
 function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 text-sm ${right?'text-right':''}`} style={{color:color||(muted?'rgba(235,235,245,0.35)':'rgba(235,235,245,0.85)'),borderBottom:'1px solid rgba(255,255,255,0.05)'}}>{children}</td>}
 
 const CTip=({active,payload,label})=>{
   if(!active||!payload?.length)return null
-  return <div className="rounded-2xl p-3 text-sm" style={{background:'rgba(20,20,20,0.95)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:'1px solid rgba(255,255,255,0.12)',boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}><p className="mb-1" style={{color:'rgba(235,235,245,0.5)'}}>{label}</p>{payload.map((p,i)=><p key={i} className="font-medium" style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
+  return <div className="rounded-2xl p-3 text-sm" style={{background:'rgba(20,20,20,0.95)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}><p className="mb-1" style={{color:'var(--text-2)'}}>{label}</p>{payload.map((p,i)=><p key={i} className="font-medium" style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -681,7 +706,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
 
   return(
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="col-span-2 rounded-2xl p-5" style={{background:'linear-gradient(135deg,#10b98115,#10b98105)',border:'1px solid #10b98130',boxShadow:'0 4px 20px #10b98108'}}>
           <div className="flex items-start justify-between mb-3"><span className="text-xs text-slate-400 uppercase tracking-wider">Saldo em Caixa</span><Wallet size={16} style={{color:'#10b981'}}/></div>
           {editBal?(
@@ -708,7 +733,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl p-5 space-y-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-5 space-y-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <h3 className="text-sm font-semibold text-slate-300">Resultado do Mês</h3>
           <div className="flex gap-6">
             <div><div className="text-xs text-slate-500 mb-1">Previsto</div><div className="text-xl font-bold" style={{color:resPrev>=0?'#10b981':'#ef4444'}}>{fmtBRL(resPrev)}</div></div>
@@ -719,7 +744,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
           {!month.closed&&<button onClick={()=>{dispatch({type:'CLOSE_MONTH',payload:{monthKey:mk}});toast('Mês fechado!')}} className="text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1 pt-1"><Check size={12}/> Fechar mês</button>}
           {month.closed&&<span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle size={12}/> Mês fechado</span>}
         </div>
-        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3">Previsto vs Realizado</h3>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={barData} barSize={16}>
@@ -743,7 +768,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
         }).map(c=>({...c,daysLeft:Math.floor((new Date(c.endDate+'T12:00:00')-todayD)/86400000)})).sort((a,b)=>a.daysLeft-b.daysLeft)
         if(alertas.length===0)return null
         return(
-          <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid #f59e0b40'}}>
+          <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid #f59e0b40'}}>
             <h3 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2"><AlertCircle size={14}/> Contratos Vencendo</h3>
             <div className="space-y-2">{alertas.map(c=>(
               <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-slate-700/50">
@@ -759,7 +784,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
       })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingUp size={14} style={{color:'#10b981'}}/> A Receber ({pendIn.length})</h3>
           {pendIn.length===0?<p className="text-xs text-slate-500">Tudo recebido!</p>:(
             <div className="space-y-2">{pendIn.map(e=>(
@@ -770,7 +795,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
             ))}</div>
           )}
         </div>
-        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingDown size={14} style={{color:'#ef4444'}}/> A Pagar ({pendOut.length})</h3>
           {pendOut.length===0?<p className="text-xs text-slate-500">Tudo pago!</p>:(
             <div className="space-y-2">{pendOut.map(e=>(
@@ -809,7 +834,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
   function del(id){dispatch({type:'DELETE_ENTRY',payload:{monthKey:mk,id}});toast('Removido','warn')}
   return(
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard label="Previsto" value={fmtBRL(totalExp)} color="#3b82f6" icon={TrendingUp}/>
         <SummaryCard label="Recebido" value={fmtBRL(totalReal)} color="#10b981" icon={CheckCircle}/>
         <SummaryCard label="A Receber" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
@@ -818,19 +843,19 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
         <div className="flex gap-2 flex-wrap">
           {['Todos','Previsto','Cobrado','Recebido'].map(s=>(
             <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-              style={{background:filter===s?'#10b981':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid rgba(255,255,255,0.1)'}}>{s}</button>
+              style={{background:filter===s?'#10b981':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid var(--border)'}}>{s}</button>
           ))}
         </div>
         <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
       </div>
-      <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+      <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
         <table className="w-full min-w-[600px]">
-          <thead style={{background:'#000000'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th right>Diferença</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+          <thead style={{background:'var(--bg)'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th right>Diferença</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
           <tbody>
             {filtered.map((e,i)=>{
               const diff=(e.realValue||0)-(e.expectedValue||0)
               return(
-                <tr key={e.id} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
+                <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
                   <Td>{e.client}</Td><Td muted>{e.dueDay||'—'}</Td>
                   <Td right>{fmtBRL(e.expectedValue)}</Td>
                   <Td right color={e.realValue?'#f1f5f9':'#475569'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
@@ -845,7 +870,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
             })}
             {filtered.length===0&&<tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma entrada</td></tr>}
           </tbody>
-          <tfoot style={{background:'#000000',borderTop:'1px solid rgba(255,255,255,0.1)'}}>
+          <tfoot style={{background:'var(--bg)',borderTop:'1px solid var(--border)'}}>
             <tr>
               <td colSpan={2} className="px-3 py-2 text-xs text-slate-400 font-medium">Total ({filtered.length})</td>
               <td className="px-3 py-2 text-sm text-right font-bold text-slate-200">{fmtBRL(filtered.reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
@@ -901,18 +926,18 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
   const cardName=id=>cards.find(c=>c.id===id)?.name||'—'
   return(
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard label="Previsto" value={fmtBRL(totalExp)} color="#ef4444" icon={TrendingDown}/>
         <SummaryCard label="Pago" value={fmtBRL(totalPaid)} color="#10b981" icon={CheckCircle}/>
         <SummaryCard label="A Pagar" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-2xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <h3 className="text-xs font-medium text-slate-400 mb-2">Por Categoria</h3>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2}>
               {pieData.map((_,i)=><Cell key={i} fill={CAT_COLORS[i%CAT_COLORS.length]}/>)}
-            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,fontSize:12}}/></PieChart>
+            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,fontSize:12}}/></PieChart>
           </ResponsiveContainer>
           <div className="space-y-1 mt-1">{pieData.slice(0,5).map((d,i)=>(
             <div key={d.name} className="flex items-center justify-between text-xs">
@@ -926,17 +951,17 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
             <div className="flex gap-2 flex-wrap">
               {['Todos','Pendente','Pago'].map(s=>(
                 <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-                  style={{background:filter===s?'#ef4444':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid rgba(255,255,255,0.1)'}}>{s}</button>
+                  style={{background:filter===s?'#ef4444':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid var(--border)'}}>{s}</button>
               ))}
             </div>
             <Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setModal('add')}}><Plus size={14}/> Adicionar</Btn>
           </div>
-          <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+          <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
             <table className="w-full min-w-[500px]">
-              <thead style={{background:'#000000'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+              <thead style={{background:'var(--bg)'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
               <tbody>
                 {filtered.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
+                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
                     <Td><div>{e.name}</div>{e.cardId&&<div className="text-xs text-slate-500">{cardName(e.cardId)}</div>}</Td>
                     <Td muted>{e.category}</Td><Td muted>{e.day||'—'}</Td>
                     <Td right>{fmtBRL(e.expectedValue)}</Td>
@@ -991,9 +1016,9 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
   const exitsByDay={};exits.forEach(e=>{if(e.day)exitsByDay[e.day]=(exitsByDay[e.day]||0)+(e.expectedValue||0)})
   let running=mData.cashBalance||0
   return(
-    <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+    <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
       <table className="w-full min-w-[700px]">
-        <thead style={{background:'#000000'}}><tr><Th>Dia</Th><Th right>Ent. Prev.</Th><Th right>Saí. Prev.</Th><Th right>Saldo Esp.</Th><Th right>Saldo Real</Th><Th>Status</Th><Th>Obs.</Th></tr></thead>
+        <thead style={{background:'var(--bg)'}}><tr><Th>Dia</Th><Th right>Ent. Prev.</Th><Th right>Saí. Prev.</Th><Th right>Saldo Esp.</Th><Th right>Saldo Real</Th><Th>Status</Th><Th>Obs.</Th></tr></thead>
         <tbody>
           {Array.from({length:daysInMonth},(_,i)=>i+1).map((d,i)=>{
             const dIn=entriesByDay[d]||0;const dOut=exitsByDay[d]||0;running+=dIn-dOut
@@ -1003,14 +1028,14 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
             const diff=realCash!=null?realCash-running:null
             const status=realCash!=null?(Math.abs(diff)<1?'✅':'⚠️'):(isPast?'⏳':'—')
             return(
-              <tr key={d} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:isToday?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
+              <tr key={d} className="border-t" style={{borderColor:'var(--sep)',background:isToday?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
                 <Td><span style={{color:isToday?'#10b981':'#f1f5f9'}}>{d}</span>{isToday&&<span className="ml-1 text-xs text-emerald-500">hoje</span>}</Td>
                 <Td right color={dIn>0?'#10b981':'#475569'}>{dIn>0?fmtBRL(dIn):'—'}</Td>
                 <Td right color={dOut>0?'#ef4444':'#475569'}>{dOut>0?fmtBRL(dOut):'—'}</Td>
                 <Td right color={running>=0?'#f1f5f9':'#ef4444'}>{fmtBRL(running)}</Td>
                 <td className="px-3 py-1.5"><input type="number" defaultValue={realCash??''} placeholder="—"
                   onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v))dispatch({type:'UPDATE_DAILY_CASH',payload:{monthKey:mk,day:String(d),value:v}})}}
-                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'#000000',border:'1px solid rgba(255,255,255,0.1)',color:'#f1f5f9'}}/></td>
+                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'var(--bg)',border:'1px solid var(--border)',color:'#f1f5f9'}}/></td>
                 <Td>{status}</Td>
                 <td className="px-3 py-1.5"><input defaultValue={mData.dailyNotes?.[String(d)]||''} placeholder="Observação..."
                   onBlur={e=>dispatch({type:'UPDATE_DAILY_NOTE',payload:{monthKey:mk,day:String(d),note:e.target.value}})}
@@ -1049,7 +1074,7 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
       ))}</div>
       {card&&(
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-2xl p-5 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+          <div className="rounded-2xl p-5 space-y-3" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg" style={{background:'#10b98120'}}><CreditCard size={18} style={{color:'#10b981'}}/></div>
               <div><div className="font-semibold text-slate-100">{card.name}</div><div className="text-xs text-slate-500">{card.type} · {card.description}</div></div>
@@ -1066,10 +1091,10 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
               <h3 className="text-sm font-semibold text-slate-300">Lançamentos</h3>
               <Btn onClick={()=>{setForm({description:'',value:'',installments:'1',currentInstallment:'1'});setModal(true)}} small><Plus size={12}/> Novo</Btn>
             </div>
-            <div className="rounded-2xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
-              <table className="w-full"><thead style={{background:'#000000'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
+            <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
+              <table className="w-full"><thead style={{background:'var(--bg)'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
                 <tbody>{expenses.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
+                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
                     <Td>{e.description}</Td><Td right>{fmtBRL(e.value)}</Td>
                     <Td muted>{e.installments>1?`${e.currentInstallment}/${e.installments}`:'1x'}</Td>
                     <Td><button onClick={()=>dispatch({type:'DELETE_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,id:e.id}})} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button></Td>
@@ -1107,7 +1132,7 @@ function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
   const totalExt=collabs.reduce((s,c)=>s+(month.collaboratorExtras?.[c.id]||[]).reduce((ss,e)=>ss+e.value,0),0)
   return(
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard label="Salários" value={fmtBRL(totalSal)} color="#3b82f6" icon={Users}/>
         <SummaryCard label="Extras" value={fmtBRL(totalExt)} color="#f59e0b" icon={Plus}/>
         <SummaryCard label="Total" value={fmtBRL(totalSal+totalExt)} color="#10b981" icon={DollarSign}/>
@@ -1116,7 +1141,7 @@ function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
         const extras=month.collaboratorExtras?.[c.id]||[]
         const extTotal=extras.reduce((s,e)=>s+e.value,0)
         return(
-          <div key={c.id} className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+          <div key={c.id} className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{background:'#10b98130',color:'#10b981'}}>{c.name[0]}</div>
@@ -1166,7 +1191,7 @@ function AnnualProjectionPage({state}){
   const chartData=data.map(r=>({name:r.name.slice(0,3),'Entradas':r.expIn,'Saídas':r.expOut}))
   return(
     <div className="space-y-5">
-      <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+      <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
         <h3 className="text-sm font-semibold text-slate-300 mb-4">Evolução {year}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={chartData}>
@@ -1183,13 +1208,13 @@ function AnnualProjectionPage({state}){
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="rounded-2xl overflow-auto" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+      <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
         <table className="w-full min-w-[800px]">
-          <thead style={{background:'#000000'}}><tr><Th>Mês</Th><Th right>Ent.Prev</Th><Th right>Saí.Prev</Th><Th right>Res.Prev</Th><Th right>Ent.Real</Th><Th right>Saí.Real</Th><Th right>Res.Real</Th><Th right>Acumulado</Th></tr></thead>
+          <thead style={{background:'var(--bg)'}}><tr><Th>Mês</Th><Th right>Ent.Prev</Th><Th right>Saí.Prev</Th><Th right>Res.Prev</Th><Th right>Ent.Real</Th><Th right>Saí.Real</Th><Th right>Res.Real</Th><Th right>Acumulado</Th></tr></thead>
           <tbody>{data.map((r,i)=>{
             const rP=r.expIn-r.expOut;const rR=r.realIn-r.realOut
             return(
-              <tr key={r.mk} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:r.isCurrent?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
+              <tr key={r.mk} className="border-t" style={{borderColor:'var(--sep)',background:r.isCurrent?'#1a3a2a':i%2===0?'#141414':'#1a2540'}}>
                 <Td><span style={{color:r.isCurrent?'#10b981':'#f1f5f9'}}>{r.name}</span>{r.isCurrent&&<span className="ml-1 text-xs text-emerald-500">atual</span>}</Td>
                 <Td right color="#10b981">{fmtBRL(r.expIn)}</Td><Td right color="#ef4444">{fmtBRL(r.expOut)}</Td>
                 <Td right color={rP>=0?'#10b981':'#ef4444'}>{fmtBRL(rP)}</Td>
@@ -1226,7 +1251,7 @@ function SimulatorPage({state,monthKey:mk}){
   const chartData=(result?.months||[]).map(m=>({name:`M+${m.month}`,'Com simulação':m.result,'Sem simulação':baseIn-baseOut}))
   return(
     <div className="space-y-5">
-      <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+      <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
         <h3 className="text-sm font-semibold text-slate-300 mb-1 flex items-center gap-2"><Zap size={14} style={{color:'#10b981'}}/> Simulador</h3>
         <p className="text-xs text-slate-500 mb-4">Não altera os dados reais.</p>
         <div className="flex gap-2 mb-5 flex-wrap">
@@ -1245,7 +1270,7 @@ function SimulatorPage({state,monthKey:mk}){
       </div>
       {result&&(
         <div className="space-y-4">
-          <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+          <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
             <h3 className="text-sm font-semibold text-slate-300 mb-3">{result.name||'Simulação'}</h3>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} barSize={18}>
@@ -1258,11 +1283,11 @@ function SimulatorPage({state,monthKey:mk}){
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="rounded-2xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
-            <table className="w-full"><thead style={{background:'#000000'}}><tr><Th>Mês</Th><Th right>Entradas</Th><Th right>Saídas</Th><Th right>Resultado</Th><Th right>Impacto</Th></tr></thead>
+          <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
+            <table className="w-full"><thead style={{background:'var(--bg)'}}><tr><Th>Mês</Th><Th right>Entradas</Th><Th right>Saídas</Th><Th right>Resultado</Th><Th right>Impacto</Th></tr></thead>
               <tbody>{result.months.map((m,i)=>{
                 const impact=m.result-(baseIn-baseOut)
-                return<tr key={i} className="border-t" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
+                return<tr key={i} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
                   <Td>Mês +{m.month}</Td><Td right color="#10b981">{fmtBRL(m.in)}</Td><Td right color="#ef4444">{fmtBRL(m.out)}</Td>
                   <Td right color={m.result>=0?'#10b981':'#ef4444'}>{fmtBRL(m.result)}</Td>
                   <Td right color={impact>=0?'#10b981':'#ef4444'}>{impact!==0?(impact>0?'+':'')+fmtBRL(impact):'—'}</Td>
@@ -1318,7 +1343,7 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
       <div className="flex flex-wrap gap-3">
         <BtnG onClick={copyPrev}><Copy size={14}/> Copiar mês anterior</BtnG>
         <BtnG onClick={exportData}><Download size={14}/> Exportar JSON</BtnG>
-        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'var(--bg-input)',color:'#94a3b8',border:'1px solid var(--border)'}}>
           <RefreshCw size={14}/> Importar JSON
           <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{dispatch({type:'IMPORT',payload:{data:JSON.parse(ev.target.result)}});toast('Importado')}catch{toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
         </label>
@@ -1330,10 +1355,10 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
         <h3 className="text-sm font-semibold text-slate-300">{tabs.find(t=>t.id===tab)?.label}</h3>
         <Btn onClick={()=>{setForm({});setModal('add')}} small><Plus size={12}/> Adicionar</Btn>
       </div>
-      <div className="rounded-2xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+      <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
         <table className="w-full"><tbody>
           {items.map((item,i)=>(
-            <tr key={item.id} className="border-b" style={{borderColor:'rgba(255,255,255,0.07)',background:i%2===0?'#141414':'#1a2540'}}>
+            <tr key={item.id} className="border-b" style={{borderColor:'var(--sep)',background:i%2===0?'#141414':'#1a2540'}}>
               {rowRender(item)}
               <Td><div className="flex gap-1.5">
                 <button onClick={()=>{setForm({...item});setModal(item)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
@@ -1398,14 +1423,14 @@ function ClientsPage({state,dispatch,toast}){
   function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas para todos os meses ✓')}
 
   const scMap={active:{label:'Ativo',c:'#10b981',b:'#10b98120'},expiring:{label:'Vencendo',c:'#f59e0b',b:'#f59e0b20'},expired:{label:'Vencido',c:'#ef4444',b:'#ef444420'},no_contract:{label:'Sem contrato',c:'#64748b',b:'#64748b20'}}
-  const inputSt={background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
 
   return(
     <div className="space-y-5">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <SummaryCard label="Total de Clientes" value={clients.length} color="#3b82f6" icon={Briefcase}/>
         <SummaryCard label="Receita Mensal" value={fmtBRL(clients.reduce((s,c)=>s+(c.value||0),0))} color="#10b981" icon={TrendingUp}/>
         <SummaryCard label="Contratos Ativos" value={clients.filter(c=>getCS(c)==='active').length} color="#10b981" icon={CheckCircle}/>
@@ -1420,7 +1445,7 @@ function ClientsPage({state,dispatch,toast}){
         {clients.map(c=>{
           const cs=getCS(c),sc=scMap[cs],dl=getDaysLeft(c.endDate),{r,t}=countReceived(c)
           return(
-            <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'rgba(255,255,255,0.07)'}`}}>
+            <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'var(--bg-card)',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'rgba(255,255,255,0.07)'}`}}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-semibold text-slate-100">{c.name}</div>
@@ -1435,7 +1460,7 @@ function ClientsPage({state,dispatch,toast}){
                   {c.endDate&&<div className="flex items-center gap-2" style={{color:dl!==null&&dl<=30?sc.c:'#94a3b8'}}><Clock size={12}/><span>Venc: {c.endDate.split('-').reverse().join('/')}{dl!==null&&(dl>=0?` (${dl}d)`:` (venceu há ${Math.abs(dl)}d)`)}</span></div>}
                   {t>0&&<div>
                     <div className="flex justify-between text-xs text-slate-500 mb-1"><span>Meses recebidos</span><span>{r}/{t}</span></div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.07)'}}><div className="h-full rounded-full" style={{width:`${(r/t)*100}%`,background:'#10b981'}}/></div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{background:'var(--bg-overlay)'}}><div className="h-full rounded-full" style={{width:`${(r/t)*100}%`,background:'#10b981'}}/></div>
                   </div>}
                 </div>
               )}
@@ -1445,7 +1470,7 @@ function ClientsPage({state,dispatch,toast}){
               </div>}
               {c.contractNote&&<div className="text-xs text-slate-500 flex items-start gap-1.5"><FileText size={11} className="mt-0.5 shrink-0"/>{c.contractNote}</div>}
               <div className="flex items-center gap-2 pt-1">
-                <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'rgba(255,255,255,0.07)',color:'#94a3b8'}}><Pencil size={11}/> Editar</button>
+                <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--bg-overlay)',color:'#94a3b8'}}><Pencil size={11}/> Editar</button>
                 {c.startDate&&c.duration&&<button onClick={()=>genEntries(c.id)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}><CalendarCheck size={11}/> Gerar meses</button>}
                 <button onClick={()=>del(c.id)} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{background:'#ef444420',color:'#ef4444'}}><Trash2 size={11}/></button>
               </div>
@@ -1482,7 +1507,7 @@ function ClientsPage({state,dispatch,toast}){
             </div>
             <Fld label="Observações (link Drive, notas...)"><Inp2 value={form.contractNote||''} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Ex: https://drive.google.com/..."/></Fld>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'#94a3b8'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -1530,7 +1555,7 @@ function PermutaPage({state,dispatch,toast}){
     setModal(null)
   }
 
-  const inputSt={background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
 
@@ -1548,7 +1573,7 @@ function PermutaPage({state,dispatch,toast}){
   return(
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard label="Permuta/mês em carteira" value={fmtBRL(totalPermuta)} color="#a78bfa" icon={ArrowLeftRight}/>
         <SummaryCard label="Total consumido" value={fmtBRL(totalUsed)} color="#f59e0b" icon={ShoppingBag}/>
         <SummaryCard label="Vendas em dinheiro" value={fmtBRL(totalSales)} color="#10b981" icon={DollarSign}/>
@@ -1556,7 +1581,7 @@ function PermutaPage({state,dispatch,toast}){
 
       {/* Cards por cliente */}
       {clients.length===0?(
-        <div className="rounded-2xl p-8 text-center text-slate-500" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-8 text-center text-slate-500" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <ArrowLeftRight size={32} className="mx-auto mb-3 opacity-30"/>
           <p className="text-sm">Nenhum cliente com permuta cadastrado.</p>
           <p className="text-xs mt-1">Edite um cliente e adicione um valor em "Permuta por mês".</p>
@@ -1568,7 +1593,7 @@ function PermutaPage({state,dispatch,toast}){
             const pct=earned>0?Math.min((used/earned)*100,100):0
             const neg=balance<0
             return(
-              <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${neg?'#ef444440':'rgba(255,255,255,0.07)'}`}}>
+              <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'var(--bg-card)',border:`1px solid ${neg?'#ef444440':'rgba(255,255,255,0.07)'}`}}>
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-semibold text-slate-100">{c.name}</div>
@@ -1582,12 +1607,12 @@ function PermutaPage({state,dispatch,toast}){
                   <div className="flex justify-between text-slate-400"><span>Ganho ({Math.round(earned/Math.max(c.permuteValue,1))} meses)</span><span>{fmtBRL(earned)}</span></div>
                   <div className="flex justify-between text-slate-400"><span>Consumido</span><span style={{color:'#f59e0b'}}>{fmtBRL(used)}</span></div>
                   <div className="flex justify-between font-semibold"><span className="text-slate-300">Saldo</span><span style={{color:neg?'#ef4444':'#10b981'}}>{fmtBRL(balance)}</span></div>
-                  <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{background:'rgba(255,255,255,0.07)'}}>
+                  <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{background:'var(--bg-overlay)'}}>
                     <div className="h-full rounded-full transition-all" style={{width:`${pct}%`,background:neg?'#ef4444':'#a78bfa'}}/>
                   </div>
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button onClick={()=>openModal(c.id,'use')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'rgba(255,255,255,0.07)',color:'#94a3b8'}}>
+                  <button onClick={()=>openModal(c.id,'use')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'var(--bg-overlay)',color:'#94a3b8'}}>
                     <ShoppingBag size={11}/> Registrar uso
                   </button>
                   <button onClick={()=>openModal(c.id,'sale')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
@@ -1602,7 +1627,7 @@ function PermutaPage({state,dispatch,toast}){
 
       {/* Histórico */}
       {usages.length>0&&(
-        <div className="rounded-2xl p-5" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-5" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-4">Histórico de usos</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -1658,7 +1683,7 @@ function PermutaPage({state,dispatch,toast}){
             )}
             {form.type==='sale'&&<p className="text-xs text-slate-500 flex items-start gap-1"><CheckCircle size={11} style={{marginTop:2,color:'#10b981',flexShrink:0}}/> Uma entrada "Venda Permuta — {form.clientName}" será criada automaticamente no mês escolhido.</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'#94a3b8'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:form.type==='sale'?'#10b981':'#a78bfa',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -1711,7 +1736,7 @@ function TasksPage({state,dispatch,toast}){
 
   const todoCount=tasks.filter(t=>t.status!=='done').length
 
-  const inputSt={background:'#000000',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
@@ -1773,7 +1798,7 @@ function TasksPage({state,dispatch,toast}){
                   return(
                     <div key={t.id} draggable onDragStart={()=>setDragging(t.id)} onDragEnd={()=>setDragging(null)}
                       className="rounded-lg p-3 space-y-2 cursor-grab active:cursor-grabbing"
-                      style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${overdue?'#ef444440':'rgba(255,255,255,0.07)'}`,opacity:dragging===t.id?0.5:1}}>
+                      style={{background:'var(--bg-card)',border:`1px solid ${overdue?'#ef444440':'rgba(255,255,255,0.07)'}`,opacity:dragging===t.id?0.5:1}}>
                       {/* Prioridade + título */}
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-xs px-1.5 py-0.5 rounded" style={{background:pr.b,color:pr.c,whiteSpace:'nowrap'}}>{pr.label}</span>
@@ -1847,7 +1872,7 @@ function TasksPage({state,dispatch,toast}){
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'rgba(255,255,255,0.06)',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'#94a3b8'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -1929,14 +1954,14 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
       <div className={`gap-4 ${selDay?'grid grid-cols-1 lg:grid-cols-3':'block'}`}>
         {/* Grade */}
         <div className={selDay?'lg:col-span-2':''}>
-          <div className="rounded-2xl overflow-hidden" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+          <div className="rounded-2xl overflow-hidden" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
             {/* Cabeçalho dias da semana */}
-            <div className="grid grid-cols-7 border-b" style={{borderColor:'rgba(255,255,255,0.07)'}}>
+            <div className="grid grid-cols-7 border-b" style={{borderColor:'var(--sep)'}}>
               {DOW.map(d=><div key={d} className="py-2 text-center text-xs font-semibold text-slate-500">{d}</div>)}
             </div>
             {/* Células */}
             <div className="grid grid-cols-7">
-              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} className="min-h-[80px] border-r border-b" style={{borderColor:'rgba(255,255,255,0.07)'}}/>)}
+              {Array.from({length:firstDay}).map((_,i)=><div key={`e${i}`} className="min-h-[80px] border-r border-b" style={{borderColor:'var(--sep)'}}/>)}
               {Array.from({length:daysInMonth}).map((_,i)=>{
                 const d=i+1
                 const evs=eventsByDay[d]||[]
@@ -1945,7 +1970,7 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
                 return(
                   <div key={d} onClick={()=>setSelDay(sel?null:d)}
                     className="min-h-[80px] p-1.5 border-r border-b cursor-pointer transition-colors"
-                    style={{borderColor:'rgba(255,255,255,0.07)',background:sel?'rgba(255,255,255,0.07)':today?'#10b98108':'transparent'}}>
+                    style={{borderColor:'var(--sep)',background:sel?'rgba(255,255,255,0.07)':today?'#10b98108':'transparent'}}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold flex items-center justify-center w-6 h-6 rounded-full"
                         style={{background:today?'#10b981':'transparent',color:today?'#fff':sel?'#f1f5f9':'#64748b'}}>
@@ -1971,7 +1996,7 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
 
         {/* Painel lateral do dia */}
         {selDay&&(
-          <div className="rounded-2xl p-4 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+          <div className="rounded-2xl p-4 space-y-3" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-slate-100">
                 {selDay} de {MONTH_NAMES[curMonth-1]}
@@ -2039,7 +2064,7 @@ function GoalsPage({state,dispatch,toast}){
   return(
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <SummaryCard label="Total de objetivos" value={goals.length} color="#8b5cf6" icon={Target}/>
         <SummaryCard label="Concluídos" value={goals.filter(g=>g.status==='Concluído').length} color="#10b981" icon={CheckCircle}/>
         <SummaryCard label="Investimento estimado" value={fmtBRL(totalCost)} color="#f59e0b" icon={DollarSign}/>
@@ -2052,7 +2077,7 @@ function GoalsPage({state,dispatch,toast}){
           {['Todos',...GOAL_STATUSES].map(s=>(
             <button key={s} onClick={()=>setFilterStatus(s)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-              style={{background:filterStatus===s?'#10b981':'rgba(255,255,255,0.06)',color:filterStatus===s?'#fff':'#94a3b8',border:filterStatus===s?'none':'1px solid rgba(255,255,255,0.07)'}}>
+              style={{background:filterStatus===s?'#10b981':'rgba(255,255,255,0.06)',color:filterStatus===s?'#fff':'#94a3b8',border:filterStatus===s?'none':'1px solid var(--sep)'}}>
               {s}
             </button>
           ))}
@@ -2062,7 +2087,7 @@ function GoalsPage({state,dispatch,toast}){
 
       {/* Lista de objetivos */}
       {filtered.length===0?(
-        <div className="rounded-2xl p-10 text-center text-slate-500" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        <div className="rounded-2xl p-10 text-center text-slate-500" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <Target size={36} className="mx-auto mb-3 opacity-20"/>
           <p className="text-sm">Nenhum objetivo {filterStatus!=='Todos'?`com status "${filterStatus}"`:'cadastrado'}.</p>
           {filterStatus==='Todos'&&<p className="text-xs mt-1 text-slate-600">Comece adicionando um objetivo de negócio, equipamento ou viagem.</p>}
@@ -2076,7 +2101,7 @@ function GoalsPage({state,dispatch,toast}){
             const staColor=GOAL_STA_COLORS[g.status]||'#64748b'
             const done=g.status==='Concluído'
             return(
-              <div key={g.id} className="rounded-2xl overflow-hidden transition-all" style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${done?'#10b98130':'rgba(255,255,255,0.07)'}`}}>
+              <div key={g.id} className="rounded-2xl overflow-hidden transition-all" style={{background:'var(--bg-card)',border:`1px solid ${done?'#10b98130':'rgba(255,255,255,0.07)'}`}}>
                 <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={()=>setExpanded(e=>({...e,[g.id]:!e[g.id]}))}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -2166,18 +2191,18 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
   }).length
   return(
     <>
-      {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)'}} onClick={()=>setOpen(false)}/>}
+      {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'var(--modal-bg)',backdropFilter:'blur(4px)'}} onClick={()=>setOpen(false)}/>}
       <aside className={`fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
-        style={{width:220,background:'rgba(10,10,10,0.88)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',borderRight:'1px solid rgba(255,255,255,0.06)'}}>
-        <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'rgba(255,255,255,0.06)'}}>
+        style={{width:220,background:'var(--bg-sidebar)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',borderRight:'1px solid var(--border-s)'}}>
+        <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-2xl flex items-center justify-center font-bold text-sm" style={{background:'#10b981',color:'#fff',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.25),0 4px 12px #10b98155'}}>P</div>
             <div>
               <span className="font-semibold text-white text-sm tracking-tight">Paiol Finance</span>
-              <div className="text-xs leading-none" style={{color:'rgba(235,235,245,0.35)'}}>Paiol Mídias</div>
+              <div className="text-xs leading-none" style={{color:'var(--text-3)'}}>Paiol Mídias</div>
             </div>
           </div>
-          <button onClick={()=>setOpen(false)} className="lg:hidden" style={{color:'rgba(235,235,245,0.4)'}}><X size={16}/></button>
+          <button onClick={()=>setOpen(false)} className="lg:hidden" style={{color:'var(--text-3)'}}><X size={16}/></button>
         </div>
         <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto">
           {NAV.map(({id,icon:Icon,label})=>(
@@ -2190,10 +2215,10 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
             </button>
           ))}
         </nav>
-        <div className="p-3 border-t flex items-center justify-between" style={{borderColor:'rgba(255,255,255,0.06)'}}>
+        <div className="p-3 border-t flex items-center justify-between" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full" style={{background:'#10b981'}}></div>
-            <span className="text-xs" style={{color:'rgba(235,235,245,0.25)'}}>v1.2 · Paiol Finance</span>
+            <span className="text-xs" style={{color:'var(--text-4)'}}>v1.2 · Paiol Finance</span>
           </div>
           <a href="https://t.me/paiolfinance_bot" target="_blank" rel="noopener noreferrer"
             title="Abrir bot no Telegram"
@@ -2250,10 +2275,10 @@ function LoginScreen({onLogin}){
     setBusy(false)
   }
 
-  const inputSt={background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:16,padding:'16px',color:'#ffffff',fontSize:24,outline:'none',textAlign:'center',letterSpacing:'0.5em',width:'100%',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}
+  const inputSt={background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:16,padding:'16px',color:'#ffffff',fontSize:24,outline:'none',textAlign:'center',letterSpacing:'0.5em',width:'100%',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}
 
   return(
-    <div className="min-h-screen flex items-center justify-center px-4" style={{background:'#000000'}}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{background:'var(--bg)'}}>
       <div className="w-full max-w-xs">
         {/* Logo */}
         <div className="text-center mb-10">
@@ -2261,24 +2286,24 @@ function LoginScreen({onLogin}){
             <KeyRound size={28} style={{color:'#10b981'}}/>
           </div>
           <div className="text-2xl font-bold text-white tracking-tight">Paiol Finance</div>
-          <div className="text-sm mt-1" style={{color:'rgba(235,235,245,0.4)'}}>Paiol Mídias · Área restrita</div>
+          <div className="text-sm mt-1" style={{color:'var(--text-3)'}}>Paiol Mídias · Área restrita</div>
         </div>
 
         {step==='select'&&(
           <div className="space-y-3">
-            <p className="text-xs text-center mb-4" style={{color:'rgba(235,235,245,0.4)'}}>Quem está acessando?</p>
+            <p className="text-xs text-center mb-4" style={{color:'var(--text-3)'}}>Quem está acessando?</p>
             {USERS.map(u=>(
               <button key={u.id} onClick={()=>pick(u)} className="w-full flex items-center gap-3 p-4 rounded-2xl transition-all active:scale-[0.98]"
-                style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',boxShadow:'inset 0 0.5px 0 rgba(255,255,255,0.15)'}}>
+                style={{background:'var(--bg-input)',border:'1px solid var(--border)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',boxShadow:'inset 0 0.5px 0 var(--inner)'}}>
                 <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold shrink-0"
                   style={{background:u.color+'25',border:`1.5px solid ${u.color}40`}}>
                   <span style={{color:u.color,fontSize:13}}>{u.initials}</span>
                 </div>
                 <div className="text-left flex-1">
                   <div className="font-semibold text-white text-sm">{u.name}</div>
-                  <div className="text-xs mt-0.5" style={{color:'rgba(235,235,245,0.4)'}}>{u.roleLabel}</div>
+                  <div className="text-xs mt-0.5" style={{color:'var(--text-3)'}}>{u.roleLabel}</div>
                 </div>
-                <ChevronRight size={15} style={{color:'rgba(235,235,245,0.25)'}}/>
+                <ChevronRight size={15} style={{color:'var(--text-4)'}}/>
               </button>
             ))}
           </div>
@@ -2287,7 +2312,7 @@ function LoginScreen({onLogin}){
         {(step==='pin'||step==='setup')&&(
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-6">
-              <button onClick={back} className="p-2 rounded-xl" style={{background:'rgba(255,255,255,0.06)',color:'rgba(235,235,245,0.6)'}}>
+              <button onClick={back} className="p-2 rounded-xl" style={{background:'var(--bg-input)',color:'var(--text-2)'}}>
                 <ChevronLeft size={17}/>
               </button>
               <div className="flex items-center gap-2">
@@ -2298,7 +2323,7 @@ function LoginScreen({onLogin}){
                 <span className="text-sm font-semibold text-white">{user?.name}</span>
               </div>
             </div>
-            <p className="text-xs" style={{color:'rgba(235,235,245,0.5)'}}>{step==='setup'?'Crie seu PIN de 4 dígitos':'Digite seu PIN'}</p>
+            <p className="text-xs" style={{color:'var(--text-2)'}}>{step==='setup'?'Crie seu PIN de 4 dígitos':'Digite seu PIN'}</p>
             <input type="password" inputMode="numeric" maxLength={4} autoFocus
               value={pin} onChange={e=>{setPin(e.target.value.replace(/\D/g,''));setErr('')}}
               onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="••••" style={inputSt}/>
@@ -2314,7 +2339,7 @@ function LoginScreen({onLogin}){
             </button>
           </div>
         )}
-        <p className="text-center text-xs mt-8" style={{color:'rgba(235,235,245,0.2)'}}>v1.2 · Paiol Mídias</p>
+        <p className="text-center text-xs mt-8" style={{color:'var(--text-4)'}}>v1.2 · Paiol Mídias</p>
       </div>
     </div>
   )
@@ -2370,36 +2395,36 @@ function PaiolFinanceApp({currentUser,onLogout}){
   const monthData=state.months[mk]||{}
 
   return(
-    <div className="min-h-screen flex" style={{background:'#000000',color:'#ffffff'}}>
+    <div className="min-h-screen flex" style={{background:'var(--bg)',color:'var(--text)'}}>
       <Sidebar activePage={activePage} setActivePage={setActivePage} open={sidebarOpen} setOpen={setSidebarOpen} state={state}/>
       <div className="flex-1 flex flex-col min-h-screen" style={{marginLeft:0,paddingLeft:0}}>
         <div className="flex-1 flex flex-col min-h-screen lg:ml-[220px]">
           {/* Header */}
-          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'rgba(0,0,0,0.8)',borderBottom:'1px solid rgba(255,255,255,0.07)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)'}}>
+          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'var(--bg-header)',borderBottom:'1px solid var(--sep)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)'}}>
             <div className="flex items-center gap-3">
-              <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl transition-colors" style={{color:'rgba(235,235,245,0.5)'}}><Menu size={18}/></button>
+              <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><Menu size={18}/></button>
               {activePage!=='annual'&&(
                 <div className="flex items-center gap-1.5">
-                  <button onClick={prevMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'rgba(235,235,245,0.5)'}}><ChevronLeft size={16}/></button>
+                  <button onClick={prevMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronLeft size={16}/></button>
                   <span className="text-sm font-semibold text-white min-w-[130px] text-center tracking-tight">{MONTH_NAMES[selMonth-1]} · {selYear}</span>
-                  <button onClick={nextMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'rgba(235,235,245,0.5)'}}><ChevronRight size={16}/></button>
+                  <button onClick={nextMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronRight size={16}/></button>
                 </div>
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               {monthData.closed&&<span className="px-2.5 py-1 text-xs font-medium rounded-full" style={{background:'rgba(16,185,129,0.15)',color:'#10b981',border:'1px solid rgba(16,185,129,0.3)'}}>Fechado</span>}
               <div className="text-right hidden sm:block">
-                <div className="text-xs" style={{color:'rgba(235,235,245,0.4)'}}>Saldo em caixa</div>
+                <div className="text-xs" style={{color:'var(--text-3)'}}>Saldo em caixa</div>
                 <div className="text-sm font-bold" style={{color:'#10b981'}}>{fmtBRL(monthData.cashBalance)}</div>
               </div>
               <div className="p-1.5 rounded-xl hidden sm:block" style={{background:'rgba(16,185,129,0.12)'}}><Wallet size={15} style={{color:'#10b981'}}/></div>
-              <div className="flex items-center gap-2 pl-2" style={{borderLeft:'1px solid rgba(255,255,255,0.1)'}}>
+              <div className="flex items-center gap-2 pl-2" style={{borderLeft:'1px solid var(--border)'}}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                   style={{background:(currentUser.color||'#10b981')+'25',border:`1.5px solid ${currentUser.color||'#10b981'}45`,color:currentUser.color||'#10b981'}}>
                   {currentUser.initials||currentUser.name?.slice(0,2).toUpperCase()}
                 </div>
                 <span className="text-xs font-medium hidden sm:block" style={{color:'rgba(235,235,245,0.7)'}}>{currentUser.name}</span>
-                <button onClick={onLogout} title="Sair" className="p-1 rounded-lg transition-colors" style={{color:'rgba(235,235,245,0.35)'}}>
+                <button onClick={onLogout} title="Sair" className="p-1 rounded-lg transition-colors" style={{color:'var(--text-3)'}}>
                   <LogOut size={14}/>
                 </button>
               </div>
@@ -2416,6 +2441,13 @@ function PaiolFinanceApp({currentUser,onLogout}){
 
 function App(){
   const [currentUser,setCurrentUser]=useState(loadSession)
+  useEffect(()=>{
+    const mq=window.matchMedia('(prefers-color-scheme: light)')
+    const apply=e=>document.body.classList.toggle('light',e.matches)
+    apply(mq)
+    mq.addEventListener('change',apply)
+    return()=>mq.removeEventListener('change',apply)
+  },[])
   if(!currentUser) return <LoginScreen onLogin={u=>setCurrentUser(u)}/>
   return <PaiolFinanceApp currentUser={currentUser} onLogout={()=>{clearSession();setCurrentUser(null)}}/>
 }
