@@ -85,7 +85,7 @@
   ['paiolfinance_v1','paiolfinance_v2'].forEach(function(k){localStorage.removeItem(k)})
   try{
     var d=JSON.parse(localStorage.getItem('paiolfinance_v3')||'{}')
-    if(!d.months||!d.months['2025-01']||!d.months['2026-03']||!(d.months['2025-01'].exits&&d.months['2025-01'].exits.length))localStorage.removeItem('paiolfinance_v3')
+    if(!d.months||!d.months['2025-01']||!d.months['2026-03']||!(d.months['2025-01'].exits&&d.months['2025-01'].exits.length)||!d.settings?.clients?.find(c=>c.name==='Reddogz'))localStorage.removeItem('paiolfinance_v3')
   }catch(e){localStorage.removeItem('paiolfinance_v3')}
 })()
 </script>
@@ -109,6 +109,11 @@ const SEED={
     clients:[
       {id:'c1',name:'Involt',value:2000,dueDay:5,startDate:'2025-11-01',duration:24,endDate:'',contractNote:'Reativado em nov/2025 com novo valor. Antes pagava R$750/mês.',phone:'',email:'',permuteValue:0},
       {id:'c2',name:'SA Hair',value:1300,dueDay:10,startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0},
+      {id:'c3',name:'Reddogz',value:500,dueDay:26,startDate:'',duration:12,endDate:'',contractNote:'Paga última semana do mês. Cobrado dia 26.',phone:'',email:'',permuteValue:300},
+      {id:'c4',name:'BigBear',value:1000,dueDay:26,startDate:'',duration:12,endDate:'2026-04-30',contractNote:'Último pagamento: abril/2026.',phone:'',email:'',permuteValue:0},
+      {id:'c5',name:'Harlem Hamburgueria',value:500,dueDay:26,startDate:'',duration:12,endDate:'',contractNote:'Paga última semana do mês. A partir de abr/2026 permuta sobe de R$750 para R$1.050.',phone:'',email:'',permuteValue:750},
+      {id:'c6',name:'Harlem Pizzaria',value:500,dueDay:26,startDate:'',duration:12,endDate:'2026-03-31',contractNote:'Encerrado em mar/2026. Deve R$500 de fev/2026.',phone:'',email:'',permuteValue:300},
+      {id:'c7',name:'Planeta Pizza',value:0,dueDay:26,startDate:'2025-07-01',duration:12,endDate:'',contractNote:'Somente permuta — sem valor em dinheiro.',phone:'',email:'',permuteValue:650},
     ],
     fixedExpenses:[
       {id:'e1',name:'Santander PJ',value:3600,category:'Cartão',day:10,cardId:'k1'},
@@ -129,6 +134,8 @@ const SEED={
       {id:'col2',name:'Fábio',role:'Sócio / Diretor',baseSalary:3000},
       {id:'col3',name:'Designer Freelancer',role:'Freelancer',baseSalary:800},
     ],
+    goals:[],
+    permuteUsages:[],
   },
   months:{
     '2025-01':{
@@ -430,6 +437,10 @@ const SEED={
         {id:uid(),client:'SA Hair',dueDay:10,expectedValue:1300,status:'Recebido',realValue:1300,note:''},
         {id:uid(),client:'Angel',dueDay:12,expectedValue:1500,status:'Recebido',realValue:1500,note:'Última parcela — contrato encerrado'},
         {id:uid(),client:'M1 Dist',dueDay:14,expectedValue:1500,status:'Cobrado',realValue:0,note:'Contrato encerrado em 15/03/2026 — sem pagamento'},
+        {id:uid(),client:'Reddogz',clientId:'c3',dueDay:26,expectedValue:500,status:'Previsto',realValue:0,note:''},
+        {id:uid(),client:'BigBear',clientId:'c4',dueDay:26,expectedValue:1000,status:'Previsto',realValue:0,note:''},
+        {id:uid(),client:'Harlem Hamburgueria',clientId:'c5',dueDay:26,expectedValue:500,status:'Previsto',realValue:0,note:''},
+        {id:uid(),client:'Harlem Pizzaria',clientId:'c6',dueDay:26,expectedValue:500,status:'Cobrado',realValue:0,note:'Contrato encerrado — deve R$500 de fev/2026'},
       ],
       exits:[
         {id:uid(),name:'Santander PJ',category:'Cartão',day:10,cardId:'k1',expectedValue:3600,status:'Pago',realValue:3600,note:''},
@@ -511,6 +522,9 @@ function reducer(state,action){
     case'ADD_TASK':return{...state,tasks:[...(state.tasks||[]),{...payload.task,id:uid(),createdAt:new Date().toISOString()}]}
     case'UPDATE_TASK':return{...state,tasks:(state.tasks||[]).map(t=>t.id===payload.task.id?{...payload.task,updatedAt:new Date().toISOString()}:t)}
     case'DELETE_TASK':return{...state,tasks:(state.tasks||[]).filter(t=>t.id!==payload.id)}
+    case'ADD_GOAL':return{...state,settings:{...state.settings,goals:[...(state.settings.goals||[]),{...payload.goal,id:uid(),createdAt:new Date().toISOString()}]}}
+    case'UPDATE_GOAL':return{...state,settings:{...state.settings,goals:(state.settings.goals||[]).map(g=>g.id===payload.goal.id?{...payload.goal,updatedAt:new Date().toISOString()}:g)}}
+    case'DELETE_GOAL':return{...state,settings:{...state.settings,goals:(state.settings.goals||[]).filter(g=>g.id!==payload.id)}}
     case'ADD_PERMUTE_USAGE':return{...state,settings:{...state.settings,permuteUsages:[...(state.settings.permuteUsages||[]),{...payload.usage,id:uid()}]}}
     case'DELETE_PERMUTE_USAGE':return{...state,settings:{...state.settings,permuteUsages:(state.settings.permuteUsages||[]).filter(u=>u.id!==payload.id)}}
     case'SELL_PERMUTE':{
@@ -523,7 +537,7 @@ function reducer(state,action){
     case'ADD_SETTING':return{...state,settings:{...state.settings,[payload.key]:[...(state.settings[payload.key]||[]),{...payload.item,id:uid()}]}}
     case'UPDATE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].map(i=>i.id===payload.item.id?payload.item:i)}}
     case'DELETE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].filter(i=>i.id!==payload.id)}}
-    case'IMPORT':{const d=payload.data;if(!d.settings)d.settings={};if(!d.settings.permuteUsages)d.settings.permuteUsages=[];if(!d.tasks)d.tasks=[];return d}
+    case'IMPORT':{const d=payload.data;if(!d.settings)d.settings={};if(!d.settings.permuteUsages)d.settings.permuteUsages=[];if(!d.settings.goals)d.settings.goals=[];if(!d.tasks)d.tasks=[];return d}
     default:return state
   }
 }
@@ -537,6 +551,7 @@ function loadState(){
     }
     if(!data.settings)data.settings={}
     if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
+    if(!data.settings.goals)data.settings.goals=[]
     if(!data.tasks)data.tasks=[]
     return data
   }catch{return SEED}
@@ -640,6 +655,11 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
   const totalRealOut=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
   const resPrev=totalExpIn-totalExpOut
   const resReal=totalRealIn-totalRealOut
+  // Carry-over: saldo final do mês anterior
+  const prevMkKey=(()=>{const d=parseMonthKey(mk);const pm=d.month===1?{year:d.year-1,month:12}:{year:d.year,month:d.month-1};return monthKey(pm.year,pm.month)})()
+  const prevMth=state.months[prevMkKey]||null
+  const prevEndBal=prevMth?((prevMth.cashBalance||0)+prevMth.entries?.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)-prevMth.exits?.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)):null
+  const showCarryOver=!month.cashBalance&&prevEndBal!==null&&prevEndBal!==0
   const [editBal,setEditBal]=useState(false)
   const [balVal,setBalVal]=useState(String(month.cashBalance||''))
   const pendIn=entries.filter(e=>e.status!=='Recebido')
@@ -665,6 +685,12 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
             </div>
           )}
           <div className="text-xs text-slate-500 mt-1">Clique para editar</div>
+          {showCarryOver&&(
+            <button onClick={()=>{dispatch({type:'SET_CASH_BALANCE',payload:{monthKey:mk,value:prevEndBal}});toast('Saldo inicial importado do mês anterior ✓')}}
+              className="text-xs mt-2 px-3 py-1 rounded-lg" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
+              ↩ Iniciar com {fmtBRL(prevEndBal)} do mês anterior
+            </button>
+          )}
         </div>
         <SummaryCard label="Entradas Previstas" value={fmtBRL(totalExpIn)} sub={`Realizadas: ${fmtBRL(totalRealIn)}`} color="#10b981" icon={TrendingUp}/>
         <SummaryCard label="Saídas Previstas" value={fmtBRL(totalExpOut)} sub={`Pagas: ${fmtBRL(totalRealOut)}`} color="#ef4444" icon={TrendingDown}/>
@@ -1465,7 +1491,8 @@ function PermutaPage({state,dispatch,toast}){
   const curMk=monthKey(new Date().getFullYear(),new Date().getMonth()+1)
 
   function getBalance(c){
-    const earned=Object.values(state.months||{}).reduce((sum,month)=>{
+    const earned=Object.entries(state.months||{}).reduce((sum,[mk2,month])=>{
+      if(mk2<'2026-03')return sum
       const e=(month.entries||[]).find(en=>(en.clientId===c.id||en.client===c.name)&&en.status==='Recebido')
       return sum+(e?(c.permuteValue||0):0)
     },0)
@@ -1966,6 +1993,134 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
   )
 }
 
+// ─── GOALS ────────────────────────────────────────────────────────────────────
+const GOAL_CATEGORIES=['Reforma','Equipamento','Viagem','Ferramenta','Marketing','Outro']
+const GOAL_PRIORITIES=['Alta','Média','Baixa']
+const GOAL_STATUSES=['Ideia','Planejando','Comprometido','Concluído']
+const GOAL_CAT_COLORS={Reforma:'#f59e0b',Equipamento:'#3b82f6',Viagem:'#06b6d4',Ferramenta:'#8b5cf6',Marketing:'#ec4899',Outro:'#94a3b8'}
+const GOAL_PRI_COLORS={Alta:'#ef4444',Média:'#f59e0b',Baixa:'#10b981'}
+const GOAL_STA_COLORS={Ideia:'#64748b',Planejando:'#3b82f6',Comprometido:'#f59e0b',Concluído:'#10b981'}
+
+function GoalsPage({state,dispatch,toast}){
+  const goals=state.settings?.goals||[]
+  const [modal,setModal]=useState(null)
+  const [expanded,setExpanded]=useState({})
+  const [filterStatus,setFilterStatus]=useState('Todos')
+  const [form,setForm]=useState({title:'',description:'',category:'Outro',estimatedCost:'',priority:'Média',status:'Ideia'})
+
+  const emptyForm={title:'',description:'',category:'Outro',estimatedCost:'',priority:'Média',status:'Ideia'}
+
+  function openNew(){setForm(emptyForm);setModal('new')}
+  function openEdit(g){setForm({...g,estimatedCost:String(g.estimatedCost||'')});setModal('edit')}
+  function save(){
+    if(!form.title.trim())return toast('Informe o título do objetivo','error')
+    const goal={...form,estimatedCost:parseFloat(String(form.estimatedCost).replace(',','.'))||0}
+    if(modal==='new'){dispatch({type:'ADD_GOAL',payload:{goal}});toast('Objetivo adicionado ✓')}
+    else{dispatch({type:'UPDATE_GOAL',payload:{goal}});toast('Objetivo atualizado ✓')}
+    setModal(null)
+  }
+  function del(id){dispatch({type:'DELETE_GOAL',payload:{id}});toast('Removido','warn')}
+
+  const filtered=filterStatus==='Todos'?goals:goals.filter(g=>g.status===filterStatus)
+  const totalCost=goals.filter(g=>g.status!=='Concluído').reduce((s,g)=>s+(g.estimatedCost||0),0)
+  const doneCost=goals.filter(g=>g.status==='Concluído').reduce((s,g)=>s+(g.estimatedCost||0),0)
+
+  return(
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard label="Total de objetivos" value={goals.length} color="#8b5cf6" icon={Target}/>
+        <SummaryCard label="Concluídos" value={goals.filter(g=>g.status==='Concluído').length} color="#10b981" icon={CheckCircle}/>
+        <SummaryCard label="Investimento estimado" value={fmtBRL(totalCost)} color="#f59e0b" icon={DollarSign}/>
+        <SummaryCard label="Já investido" value={fmtBRL(doneCost)} color="#3b82f6" icon={TrendingUp}/>
+      </div>
+
+      {/* Filtros + Botão */}
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex gap-2 flex-wrap">
+          {['Todos',...GOAL_STATUSES].map(s=>(
+            <button key={s} onClick={()=>setFilterStatus(s)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{background:filterStatus===s?'#10b981':'#33415540',color:filterStatus===s?'#fff':'#94a3b8',border:filterStatus===s?'none':'1px solid #334155'}}>
+              {s}
+            </button>
+          ))}
+        </div>
+        <Btn onClick={openNew}><Plus size={14}/> Novo Objetivo</Btn>
+      </div>
+
+      {/* Lista de objetivos */}
+      {filtered.length===0?(
+        <div className="rounded-xl p-10 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <Target size={36} className="mx-auto mb-3 opacity-20"/>
+          <p className="text-sm">Nenhum objetivo {filterStatus!=='Todos'?`com status "${filterStatus}"`:'cadastrado'}.</p>
+          {filterStatus==='Todos'&&<p className="text-xs mt-1 text-slate-600">Comece adicionando um objetivo de negócio, equipamento ou viagem.</p>}
+        </div>
+      ):(
+        <div className="space-y-3">
+          {filtered.map(g=>{
+            const isExp=expanded[g.id]
+            const catColor=GOAL_CAT_COLORS[g.category]||'#94a3b8'
+            const priColor=GOAL_PRI_COLORS[g.priority]||'#94a3b8'
+            const staColor=GOAL_STA_COLORS[g.status]||'#64748b'
+            const done=g.status==='Concluído'
+            return(
+              <div key={g.id} className="rounded-xl overflow-hidden transition-all" style={{background:'#1e293b',border:`1px solid ${done?'#10b98130':'#334155'}`}}>
+                <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={()=>setExpanded(e=>({...e,[g.id]:!e[g.id]}))}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`font-semibold text-sm ${done?'line-through text-slate-500':'text-slate-100'}`}>{g.title}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{background:catColor+'20',color:catColor}}>{g.category}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{background:priColor+'20',color:priColor}}>{g.priority}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{background:staColor+'20',color:staColor}}>{g.status}</span>
+                      {g.estimatedCost>0&&<span className="text-xs text-slate-500">{fmtBRL(g.estimatedCost)}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={e=>{e.stopPropagation();openEdit(g)}} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-700 transition-colors"><Pencil size={13}/></button>
+                    <button onClick={e=>{e.stopPropagation();del(g.id)}} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors"><Trash2 size={13}/></button>
+                    <ChevronDown size={14} className="text-slate-500 transition-transform" style={{transform:isExp?'rotate(180deg)':'rotate(0deg)'}}/>
+                  </div>
+                </div>
+                {isExp&&g.description&&(
+                  <div className="px-4 pb-4 text-sm text-slate-400 border-t border-slate-700 pt-3">{g.description}</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Modal */}
+      {modal&&(
+        <Modal title={modal==='new'?'Novo Objetivo':'Editar Objetivo'} onClose={()=>setModal(null)}>
+          <div className="space-y-4">
+            <Field label="Título"><Inp value={form.title} onChange={v=>setForm(f=>({...f,title:v}))} placeholder="Ex: Notebook novo para edição"/></Field>
+            <Field label="Descrição (opcional)">
+              <textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Detalhes, motivação, links..." rows={3}
+                className={iCls} style={{...iSty,resize:'vertical'}}/>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Categoria"><Sel value={form.category} onChange={v=>setForm(f=>({...f,category:v}))} options={GOAL_CATEGORIES}/></Field>
+              <Field label="Custo estimado (R$)"><Inp type="number" value={form.estimatedCost} onChange={v=>setForm(f=>({...f,estimatedCost:v}))} placeholder="0"/></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Prioridade"><Sel value={form.priority} onChange={v=>setForm(f=>({...f,priority:v}))} options={GOAL_PRIORITIES}/></Field>
+              <Field label="Status"><Sel value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={GOAL_STATUSES}/></Field>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Btn onClick={save}><Save size={14}/> Salvar</Btn>
+              <BtnG onClick={()=>setModal(null)}>Cancelar</BtnG>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
   {id:'dashboard',icon:LayoutDashboard,label:'Dashboard'},
@@ -1976,6 +2131,7 @@ const NAV=[
   {id:'collaborators',icon:Users,label:'Colaboradores'},
   {id:'clients',icon:Briefcase,label:'Clientes'},
   {id:'permuta',icon:ArrowLeftRight,label:'Permuta'},
+  {id:'objetivos',icon:Flag,label:'Objetivos'},
   {id:'tasks',icon:ListTodo,label:'Tarefas'},
   {id:'calendar',icon:CalendarRange,label:'Calendário'},
   {id:'annual',icon:Target,label:'Projeção Anual'},
@@ -2180,6 +2336,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
     exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,collaborators:<CollaboratorsPage {...pp}/>,
     clients:<ClientsPage state={state} dispatch={dispatch} toast={toast}/>,
     permuta:<PermutaPage state={state} dispatch={dispatch} toast={toast}/>,
+    objetivos:<GoalsPage state={state} dispatch={dispatch} toast={toast}/>,
     tasks:<TasksPage state={state} dispatch={dispatch} toast={toast}/>,
     calendar:<CalendarPage state={state} dispatch={dispatch} monthKey={mk} toast={toast}/>,
     annual:<AnnualProjectionPage {...pp}/>,simulator:<SimulatorPage {...pp}/>,settings:<SettingsPage {...pp}/>,
