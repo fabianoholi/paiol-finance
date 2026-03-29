@@ -70,11 +70,14 @@
   })()
   </script>
   <style>
-    *{box-sizing:border-box}body{margin:0;background:#1e293b}
-    ::-webkit-scrollbar{width:6px;height:6px}
-    ::-webkit-scrollbar-track{background:#0f172a}
-    ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:#0a1628}
+    ::-webkit-scrollbar-thumb{background:#2d3f55;border-radius:4px}
+    ::-webkit-scrollbar-thumb:hover{background:#334155}
     select option{background:#1e293b;color:#f1f5f9}
+    input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:0.3}
   </style>
 </head>
 <body>
@@ -567,11 +570,11 @@ async function gasPost(data){await fetch(GAS_URL,{method:'POST',body:JSON.string
 // ─── UI BASE ──────────────────────────────────────────────────────────────────
 function Modal({title,onClose,children,wide}){
   return(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.7)'}} onClick={onClose}>
-      <div className={`relative rounded-xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'#1e293b',border:'1px solid #334155'}} onClick={e=>e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-100 transition-colors"><X size={20}/></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(4px)'}} onClick={onClose}>
+      <div className={`relative rounded-2xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'#1e293b',border:'1px solid #2d3f55',boxShadow:'0 25px 50px rgba(0,0,0,0.5)'}} onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-base font-semibold text-slate-100">{title}</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-700 transition-all"><X size={16}/></button>
         </div>
         {children}
       </div>
@@ -581,11 +584,11 @@ function Modal({title,onClose,children,wide}){
 
 function Toast({toasts}){
   return(
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
       {toasts.map(t=>(
-        <div key={t.id} className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium shadow-xl"
-          style={{background:t.type==='error'?'#ef4444':t.type==='warn'?'#f59e0b':'#10b981',color:'#fff',minWidth:220}}>
-          {t.type==='error'?<AlertCircle size={16}/>:<CheckCircle size={16}/>}{t.msg}
+        <div key={t.id} className="flex items-center gap-2.5 px-4 py-3 rounded-2xl text-sm font-semibold shadow-2xl backdrop-blur"
+          style={{background:t.type==='error'?'#ef4444ee':t.type==='warn'?'#f59e0bee':'#10b981ee',color:'#fff',minWidth:220,border:'1px solid rgba(255,255,255,0.1)'}}>
+          {t.type==='error'?<AlertCircle size={15}/>:<CheckCircle size={15}/>}{t.msg}
         </div>
       ))}
     </div>
@@ -594,12 +597,12 @@ function Toast({toasts}){
 
 function SummaryCard({label,value,sub,color,icon:Icon}){
   return(
-    <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-xs text-slate-400 uppercase tracking-wider">{label}</span>
-        {Icon&&<div className="p-2 rounded-lg" style={{background:color+'22'}}><Icon size={16} style={{color}}/></div>}
+    <div className="rounded-2xl p-5 transition-all hover:brightness-105" style={{background:'#1e293b',border:'1px solid #2d3f55',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}>
+      <div className="flex items-start justify-between mb-4">
+        <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">{label}</span>
+        {Icon&&<div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{background:`linear-gradient(135deg,${color}25,${color}10)`,border:`1px solid ${color}30`}}><Icon size={16} style={{color}}/></div>}
       </div>
-      <div className="text-2xl font-bold mb-1" style={{color:color||'#f1f5f9'}}>{value}</div>
+      <div className="text-2xl font-bold tracking-tight mb-1" style={{color:color||'#f1f5f9'}}>{value}</div>
       {sub&&<div className="text-xs text-slate-500">{sub}</div>}
     </div>
   )
@@ -607,41 +610,41 @@ function SummaryCard({label,value,sub,color,icon:Icon}){
 
 function StatusBadge({status}){
   const cfg={
-    'Previsto':{bg:'#1e40af22',color:'#60a5fa'},
-    'Cobrado':{bg:'#78350f22',color:'#f59e0b'},
-    'Recebido':{bg:'#06522022',color:'#10b981'},
-    'Pendente':{bg:'#78350f22',color:'#f59e0b'},
-    'Pago':{bg:'#06522022',color:'#10b981'},
-  }[status]||{bg:'#33415522',color:'#94a3b8'}
-  return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{background:cfg.bg,color:cfg.color}}>{status}</span>
+    'Previsto':{bg:'#1e40af20',color:'#60a5fa',border:'#3b82f630'},
+    'Cobrado':{bg:'#78350f20',color:'#f59e0b',border:'#f59e0b30'},
+    'Recebido':{bg:'#06522020',color:'#10b981',border:'#10b98130'},
+    'Pendente':{bg:'#78350f20',color:'#f59e0b',border:'#f59e0b30'},
+    'Pago':{bg:'#06522020',color:'#10b981',border:'#10b98130'},
+  }[status]||{bg:'#33415520',color:'#94a3b8',border:'#33415550'}
+  return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`}}>{status}</span>
 }
 
 function ProgressBar({label,current,total,color}){
   const pct=total>0?Math.min(100,(current/total)*100):0
   return(
     <div>
-      <div className="flex justify-between text-xs text-slate-400 mb-1"><span>{label}</span><span>{Math.round(pct)}%</span></div>
-      <div className="h-2 rounded-full overflow-hidden" style={{background:'#334155'}}>
-        <div className="h-full rounded-full transition-all" style={{width:`${pct}%`,background:color||'#10b981'}}/>
+      <div className="flex justify-between text-xs text-slate-500 mb-1.5"><span>{label}</span><span className="font-medium" style={{color:color||'#10b981'}}>{Math.round(pct)}%</span></div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'#2d3f55'}}>
+        <div className="h-full rounded-full transition-all duration-500" style={{width:`${pct}%`,background:`linear-gradient(90deg,${color||'#10b981'},${color||'#10b981'}aa)`}}/>
       </div>
     </div>
   )
 }
 
 function Field({label,children}){return <div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>}
-const iCls="w-full px-3 py-2 rounded-lg text-sm text-slate-100 outline-none"
-const iSty={background:'#0f172a',border:'1px solid #334155'}
+const iCls="w-full px-3.5 py-2.5 rounded-xl text-sm text-slate-100 outline-none transition-all focus:ring-2 focus:ring-emerald-500/30"
+const iSty={background:'#0f172a',border:'1px solid #2d3f55'}
 function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
 function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
-function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-medium rounded-lg transition-all hover:brightness-110 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff'}}>{children}</button>}
-function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 rounded-lg transition-all ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'#33415540',color:'#94a3b8',border:'1px solid #334155'}}>{children}</button>}
+function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold rounded-xl transition-all hover:brightness-110 active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:`linear-gradient(135deg,${color},${color}dd)`,color:'#fff',boxShadow:`0 2px 8px ${color}40`}}>{children}</button>}
+function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 rounded-xl transition-all hover:bg-slate-600 active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'#2d3f55',color:'#94a3b8',border:'1px solid #2d3f55'}}>{children}</button>}
 
-function Th({children,right}){return <th className={`px-3 py-2.5 text-xs font-medium text-slate-400 uppercase tracking-wider ${right?'text-right':'text-left'}`}>{children}</th>}
-function Td({children,right,muted,color}){return <td className={`px-3 py-2.5 text-sm ${right?'text-right':''} ${muted?'text-slate-500':''}`} style={{color:color||undefined}}>{children}</td>}
+function Th({children,right}){return <th className={`px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-widest ${right?'text-right':'text-left'}`}>{children}</th>}
+function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 text-sm border-b border-slate-800 ${right?'text-right':''} ${muted?'text-slate-500':''}`} style={{color:color||undefined}}>{children}</td>}
 
 const CTip=({active,payload,label})=>{
   if(!active||!payload?.length)return null
-  return <div className="rounded-lg p-3 text-sm" style={{background:'#0f172a',border:'1px solid #334155'}}><p className="text-slate-400 mb-1">{label}</p>{payload.map((p,i)=><p key={i} style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
+  return <div className="rounded-lg p-3 text-sm" style={{background:'#0f172a',border:'1px solid #2d3f55'}}><p className="text-slate-400 mb-1">{label}</p>{payload.map((p,i)=><p key={i} style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -671,7 +674,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
   return(
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="col-span-2 rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="col-span-2 rounded-2xl p-5" style={{background:'linear-gradient(135deg,#10b98115,#10b98105)',border:'1px solid #10b98130',boxShadow:'0 4px 20px #10b98108'}}>
           <div className="flex items-start justify-between mb-3"><span className="text-xs text-slate-400 uppercase tracking-wider">Saldo em Caixa</span><Wallet size={16} style={{color:'#10b981'}}/></div>
           {editBal?(
             <div className="flex gap-2 items-center">
@@ -697,7 +700,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-xl p-5 space-y-4" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-5 space-y-4" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <h3 className="text-sm font-semibold text-slate-300">Resultado do Mês</h3>
           <div className="flex gap-6">
             <div><div className="text-xs text-slate-500 mb-1">Previsto</div><div className="text-xl font-bold" style={{color:resPrev>=0?'#10b981':'#ef4444'}}>{fmtBRL(resPrev)}</div></div>
@@ -708,11 +711,11 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
           {!month.closed&&<button onClick={()=>{dispatch({type:'CLOSE_MONTH',payload:{monthKey:mk}});toast('Mês fechado!')}} className="text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1 pt-1"><Check size={12}/> Fechar mês</button>}
           {month.closed&&<span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle size={12}/> Mês fechado</span>}
         </div>
-        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3">Previsto vs Realizado</h3>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={barData} barSize={16}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155"/>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2d3f55"/>
               <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
               <Tooltip content={<CTip/>}/>
@@ -732,7 +735,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
         }).map(c=>({...c,daysLeft:Math.floor((new Date(c.endDate+'T12:00:00')-todayD)/86400000)})).sort((a,b)=>a.daysLeft-b.daysLeft)
         if(alertas.length===0)return null
         return(
-          <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #f59e0b40'}}>
+          <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #f59e0b40'}}>
             <h3 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2"><AlertCircle size={14}/> Contratos Vencendo</h3>
             <div className="space-y-2">{alertas.map(c=>(
               <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-slate-700/50">
@@ -748,7 +751,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
       })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingUp size={14} style={{color:'#10b981'}}/> A Receber ({pendIn.length})</h3>
           {pendIn.length===0?<p className="text-xs text-slate-500">Tudo recebido!</p>:(
             <div className="space-y-2">{pendIn.map(e=>(
@@ -759,7 +762,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast}){
             ))}</div>
           )}
         </div>
-        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><TrendingDown size={14} style={{color:'#ef4444'}}/> A Pagar ({pendOut.length})</h3>
           {pendOut.length===0?<p className="text-xs text-slate-500">Tudo pago!</p>:(
             <div className="space-y-2">{pendOut.map(e=>(
@@ -807,12 +810,12 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
         <div className="flex gap-2 flex-wrap">
           {['Todos','Previsto','Cobrado','Recebido'].map(s=>(
             <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-              style={{background:filter===s?'#10b981':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #334155'}}>{s}</button>
+              style={{background:filter===s?'#10b981':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #2d3f55'}}>{s}</button>
           ))}
         </div>
         <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
       </div>
-      <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+      <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
         <table className="w-full min-w-[600px]">
           <thead style={{background:'#0f172a'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th right>Diferença</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
           <tbody>
@@ -834,7 +837,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
             })}
             {filtered.length===0&&<tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma entrada</td></tr>}
           </tbody>
-          <tfoot style={{background:'#0f172a',borderTop:'1px solid #334155'}}>
+          <tfoot style={{background:'#0f172a',borderTop:'1px solid #2d3f55'}}>
             <tr>
               <td colSpan={2} className="px-3 py-2 text-xs text-slate-400 font-medium">Total ({filtered.length})</td>
               <td className="px-3 py-2 text-sm text-right font-bold text-slate-200">{fmtBRL(filtered.reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
@@ -896,12 +899,12 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
         <SummaryCard label="A Pagar" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-xl p-4" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-4" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <h3 className="text-xs font-medium text-slate-400 mb-2">Por Categoria</h3>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2}>
               {pieData.map((_,i)=><Cell key={i} fill={CAT_COLORS[i%CAT_COLORS.length]}/>)}
-            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'#0f172a',border:'1px solid #334155',borderRadius:8,fontSize:12}}/></PieChart>
+            </Pie><Tooltip formatter={v=>fmtBRL(v)} contentStyle={{background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,fontSize:12}}/></PieChart>
           </ResponsiveContainer>
           <div className="space-y-1 mt-1">{pieData.slice(0,5).map((d,i)=>(
             <div key={d.name} className="flex items-center justify-between text-xs">
@@ -915,12 +918,12 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
             <div className="flex gap-2 flex-wrap">
               {['Todos','Pendente','Pago'].map(s=>(
                 <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-                  style={{background:filter===s?'#ef4444':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #334155'}}>{s}</button>
+                  style={{background:filter===s?'#ef4444':'#33415540',color:filter===s?'#fff':'#94a3b8',border:'1px solid #2d3f55'}}>{s}</button>
               ))}
             </div>
             <Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setModal('add')}}><Plus size={14}/> Adicionar</Btn>
           </div>
-          <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+          <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
             <table className="w-full min-w-[500px]">
               <thead style={{background:'#0f172a'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
               <tbody>
@@ -980,7 +983,7 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
   const exitsByDay={};exits.forEach(e=>{if(e.day)exitsByDay[e.day]=(exitsByDay[e.day]||0)+(e.expectedValue||0)})
   let running=mData.cashBalance||0
   return(
-    <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+    <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
       <table className="w-full min-w-[700px]">
         <thead style={{background:'#0f172a'}}><tr><Th>Dia</Th><Th right>Ent. Prev.</Th><Th right>Saí. Prev.</Th><Th right>Saldo Esp.</Th><Th right>Saldo Real</Th><Th>Status</Th><Th>Obs.</Th></tr></thead>
         <tbody>
@@ -999,7 +1002,7 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
                 <Td right color={running>=0?'#f1f5f9':'#ef4444'}>{fmtBRL(running)}</Td>
                 <td className="px-3 py-1.5"><input type="number" defaultValue={realCash??''} placeholder="—"
                   onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v))dispatch({type:'UPDATE_DAILY_CASH',payload:{monthKey:mk,day:String(d),value:v}})}}
-                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'#0f172a',border:'1px solid #334155',color:'#f1f5f9'}}/></td>
+                  className="w-24 px-2 py-1 rounded text-right text-sm outline-none" style={{background:'#0f172a',border:'1px solid #2d3f55',color:'#f1f5f9'}}/></td>
                 <Td>{status}</Td>
                 <td className="px-3 py-1.5"><input defaultValue={mData.dailyNotes?.[String(d)]||''} placeholder="Observação..."
                   onBlur={e=>dispatch({type:'UPDATE_DAILY_NOTE',payload:{monthKey:mk,day:String(d),note:e.target.value}})}
@@ -1038,7 +1041,7 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
       ))}</div>
       {card&&(
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-xl p-5 space-y-3" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <div className="rounded-2xl p-5 space-y-3" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg" style={{background:'#10b98120'}}><CreditCard size={18} style={{color:'#10b981'}}/></div>
               <div><div className="font-semibold text-slate-100">{card.name}</div><div className="text-xs text-slate-500">{card.type} · {card.description}</div></div>
@@ -1055,7 +1058,7 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
               <h3 className="text-sm font-semibold text-slate-300">Lançamentos</h3>
               <Btn onClick={()=>{setForm({description:'',value:'',installments:'1',currentInstallment:'1'});setModal(true)}} small><Plus size={12}/> Novo</Btn>
             </div>
-            <div className="rounded-xl overflow-hidden" style={{border:'1px solid #334155'}}>
+            <div className="rounded-2xl overflow-hidden" style={{border:'1px solid #2d3f55'}}>
               <table className="w-full"><thead style={{background:'#0f172a'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
                 <tbody>{expenses.map((e,i)=>(
                   <tr key={e.id} className="border-t" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
@@ -1105,7 +1108,7 @@ function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
         const extras=month.collaboratorExtras?.[c.id]||[]
         const extTotal=extras.reduce((s,e)=>s+e.value,0)
         return(
-          <div key={c.id} className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <div key={c.id} className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{background:'#10b98130',color:'#10b981'}}>{c.name[0]}</div>
@@ -1155,7 +1158,7 @@ function AnnualProjectionPage({state}){
   const chartData=data.map(r=>({name:r.name.slice(0,3),'Entradas':r.expIn,'Saídas':r.expOut}))
   return(
     <div className="space-y-5">
-      <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+      <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
         <h3 className="text-sm font-semibold text-slate-300 mb-4">Evolução {year}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={chartData}>
@@ -1163,7 +1166,7 @@ function AnnualProjectionPage({state}){
               <linearGradient id="gin" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
               <linearGradient id="gout" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/><stop offset="95%" stopColor="#ef4444" stopOpacity={0}/></linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155"/>
+            <CartesianGrid strokeDasharray="3 3" stroke="#2d3f55"/>
             <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
             <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
             <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
@@ -1172,7 +1175,7 @@ function AnnualProjectionPage({state}){
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="rounded-xl overflow-auto" style={{border:'1px solid #334155'}}>
+      <div className="rounded-2xl overflow-auto" style={{border:'1px solid #2d3f55'}}>
         <table className="w-full min-w-[800px]">
           <thead style={{background:'#0f172a'}}><tr><Th>Mês</Th><Th right>Ent.Prev</Th><Th right>Saí.Prev</Th><Th right>Res.Prev</Th><Th right>Ent.Real</Th><Th right>Saí.Real</Th><Th right>Res.Real</Th><Th right>Acumulado</Th></tr></thead>
           <tbody>{data.map((r,i)=>{
@@ -1215,7 +1218,7 @@ function SimulatorPage({state,monthKey:mk}){
   const chartData=(result?.months||[]).map(m=>({name:`M+${m.month}`,'Com simulação':m.result,'Sem simulação':baseIn-baseOut}))
   return(
     <div className="space-y-5">
-      <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+      <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
         <h3 className="text-sm font-semibold text-slate-300 mb-1 flex items-center gap-2"><Zap size={14} style={{color:'#10b981'}}/> Simulador</h3>
         <p className="text-xs text-slate-500 mb-4">Não altera os dados reais.</p>
         <div className="flex gap-2 mb-5 flex-wrap">
@@ -1234,11 +1237,11 @@ function SimulatorPage({state,monthKey:mk}){
       </div>
       {result&&(
         <div className="space-y-4">
-          <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
             <h3 className="text-sm font-semibold text-slate-300 mb-3">{result.name||'Simulação'}</h3>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData} barSize={18}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155"/>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2d3f55"/>
                 <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
                 <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
                 <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
@@ -1247,7 +1250,7 @@ function SimulatorPage({state,monthKey:mk}){
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="rounded-xl overflow-hidden" style={{border:'1px solid #334155'}}>
+          <div className="rounded-2xl overflow-hidden" style={{border:'1px solid #2d3f55'}}>
             <table className="w-full"><thead style={{background:'#0f172a'}}><tr><Th>Mês</Th><Th right>Entradas</Th><Th right>Saídas</Th><Th right>Resultado</Th><Th right>Impacto</Th></tr></thead>
               <tbody>{result.months.map((m,i)=>{
                 const impact=m.result-(baseIn-baseOut)
@@ -1307,7 +1310,7 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
       <div className="flex flex-wrap gap-3">
         <BtnG onClick={copyPrev}><Copy size={14}/> Copiar mês anterior</BtnG>
         <BtnG onClick={exportData}><Download size={14}/> Exportar JSON</BtnG>
-        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'#33415540',color:'#94a3b8',border:'1px solid #334155'}}>
+        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'#33415540',color:'#94a3b8',border:'1px solid #2d3f55'}}>
           <RefreshCw size={14}/> Importar JSON
           <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{dispatch({type:'IMPORT',payload:{data:JSON.parse(ev.target.result)}});toast('Importado')}catch{toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
         </label>
@@ -1319,7 +1322,7 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
         <h3 className="text-sm font-semibold text-slate-300">{tabs.find(t=>t.id===tab)?.label}</h3>
         <Btn onClick={()=>{setForm({});setModal('add')}} small><Plus size={12}/> Adicionar</Btn>
       </div>
-      <div className="rounded-xl overflow-hidden" style={{border:'1px solid #334155'}}>
+      <div className="rounded-2xl overflow-hidden" style={{border:'1px solid #2d3f55'}}>
         <table className="w-full"><tbody>
           {items.map((item,i)=>(
             <tr key={item.id} className="border-b" style={{borderColor:'#334155',background:i%2===0?'#1e293b':'#1a2540'}}>
@@ -1387,7 +1390,7 @@ function ClientsPage({state,dispatch,toast}){
   function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas para todos os meses ✓')}
 
   const scMap={active:{label:'Ativo',c:'#10b981',b:'#10b98120'},expiring:{label:'Vencendo',c:'#f59e0b',b:'#f59e0b20'},expired:{label:'Vencido',c:'#ef4444',b:'#ef444420'},no_contract:{label:'Sem contrato',c:'#64748b',b:'#64748b20'}}
-  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
@@ -1409,7 +1412,7 @@ function ClientsPage({state,dispatch,toast}){
         {clients.map(c=>{
           const cs=getCS(c),sc=scMap[cs],dl=getDaysLeft(c.endDate),{r,t}=countReceived(c)
           return(
-            <div key={c.id} className="rounded-xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'#334155'}`}}>
+            <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'#334155'}`}}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-semibold text-slate-100">{c.name}</div>
@@ -1519,7 +1522,7 @@ function PermutaPage({state,dispatch,toast}){
     setModal(null)
   }
 
-  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
 
@@ -1545,7 +1548,7 @@ function PermutaPage({state,dispatch,toast}){
 
       {/* Cards por cliente */}
       {clients.length===0?(
-        <div className="rounded-xl p-8 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-8 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <ArrowLeftRight size={32} className="mx-auto mb-3 opacity-30"/>
           <p className="text-sm">Nenhum cliente com permuta cadastrado.</p>
           <p className="text-xs mt-1">Edite um cliente e adicione um valor em "Permuta por mês".</p>
@@ -1557,7 +1560,7 @@ function PermutaPage({state,dispatch,toast}){
             const pct=earned>0?Math.min((used/earned)*100,100):0
             const neg=balance<0
             return(
-              <div key={c.id} className="rounded-xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${neg?'#ef444440':'#334155'}`}}>
+              <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'#1e293b',border:`1px solid ${neg?'#ef444440':'#334155'}`}}>
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-semibold text-slate-100">{c.name}</div>
@@ -1591,7 +1594,7 @@ function PermutaPage({state,dispatch,toast}){
 
       {/* Histórico */}
       {usages.length>0&&(
-        <div className="rounded-xl p-5" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-5" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <h3 className="text-sm font-semibold text-slate-300 mb-4">Histórico de usos</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -1700,7 +1703,7 @@ function TasksPage({state,dispatch,toast}){
 
   const todoCount=tasks.filter(t=>t.status!=='done').length
 
-  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
+  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14,width:'100%',outline:'none'}
   const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
   const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
   const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
@@ -1918,7 +1921,7 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
       <div className={`gap-4 ${selDay?'grid grid-cols-1 lg:grid-cols-3':'block'}`}>
         {/* Grade */}
         <div className={selDay?'lg:col-span-2':''}>
-          <div className="rounded-xl overflow-hidden" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <div className="rounded-2xl overflow-hidden" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
             {/* Cabeçalho dias da semana */}
             <div className="grid grid-cols-7 border-b" style={{borderColor:'#334155'}}>
               {DOW.map(d=><div key={d} className="py-2 text-center text-xs font-semibold text-slate-500">{d}</div>)}
@@ -1960,7 +1963,7 @@ function CalendarPage({state,dispatch,monthKey:mk,toast}){
 
         {/* Painel lateral do dia */}
         {selDay&&(
-          <div className="rounded-xl p-4 space-y-3" style={{background:'#1e293b',border:'1px solid #334155'}}>
+          <div className="rounded-2xl p-4 space-y-3" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-slate-100">
                 {selDay} de {MONTH_NAMES[curMonth-1]}
@@ -2051,7 +2054,7 @@ function GoalsPage({state,dispatch,toast}){
 
       {/* Lista de objetivos */}
       {filtered.length===0?(
-        <div className="rounded-xl p-10 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #334155'}}>
+        <div className="rounded-2xl p-10 text-center text-slate-500" style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
           <Target size={36} className="mx-auto mb-3 opacity-20"/>
           <p className="text-sm">Nenhum objetivo {filterStatus!=='Todos'?`com status "${filterStatus}"`:'cadastrado'}.</p>
           {filterStatus==='Todos'&&<p className="text-xs mt-1 text-slate-600">Comece adicionando um objetivo de negócio, equipamento ou viagem.</p>}
@@ -2065,7 +2068,7 @@ function GoalsPage({state,dispatch,toast}){
             const staColor=GOAL_STA_COLORS[g.status]||'#64748b'
             const done=g.status==='Concluído'
             return(
-              <div key={g.id} className="rounded-xl overflow-hidden transition-all" style={{background:'#1e293b',border:`1px solid ${done?'#10b98130':'#334155'}`}}>
+              <div key={g.id} className="rounded-2xl overflow-hidden transition-all" style={{background:'#1e293b',border:`1px solid ${done?'#10b98130':'#334155'}`}}>
                 <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={()=>setExpanded(e=>({...e,[g.id]:!e[g.id]}))}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -2157,18 +2160,21 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
     <>
       {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'rgba(0,0,0,0.6)'}} onClick={()=>setOpen(false)}/>}
       <aside className={`fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
-        style={{width:220,background:'#0f172a',borderRight:'1px solid #1e293b'}}>
+        style={{width:220,background:'#0a1628',borderRight:'1px solid #1e293b'}}>
         <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'#1e293b'}}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm" style={{background:'#10b981',color:'#fff'}}>P</div>
-            <span className="font-bold text-slate-100 text-sm">PAIOL FINANCE</span>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm" style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',boxShadow:'0 2px 8px #10b98150'}}>P</div>
+            <div>
+              <span className="font-bold text-slate-100 text-sm tracking-tight">Paiol Finance</span>
+              <div className="text-xs text-slate-600 leading-none">Paiol Mídias</div>
+            </div>
           </div>
           <button onClick={()=>setOpen(false)} className="lg:hidden text-slate-500 hover:text-slate-300"><X size={16}/></button>
         </div>
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {NAV.map(({id,icon:Icon,label})=>(
             <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left"
-              style={{background:activePage===id?'#10b98115':'transparent',color:activePage===id?'#10b981':'#64748b',fontWeight:activePage===id?600:400}}>
+              style={{background:activePage===id?'linear-gradient(135deg,#10b98118,#10b98108)':'transparent',color:activePage===id?'#10b981':'#64748b',fontWeight:activePage===id?600:400}}>
               <Icon size={16}/>{label}
               {id==='clients'&&expCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#f59e0b',color:'#000',fontSize:10}}>{expCount}</span>}
               {id==='permuta'&&permuteNegCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#ef4444',color:'#fff',fontSize:10}}>!</span>}
@@ -2176,7 +2182,10 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t text-xs text-slate-600" style={{borderColor:'#1e293b'}}>v1.1 · Paiol Mídias</div>
+        <div className="p-4 border-t text-xs text-slate-700 flex items-center gap-2" style={{borderColor:'#1e293b'}}>
+          <div className="w-1.5 h-1.5 rounded-full" style={{background:'#10b981'}}></div>
+          v1.2 · Paiol Finance
+        </div>
       </aside>
     </>
   )
@@ -2224,7 +2233,7 @@ function LoginScreen({onLogin}){
     setBusy(false)
   }
 
-  const inputSt={background:'#0f172a',border:'1px solid #334155',borderRadius:12,padding:'14px',color:'#f1f5f9',fontSize:22,outline:'none',textAlign:'center',letterSpacing:'0.4em',width:'100%'}
+  const inputSt={background:'#0f172a',border:'1px solid #2d3f55',borderRadius:12,padding:'14px',color:'#f1f5f9',fontSize:22,outline:'none',textAlign:'center',letterSpacing:'0.4em',width:'100%'}
 
   return(
     <div className="min-h-screen flex items-center justify-center px-4" style={{background:'#0f172a'}}>
@@ -2243,7 +2252,7 @@ function LoginScreen({onLogin}){
             <p className="text-xs text-slate-500 text-center mb-4">Quem está acessando?</p>
             {USERS.map(u=>(
               <button key={u.id} onClick={()=>pick(u)} className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{background:'#1e293b',border:'1px solid #334155'}}>
+                style={{background:'#1e293b',border:'1px solid #2d3f55'}}>
                 <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold shrink-0"
                   style={{background:u.color+'30',border:`2px solid ${u.color}50`}}>
                   <span style={{color:u.color,fontSize:14}}>{u.initials}</span>
@@ -2349,7 +2358,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
       <div className="flex-1 flex flex-col min-h-screen" style={{marginLeft:0,paddingLeft:0}}>
         <div className="flex-1 flex flex-col min-h-screen lg:ml-[220px]">
           {/* Header */}
-          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'#1e293b',borderBottom:'1px solid #334155'}}>
+          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'#0a1628',borderBottom:'1px solid #1e293b',backdropFilter:'blur(12px)'}}>
             <div className="flex items-center gap-3">
               <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors"><Menu size={18}/></button>
               <div className="flex items-center gap-2">
