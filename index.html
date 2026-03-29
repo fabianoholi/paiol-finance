@@ -85,7 +85,7 @@
   ['paiolfinance_v1','paiolfinance_v2'].forEach(function(k){localStorage.removeItem(k)})
   try{
     var d=JSON.parse(localStorage.getItem('paiolfinance_v3')||'{}')
-    if(!d.months||!d.months['2025-01']||!d.months['2026-03'])localStorage.removeItem('paiolfinance_v3')
+    if(!d.months||!d.months['2025-01']||!d.months['2026-03']||!(d.months['2025-01'].exits&&d.months['2025-01'].exits.length))localStorage.removeItem('paiolfinance_v3')
   }catch(e){localStorage.removeItem('paiolfinance_v3')}
 })()
 </script>
