@@ -518,7 +518,7 @@ const SEED={
 // ─── REDUCER ──────────────────────────────────────────────────────────────────
 function reducer(state,action){
   const{type,payload}=action
-  const updMonth=(key,fn)=>({...state,months:{...state.months,[key]:fn(state.months[key]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}})}})
+  const updMonth=(key,fn)=>({...state,months:{...state.months,[key]:fn(state.months[key]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},cardPayments:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}})}})
   switch(type){
     case'ADD_ENTRY':return updMonth(payload.monthKey,m=>({...m,entries:[...(m.entries||[]),{...payload.entry,id:uid()}]}))
     case'UPDATE_ENTRY':return updMonth(payload.monthKey,m=>({...m,entries:m.entries.map(e=>e.id===payload.entry.id?payload.entry:e)}))
@@ -531,6 +531,17 @@ function reducer(state,action){
     case'UPDATE_DAILY_CASH':return updMonth(payload.monthKey,m=>({...m,dailyCash:{...m.dailyCash,[payload.day]:payload.value}}))
     case'ADD_CARD_EXPENSE':return updMonth(payload.monthKey,m=>({...m,cardExpenses:{...m.cardExpenses,[payload.cardId]:[...(m.cardExpenses?.[payload.cardId]||[]),{...payload.expense,id:uid()}]}}))
     case'DELETE_CARD_EXPENSE':return updMonth(payload.monthKey,m=>({...m,cardExpenses:{...m.cardExpenses,[payload.cardId]:(m.cardExpenses?.[payload.cardId]||[]).filter(e=>e.id!==payload.id)}}))
+    case'PAY_CARD_BILL':{
+      const{monthKey:mk2,cardId,amount,date,notes,createExit}=payload
+      const card=(state.settings?.cards||[]).find(c=>c.id===cardId)
+      const baseMonth=state.months[mk2]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},cardPayments:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}}
+      const updatedMonth={...baseMonth,cardPayments:{...(baseMonth.cardPayments||{}),[cardId]:{paid:true,amount,date,notes,paidAt:new Date().toISOString()}}}
+      if(createExit){
+        const exit={id:uid(),description:`Fatura ${card?.name||'Cartão'}`,category:'Cartões',value:amount,realValue:amount,date,status:'Pago',note:notes||''}
+        updatedMonth.exits=[...(updatedMonth.exits||[]),exit]
+      }
+      return{...state,months:{...state.months,[mk2]:updatedMonth}}
+    }
     case'ADD_COLLAB_EXTRA':return updMonth(payload.monthKey,m=>({...m,collaboratorExtras:{...m.collaboratorExtras,[payload.collabId]:[...(m.collaboratorExtras?.[payload.collabId]||[]),{...payload.extra,id:uid()}]}}))
     case'DELETE_COLLAB_EXTRA':return updMonth(payload.monthKey,m=>({...m,collaboratorExtras:{...m.collaboratorExtras,[payload.collabId]:(m.collaboratorExtras?.[payload.collabId]||[]).filter(e=>e.id!==payload.id)}}))
     case'CLOSE_MONTH':return updMonth(payload.monthKey,m=>({...m,closed:true,snapshot:{...m,closed:true}}))
@@ -585,7 +596,7 @@ function loadState(){
     const s=localStorage.getItem('paiolfinance_v3')
     const data=s?JSON.parse(s):SEED
     if(data.settings?.clients){
-      data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,...c}))
+      data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,razaoSocial:'',cnpj:'',cep:'',street:'',number:'',complement:'',city:'',state:'',status:'ativo',services:[],contractUrl:'',proposalUrl:'',...c}))
     }
     if(!data.settings)data.settings={}
     if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
@@ -1097,72 +1108,217 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
 }
 
 // ─── CARTÕES ──────────────────────────────────────────────────────────────────
+const CARD_GRADIENTS=['linear-gradient(135deg,#1a1a2e,#16213e)','linear-gradient(135deg,#0f3460,#533483)','linear-gradient(135deg,#1b262c,#0f4c75)','linear-gradient(135deg,#2d1b69,#11998e)','linear-gradient(135deg,#200122,#6f0000)','linear-gradient(135deg,#134e5e,#71b280)']
 function CardsPage({state,dispatch,monthKey:mk,toast}){
   const cards=state.settings?.cards||[]
-  const month=state.months[mk]||{}
   const [sel,setSel]=useState(cards[0]?.id||null)
-  const [modal,setModal]=useState(false)
+  const [modal,setModal]=useState(null) // null | 'newExp' | 'payBill' | 'addCard' | cardObj
   const [form,setForm]=useState({})
+  const today=new Date()
+  const todayStr=today.toISOString().slice(0,10)
+
+  // prev month key
+  const{year:cy,month:cm}=parseMonthKey(mk)
+  const prevMk=cm===1?monthKey(cy-1,12):monthKey(cy,cm-1)
+
   const card=cards.find(c=>c.id===sel)
-  const expenses=month.cardExpenses?.[sel]||[]
-  const total=expenses.reduce((s,e)=>s+(e.value||0),0)
+  const curMonth=state.months[mk]||{}
+  const prevMonth=state.months[prevMk]||{}
+
+  // Fatura aberta = lançamentos do mês atual neste cartão
+  const openExpenses=curMonth.cardExpenses?.[sel]||[]
+  const openTotal=openExpenses.reduce((s,e)=>s+(e.value||0),0)
+
+  // Fatura fechada = lançamentos do mês anterior (a pagar este mês)
+  const closedExpenses=prevMonth.cardExpenses?.[sel]||[]
+  const closedTotal=closedExpenses.reduce((s,e)=>s+(e.value||0),0)
+
+  // Status do pagamento da fatura fechada no mês atual
+  const billPayment=curMonth.cardPayments?.[sel]||null
+
   function addExp(){
     if(!form.description||!form.value)return toast('Preencha campos','error')
     dispatch({type:'ADD_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,expense:{description:form.description,value:parseFloat(form.value)||0,installments:parseInt(form.installments)||1,currentInstallment:parseInt(form.currentInstallment)||1}}})
-    setForm({});setModal(false);toast('Adicionado')
+    setForm({});setModal(null);toast('Lançamento adicionado')
   }
+  function payBill(){
+    if(!form.amount)return toast('Informe o valor pago','error')
+    dispatch({type:'PAY_CARD_BILL',payload:{monthKey:mk,cardId:sel,amount:parseFloat(form.amount)||0,date:form.date||todayStr,notes:form.notes||'',createExit:!!form.createExit}})
+    setModal(null);toast('Fatura marcada como paga ✓')
+  }
+  function saveCard(){
+    if(!form.name)return toast('Informe o nome do cartão','error')
+    const item={...form,limit:parseFloat(form.limit)||0,closeDay:parseInt(form.closeDay)||1,dueDay:parseInt(form.dueDay)||1}
+    if(modal==='addCard')dispatch({type:'ADD_SETTING',payload:{key:'cards',item}})
+    else dispatch({type:'UPDATE_SETTING',payload:{key:'cards',item}})
+    toast('Cartão salvo');setModal(null)
+  }
+  function delCard(id){dispatch({type:'DELETE_SETTING',payload:{key:'cards',id}});if(sel===id)setSel(cards.find(c=>c.id!==id)?.id||null);toast('Removido','warn')}
+
+  const{year:py,month:pm}=parseMonthKey(prevMk)
+
   return(
     <div className="space-y-5">
-      <div className="flex gap-2 flex-wrap">{cards.map(c=>(
-        <button key={c.id} onClick={()=>setSel(c.id)} className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={{background:sel===c.id?'#10b981':'rgba(255,255,255,0.06)',color:sel===c.id?'#fff':'#94a3b8',border:`1px solid ${sel===c.id?'#10b981':'rgba(255,255,255,0.07)'}`}}>
-          <CreditCard size={12} className="inline mr-1.5"/>{c.name}
+      {/* Card visual strip */}
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {cards.map((c,i)=>(
+          <button key={c.id} onClick={()=>setSel(c.id)} className="shrink-0 rounded-2xl p-4 text-left transition-all"
+            style={{width:200,minHeight:116,background:CARD_GRADIENTS[i%CARD_GRADIENTS.length],border:sel===c.id?'2px solid #10b981':'2px solid transparent',boxShadow:sel===c.id?'0 0 0 1px #10b98150,0 8px 32px rgba(0,0,0,0.4)':'0 4px 16px rgba(0,0,0,0.3)',color:'#fff',position:'relative',overflow:'hidden'}}>
+            <div style={{position:'absolute',top:-20,right:-20,width:80,height:80,borderRadius:'50%',background:'rgba(255,255,255,0.05)'}}/>
+            <div style={{position:'absolute',bottom:-30,left:-10,width:100,height:100,borderRadius:'50%',background:'rgba(255,255,255,0.03)'}}/>
+            <CreditCard size={18} style={{opacity:0.7,marginBottom:12}}/>
+            <div className="font-semibold text-sm truncate">{c.name}</div>
+            <div className="text-xs mt-0.5" style={{opacity:0.6}}>{c.type}{c.description?` · ${c.description}`:''}</div>
+            <div className="text-xs mt-2" style={{opacity:0.5}}>Fecha dia {c.closeDay} · Vence dia {c.dueDay}</div>
+          </button>
+        ))}
+        <button onClick={()=>{setForm({name:'',type:'PJ',limit:'',closeDay:'',dueDay:'',description:''});setModal('addCard')}}
+          className="shrink-0 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all"
+          style={{width:200,minHeight:116,border:'2px dashed var(--border)',color:'var(--text-4)'}}>
+          <Plus size={20}/><span className="text-xs">Novo Cartão</span>
         </button>
-      ))}</div>
+      </div>
+
       {card&&(
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-2xl p-5 space-y-3" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg" style={{background:'#10b98120'}}><CreditCard size={18} style={{color:'#10b981'}}/></div>
-              <div><div className="font-semibold text-slate-100">{card.name}</div><div className="text-xs text-slate-500">{card.type} · {card.description}</div></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Fatura fechada (mês anterior → pagar este mês) */}
+          <div className="rounded-2xl p-5 space-y-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{color:'var(--text-3)'}}>Fatura Fechada</div>
+                <div className="text-xs" style={{color:'var(--text-3)'}}>{MONTH_NAMES[pm-1]} {py} → vence dia {card.dueDay}/{cm.toString().padStart(2,'0')}</div>
+              </div>
+              {billPayment?.paid
+                ?<span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98140'}}>Paga</span>
+                :<span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{background:'#f59e0b18',color:'#f59e0b',border:'1px solid #f59e0b40'}}>Aguardando</span>}
             </div>
-            {card.limit>0&&<ProgressBar label="Uso estimado" current={total} total={card.limit} color="#f59e0b"/>}
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div><span className="text-slate-500">Fecha:</span> <span className="text-slate-300">dia {card.closeDay}</span></div>
-              <div><span className="text-slate-500">Vence:</span> <span className="text-slate-300">dia {card.dueDay}</span></div>
+            <div>
+              <div className="text-3xl font-bold" style={{color:billPayment?.paid?'#10b981':'#ef4444',fontVariantNumeric:'tabular-nums'}}>
+                {fmtBRL(billPayment?.paid?billPayment.amount:closedTotal)}
+              </div>
+              {billPayment?.paid&&billPayment.amount!==closedTotal&&(
+                <div className="text-xs mt-0.5" style={{color:'var(--text-3)'}}>Lançado: {fmtBRL(closedTotal)} · Pago: {fmtBRL(billPayment.amount)}</div>
+              )}
             </div>
-            <div className="pt-2 border-t border-slate-700"><div className="text-xs text-slate-500">Fatura estimada</div><div className="text-xl font-bold mt-1" style={{color:'#ef4444'}}>{fmtBRL(total)}</div></div>
+            {card.limit>0&&<ProgressBar label="Uso do limite" current={closedTotal} total={card.limit} color="#f59e0b"/>}
+            {closedExpenses.length>0&&(
+              <div className="rounded-xl overflow-hidden" style={{border:'1px solid var(--sep)'}}>
+                <div className="max-h-40 overflow-y-auto">
+                  <table className="w-full text-xs"><tbody>
+                    {closedExpenses.map((e,i)=>(
+                      <tr key={e.id} style={{borderTop:i>0?`1px solid var(--sep)`:'none',background:i%2===0?'transparent':'var(--row-alt)'}}>
+                        <td className="px-3 py-1.5" style={{color:'var(--text-2)'}}>{e.description}</td>
+                        <td className="px-3 py-1.5 text-right" style={{color:'var(--text-2)',fontVariantNumeric:'tabular-nums'}}>{fmtBRL(e.value)}</td>
+                        <td className="px-3 py-1.5 text-right" style={{color:'var(--text-3)'}}>{e.installments>1?`${e.currentInstallment}/${e.installments}`:'1x'}</td>
+                      </tr>
+                    ))}
+                  </tbody></table>
+                </div>
+              </div>
+            )}
+            {closedExpenses.length===0&&<p className="text-xs text-center py-4" style={{color:'var(--text-4)'}}>Nenhum lançamento no mês anterior</p>}
+            {!billPayment?.paid&&(
+              <button onClick={()=>{setForm({amount:String(closedTotal),date:todayStr,notes:'',createExit:true});setModal('payBill')}}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{background:'#10b981',color:'#fff',boxShadow:'0 2px 12px #10b98140'}}>
+                Pagar Fatura — {fmtBRL(closedTotal)}
+              </button>
+            )}
+            {billPayment?.paid&&(
+              <div className="text-xs text-center" style={{color:'var(--text-3)'}}>Paga em {billPayment.date?.split('-').reverse().join('/')}{billPayment.notes?` · ${billPayment.notes}`:''}</div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={()=>{setForm({...card});setModal(card)}} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><Pencil size={11}/> Editar cartão</button>
+              <button onClick={()=>delCard(card.id)} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg" style={{background:'#ef444418',color:'#ef4444'}}><Trash2 size={11}/> Remover</button>
+            </div>
           </div>
-          <div className="lg:col-span-2 space-y-3">
+
+          {/* Fatura aberta (mês atual — acumulando) */}
+          <div className="rounded-2xl p-5 space-y-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-300">Lançamentos</h3>
-              <Btn onClick={()=>{setForm({description:'',value:'',installments:'1',currentInstallment:'1'});setModal(true)}} small><Plus size={12}/> Novo</Btn>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{color:'var(--text-3)'}}>Fatura Aberta</div>
+                <div className="text-xs" style={{color:'var(--text-3)'}}>Acumulando em {MONTH_NAMES[cm-1]} → fecha dia {card.closeDay}</div>
+              </div>
+              <Btn onClick={()=>{setForm({description:'',value:'',installments:'1',currentInstallment:'1'});setModal('newExp')}} small><Plus size={12}/> Novo</Btn>
             </div>
-            <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
-              <table className="w-full"><thead style={{background:'var(--bg)'}}><tr><Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th></tr></thead>
-                <tbody>{expenses.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
-                    <Td>{e.description}</Td><Td right>{fmtBRL(e.value)}</Td>
+            <div className="text-3xl font-bold" style={{color:'var(--text)',fontVariantNumeric:'tabular-nums'}}>{fmtBRL(openTotal)}</div>
+            {card.limit>0&&<ProgressBar label="Do limite" current={openTotal} total={card.limit} color="#3b82f6"/>}
+            <div className="rounded-xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
+              <table className="w-full"><thead style={{background:'var(--bg-overlay)'}}><tr>
+                <Th>Descrição</Th><Th right>Valor</Th><Th>Parcelas</Th><Th>Ações</Th>
+              </tr></thead>
+              <tbody>
+                {openExpenses.map((e,i)=>(
+                  <tr key={e.id} style={{borderTop:'1px solid var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
+                    <Td>{e.description}</Td>
+                    <Td right>{fmtBRL(e.value)}</Td>
                     <Td muted>{e.installments>1?`${e.currentInstallment}/${e.installments}`:'1x'}</Td>
-                    <Td><button onClick={()=>dispatch({type:'DELETE_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,id:e.id}})} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button></Td>
+                    <Td><button onClick={()=>dispatch({type:'DELETE_CARD_EXPENSE',payload:{monthKey:mk,cardId:sel,id:e.id}})} className="p-1 rounded" style={{color:'var(--text-4)'}}><Trash2 size={13}/></button></Td>
                   </tr>
                 ))}
-                {expenses.length===0&&<tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">Nenhum lançamento</td></tr>}
-                </tbody>
-              </table>
+                {openExpenses.length===0&&<tr><td colSpan={4} className="px-3 py-6 text-center text-sm" style={{color:'var(--text-4)'}}>Nenhum lançamento ainda</td></tr>}
+              </tbody></table>
             </div>
           </div>
         </div>
       )}
-      {modal&&<Modal title="Novo Lançamento" onClose={()=>setModal(false)}>
+      {cards.length===0&&(
+        <div className="py-16 text-center space-y-3">
+          <CreditCard size={40} style={{color:'var(--text-4)',margin:'0 auto'}}/>
+          <p className="text-sm" style={{color:'var(--text-3)'}}>Nenhum cartão cadastrado</p>
+          <button onClick={()=>{setForm({name:'',type:'PJ',limit:'',closeDay:'',dueDay:'',description:''});setModal('addCard')}} className="px-4 py-2 rounded-xl text-sm font-medium" style={{background:'#10b981',color:'#fff'}}>+ Adicionar Cartão</button>
+        </div>
+      )}
+
+      {/* Modal: novo lançamento */}
+      {modal==='newExp'&&<Modal title="Novo Lançamento" onClose={()=>setModal(null)}>
         <div className="space-y-4">
-          <Field label="Descrição"><Inp value={form.description} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Adobe CC"/></Field>
+          <Field label="Descrição"><Inp value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Adobe CC, Hosting..."/></Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Valor (R$)"><Inp type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
-            <Field label="Parcelas"><Inp type="number" value={form.installments} onChange={v=>setForm(f=>({...f,installments:v}))} placeholder="1"/></Field>
-            <Field label="Parcela atual"><Inp type="number" value={form.currentInstallment} onChange={v=>setForm(f=>({...f,currentInstallment:v}))} placeholder="1"/></Field>
+            <Field label="Valor (R$)"><Inp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
+            <Field label="Parcelas"><Inp type="number" value={form.installments||'1'} onChange={v=>setForm(f=>({...f,installments:v}))} placeholder="1"/></Field>
+            <Field label="Parcela atual"><Inp type="number" value={form.currentInstallment||'1'} onChange={v=>setForm(f=>({...f,currentInstallment:v}))} placeholder="1"/></Field>
           </div>
-          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(false)}>Cancelar</BtnG><Btn onClick={addExp}><Save size={14}/> Salvar</Btn></div>
+          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={addExp}><Save size={14}/> Salvar</Btn></div>
+        </div>
+      </Modal>}
+
+      {/* Modal: pagar fatura */}
+      {modal==='payBill'&&<Modal title={`Pagar Fatura — ${card?.name}`} onClose={()=>setModal(null)}>
+        <div className="space-y-4">
+          <div className="rounded-xl p-4 text-center" style={{background:'var(--bg-overlay)'}}>
+            <div className="text-xs mb-1" style={{color:'var(--text-3)'}}>Total lançado ({MONTH_NAMES[pm-1]})</div>
+            <div className="text-2xl font-bold" style={{color:'#ef4444',fontVariantNumeric:'tabular-nums'}}>{fmtBRL(closedTotal)}</div>
+          </div>
+          <Field label="Valor pago (R$)">
+            <Inp type="number" value={form.amount||''} onChange={v=>setForm(f=>({...f,amount:v}))} placeholder={String(closedTotal)}/>
+            <p className="text-xs mt-1" style={{color:'var(--text-4)'}}>Edite se o valor da fatura for diferente do lançado</p>
+          </Field>
+          <Field label="Data do pagamento"><Inp type="date" value={form.date||todayStr} onChange={v=>setForm(f=>({...f,date:v}))}/></Field>
+          <Field label="Observações (opcional)"><Inp value={form.notes||''} onChange={v=>setForm(f=>({...f,notes:v}))} placeholder="Ex: pago via débito automático"/></Field>
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{color:'var(--text-2)'}}>
+            <input type="checkbox" checked={!!form.createExit} onChange={e=>setForm(f=>({...f,createExit:e.target.checked}))} style={{accentColor:'#10b981'}}/>
+            Criar saída em {MONTH_NAMES[cm-1]} com o valor pago
+          </label>
+          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={payBill}><Check size={14}/> Confirmar Pagamento</Btn></div>
+        </div>
+      </Modal>}
+
+      {/* Modal: adicionar/editar cartão */}
+      {(modal==='addCard'||typeof modal==='object'&&modal?.closeDay!==undefined)&&<Modal title={modal==='addCard'?'Novo Cartão':'Editar Cartão'} onClose={()=>setModal(null)}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Nubank PJ"/></Field>
+            <Field label="Tipo"><Sel value={form.type||'PJ'} onChange={v=>setForm(f=>({...f,type:v}))} options={['PJ','PF','Casa']}/></Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Limite (R$)"><Inp type="number" value={form.limit||''} onChange={v=>setForm(f=>({...f,limit:v}))} placeholder="0"/></Field>
+            <Field label="Fecha dia"><Inp type="number" value={form.closeDay||''} onChange={v=>setForm(f=>({...f,closeDay:v}))} placeholder="29"/></Field>
+            <Field label="Vence dia"><Inp type="number" value={form.dueDay||''} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field>
+          </div>
+          <Field label="Descrição"><Inp value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Ferramentas recorrentes"/></Field>
+          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={saveCard}><Save size={14}/> Salvar</Btn></div>
         </div>
       </Modal>}
     </div>
@@ -1350,19 +1506,17 @@ function SimulatorPage({state,monthKey:mk}){
 
 // ─── CONFIGURAÇÕES ────────────────────────────────────────────────────────────
 function SettingsPage({state,dispatch,monthKey:mk,toast}){
-  const [tab,setTab]=useState('clients')
   const [modal,setModal]=useState(null)
   const [form,setForm]=useState({})
-  const tabs=[{id:'clients',label:'Clientes'},{id:'fixedExpenses',label:'Despesas Fixas'},{id:'cards',label:'Cartões'},{id:'collaborators',label:'Colaboradores'}]
   const cards=state.settings?.cards||[]
+  const items=state.settings?.fixedExpenses||[]
   function save(){
-    const item={...form}
-    for(const k of Object.keys(item))if(['value','baseSalary','limit','dueDay','day','closeDay'].includes(k))item[k]=parseFloat(item[k])||0
-    if(modal==='add')dispatch({type:'ADD_SETTING',payload:{key:tab,item}})
-    else dispatch({type:'UPDATE_SETTING',payload:{key:tab,item}})
+    const item={...form,value:parseFloat(form.value)||0,day:parseInt(form.day)||1}
+    if(modal==='add')dispatch({type:'ADD_SETTING',payload:{key:'fixedExpenses',item}})
+    else dispatch({type:'UPDATE_SETTING',payload:{key:'fixedExpenses',item}})
     toast('Salvo');setModal(null)
   }
-  function del(id){dispatch({type:'DELETE_SETTING',payload:{key:tab,id}});toast('Removido','warn')}
+  function del(id){dispatch({type:'DELETE_SETTING',payload:{key:'fixedExpenses',id}});toast('Removido','warn')}
   function copyPrev(){
     const{year:y,month:m}=parseMonthKey(mk);const prev=new Date(y,m-2,1)
     dispatch({type:'COPY_FROM_PREV',payload:{monthKey:mk,prevKey:monthKey(prev.getFullYear(),prev.getMonth()+1)}})
@@ -1372,52 +1526,54 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
     const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'})
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='paiol-finance-backup.json';a.click();toast('Exportado')
   }
-  const items=state.settings?.[tab]||[]
-  const fields={
-    clients:<><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Empresa"/></Field><div className="grid grid-cols-2 gap-3"><Field label="Valor (R$)"><Inp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field><Field label="Dia pgto"><Inp type="number" value={form.dueDay||''} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field></div></>,
-    fixedExpenses:<><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Nome"/></Field><div className="grid grid-cols-2 gap-3"><Field label="Valor (R$)"><Inp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field><Field label="Dia"><Inp type="number" value={form.day||''} onChange={v=>setForm(f=>({...f,day:v}))} placeholder="10"/></Field></div><div className="grid grid-cols-2 gap-3"><Field label="Categoria"><Sel value={form.category||'Outros'} onChange={v=>setForm(f=>({...f,category:v}))} options={CATEGORIES}/></Field><Field label="Cartão"><Sel value={form.cardId||''} onChange={v=>setForm(f=>({...f,cardId:v}))} options={[{value:'',label:'Conta corrente'},...cards.map(c=>({value:c.id,label:c.name}))]}/></Field></div></>,
-    cards:<><div className="grid grid-cols-2 gap-3"><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Nubank PJ"/></Field><Field label="Tipo"><Sel value={form.type||'PJ'} onChange={v=>setForm(f=>({...f,type:v}))} options={['PJ','PF','Casa']}/></Field></div><div className="grid grid-cols-3 gap-3"><Field label="Limite (R$)"><Inp type="number" value={form.limit||''} onChange={v=>setForm(f=>({...f,limit:v}))} placeholder="0"/></Field><Field label="Fecha dia"><Inp type="number" value={form.closeDay||''} onChange={v=>setForm(f=>({...f,closeDay:v}))} placeholder="29"/></Field><Field label="Vence dia"><Inp type="number" value={form.dueDay||''} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field></div><Field label="Descrição"><Inp value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ferramentas..."/></Field></>,
-    collaborators:<><Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Nome"/></Field><div className="grid grid-cols-2 gap-3"><Field label="Função"><Inp value={form.role||''} onChange={v=>setForm(f=>({...f,role:v}))} placeholder="Designer"/></Field><Field label="Salário base (R$)"><Inp type="number" value={form.baseSalary||''} onChange={v=>setForm(f=>({...f,baseSalary:v}))} placeholder="0,00"/></Field></div></>,
-  }
-  const rowRender=item=>{
-    if(tab==='clients')return<><Td>{item.name}</Td><Td right color="#10b981">{fmtBRL(item.value)}</Td><Td muted>Dia {item.dueDay}</Td></>
-    if(tab==='fixedExpenses')return<><Td>{item.name}</Td><Td muted>{item.category}</Td><Td right color="#ef4444">{fmtBRL(item.value)}</Td><Td muted>Dia {item.day}</Td></>
-    if(tab==='cards')return<><Td>{item.name}</Td><Td muted>{item.type}</Td><Td right>{item.limit>0?fmtBRL(item.limit):'—'}</Td><Td muted>F:{item.closeDay}/V:{item.dueDay}</Td></>
-    if(tab==='collaborators')return<><Td>{item.name}</Td><Td muted>{item.role}</Td><Td right color="#3b82f6">{fmtBRL(item.baseSalary)}</Td></>
-  }
   return(
-    <div className="space-y-5">
-      <div className="flex flex-wrap gap-3">
-        <BtnG onClick={copyPrev}><Copy size={14}/> Copiar mês anterior</BtnG>
-        <BtnG onClick={exportData}><Download size={14}/> Exportar JSON</BtnG>
-        <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg cursor-pointer" style={{background:'var(--bg-input)',color:'#94a3b8',border:'1px solid var(--border)'}}>
-          <RefreshCw size={14}/> Importar JSON
-          <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{dispatch({type:'IMPORT',payload:{data:JSON.parse(ev.target.result)}});toast('Importado')}catch{toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
-        </label>
+    <div className="space-y-6">
+      <div className="rounded-2xl p-5 space-y-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
+        <h3 className="text-sm font-semibold" style={{color:'var(--text)'}}>Backup & Dados</h3>
+        <div className="flex flex-wrap gap-3">
+          <BtnG onClick={copyPrev}><Copy size={14}/> Copiar mês anterior</BtnG>
+          <BtnG onClick={exportData}><Download size={14}/> Exportar JSON</BtnG>
+          <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl cursor-pointer" style={{background:'var(--bg-input)',color:'var(--text-3)',border:'1px solid var(--border)'}}>
+            <RefreshCw size={14}/> Importar JSON
+            <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{dispatch({type:'IMPORT',payload:{data:JSON.parse(ev.target.result)}});toast('Importado')}catch{toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
+          </label>
+        </div>
+        <p className="text-xs" style={{color:'var(--text-3)'}}>Exporte regularmente para manter backup dos seus dados financeiros.</p>
       </div>
-      <div className="flex gap-0 border-b border-slate-700">
-        {tabs.map(t=><button key={t.id} onClick={()=>setTab(t.id)} className="px-4 py-2 text-sm font-medium transition-all -mb-px" style={{color:tab===t.id?'#10b981':'#64748b',borderBottom:tab===t.id?'2px solid #10b981':'2px solid transparent'}}>{t.label}</button>)}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold" style={{color:'var(--text)'}}>Despesas Fixas</h3>
+          <Btn onClick={()=>{setForm({name:'',value:'',day:'',category:'Outros',cardId:''});setModal('add')}} small><Plus size={12}/> Adicionar</Btn>
+        </div>
+        <p className="text-xs" style={{color:'var(--text-3)'}}>Despesas recorrentes mensais. Use "Copiar mês anterior" para replicá-las automaticamente.</p>
+        <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
+          <table className="w-full"><tbody>
+            {items.map((item,i)=>(
+              <tr key={item.id} className="border-b" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
+                <Td>{item.name}</Td><Td muted>{item.category}</Td><Td right color="#ef4444">{fmtBRL(item.value)}</Td><Td muted>Dia {item.day}</Td>
+                <Td><div className="flex gap-1.5">
+                  <button onClick={()=>{setForm({...item});setModal(item)}} className="p-1 rounded" style={{color:'var(--text-3)'}}><Pencil size={13}/></button>
+                  <button onClick={()=>del(item.id)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Trash2 size={13}/></button>
+                </div></Td>
+              </tr>
+            ))}
+            {items.length===0&&<tr><td colSpan={5} className="px-3 py-8 text-center text-sm" style={{color:'var(--text-3)'}}>Nenhuma despesa fixa cadastrada</td></tr>}
+          </tbody></table>
+        </div>
       </div>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-300">{tabs.find(t=>t.id===tab)?.label}</h3>
-        <Btn onClick={()=>{setForm({});setModal('add')}} small><Plus size={12}/> Adicionar</Btn>
-      </div>
-      <div className="rounded-2xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
-        <table className="w-full"><tbody>
-          {items.map((item,i)=>(
-            <tr key={item.id} className="border-b" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
-              {rowRender(item)}
-              <Td><div className="flex gap-1.5">
-                <button onClick={()=>{setForm({...item});setModal(item)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
-                <button onClick={()=>del(item.id)} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button>
-              </div></Td>
-            </tr>
-          ))}
-          {items.length===0&&<tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">Nenhum registro</td></tr>}
-        </tbody></table>
-      </div>
-      {modal&&<Modal title={modal==='add'?'Novo Registro':'Editar'} onClose={()=>setModal(null)}>
-        <div className="space-y-4">{fields[tab]}<div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={save}><Save size={14}/> Salvar</Btn></div></div>
+      {modal&&<Modal title={modal==='add'?'Nova Despesa Fixa':'Editar Despesa'} onClose={()=>setModal(null)}>
+        <div className="space-y-4">
+          <Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Aluguel"/></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Valor (R$)"><Inp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
+            <Field label="Dia do mês"><Inp type="number" value={form.day||''} onChange={v=>setForm(f=>({...f,day:v}))} placeholder="10"/></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Categoria"><Sel value={form.category||'Outros'} onChange={v=>setForm(f=>({...f,category:v}))} options={CATEGORIES}/></Field>
+            <Field label="Cartão"><Sel value={form.cardId||''} onChange={v=>setForm(f=>({...f,cardId:v}))} options={[{value:'',label:'Conta corrente'},...cards.map(c=>({value:c.id,label:c.name}))]}/></Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={save}><Save size={14}/> Salvar</Btn></div>
+        </div>
       </Modal>}
     </div>
   )
@@ -1426,15 +1582,27 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
 // ─── CLIENTES ─────────────────────────────────────────────────────────────────
 function ClientsPage({state,dispatch,toast}){
   const clients=state.settings?.clients||[]
-  const [modal,setModal]=useState(null)
+  const [modal,setModal]=useState(null) // null | 'add' | clientObj
+  const [histModal,setHistModal]=useState(null) // clientObj for history
+  const [formTab,setFormTab]=useState('dados')
   const [form,setForm]=useState({})
+  const [svcInput,setSvcInput]=useState('')
+  const [cnpjLoading,setCnpjLoading]=useState(false)
+  const [cepLoading,setCepLoading]=useState(false)
+  const [filterStatus,setFilterStatus]=useState('todos')
   const todayD=new Date()
+
+  const inputSt={background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
+  const Inp2=({value,onChange,type='text',placeholder,readOnly})=><input type={type} value={value||''} readOnly={readOnly} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder} style={{...inputSt,opacity:readOnly?0.6:1}}/>
+  const Sel2=({value,onChange,opts})=><select value={value||''} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
+  const Fld=({label,children,half})=><div className={half?'':''}><label className="block text-xs mb-1" style={{color:'var(--text-3)'}}>{label}</label>{children}</div>
 
   function getDaysLeft(endDate){
     if(!endDate)return null
     return Math.floor((new Date(endDate+'T12:00:00')-todayD)/86400000)
   }
   function getCS(c){
+    if(c.status==='inativo')return'inativo'
     if(!c.startDate||!c.endDate)return'no_contract'
     const d=getDaysLeft(c.endDate)
     if(d<0)return'expired';if(d<=30)return'expiring';return'active'
@@ -1445,117 +1613,301 @@ function ClientsPage({state,dispatch,toast}){
     d.setMonth(d.getMonth()+parseInt(duration));d.setDate(d.getDate()-1)
     return d.toISOString().slice(0,10)
   }
-  function countReceived(c){
-    if(!c.startDate||!c.duration)return{r:0,t:0}
-    const dur=parseInt(c.duration)||0,start=new Date(c.startDate+'T12:00:00')
-    let r=0
-    for(let i=0;i<dur;i++){
-      const d=new Date(start.getFullYear(),start.getMonth()+i,1)
-      const mk=monthKey(d.getFullYear(),d.getMonth()+1)
-      const m=state.months[mk]
-      if(m&&(m.entries||[]).find(e=>(e.clientId===c.id||e.client===c.name)&&e.status==='Recebido'))r++
-    }
-    return{r,t:dur}
+  function getPayHistory(c){
+    const entries=[]
+    Object.entries(state.months||{}).forEach(([mk2,m])=>{
+      const e=(m.entries||[]).find(en=>en.clientId===c.id||(en.client===c.name))
+      if(e)entries.push({mk:mk2,...e})
+    })
+    return entries.sort((a,b)=>b.mk.localeCompare(a.mk))
   }
-  function openAdd(){setForm({name:'',value:'',dueDay:'',startDate:'',duration:'12',endDate:'',contractNote:'',phone:'',email:'',permuteValue:''});setModal('add')}
-  function openEdit(c){setForm({...c});setModal(c)}
+  async function fetchCNPJ(){
+    const cnpj=(form.cnpj||'').replace(/\D/g,'')
+    if(cnpj.length!==14)return toast('CNPJ inválido (14 dígitos)','error')
+    setCnpjLoading(true)
+    try{
+      const r=await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+      if(!r.ok)throw new Error()
+      const d=await r.json()
+      setForm(f=>({...f,
+        razaoSocial:d.razao_social||f.razaoSocial,
+        street:(d.logradouro||'').trim()||f.street,
+        number:d.numero||f.number,
+        complement:d.complemento||f.complement,
+        city:d.municipio||f.city,
+        state:d.uf||f.state,
+        cep:(d.cep||'').replace(/\D/g,'')||f.cep,
+      }))
+      toast('Dados preenchidos via CNPJ ✓')
+    }catch{toast('CNPJ não encontrado','error')}
+    setCnpjLoading(false)
+  }
+  async function fetchCEP(cepVal){
+    const cep=(cepVal||form.cep||'').replace(/\D/g,'')
+    if(cep.length!==8)return
+    setCepLoading(true)
+    try{
+      const r=await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const d=await r.json()
+      if(d.erro)throw new Error()
+      setForm(f=>({...f,street:d.logradouro||f.street,city:d.localidade||f.city,state:d.uf||f.state,complement:d.complemento||f.complement}))
+    }catch{}
+    setCepLoading(false)
+  }
+  function openAdd(){
+    setForm({name:'',value:'',dueDay:'',startDate:'',duration:'12',endDate:'',contractNote:'',phone:'',email:'',permuteValue:'',razaoSocial:'',cnpj:'',cep:'',street:'',number:'',complement:'',city:'',state:'',status:'ativo',services:[],contractUrl:'',proposalUrl:''})
+    setFormTab('dados');setModal('add')
+  }
+  function openEdit(c){setForm({...c,services:c.services||[]});setFormTab('dados');setModal(c)}
   function save(){
     if(!form.name||!form.value)return toast('Preencha nome e valor','error')
-    const item={...form,value:parseFloat(form.value)||0,dueDay:parseInt(form.dueDay)||1,duration:parseInt(form.duration)||12,endDate:computeEnd(form.startDate,form.duration),permuteValue:parseFloat(form.permuteValue)||0}
+    const item={...form,value:parseFloat(form.value)||0,dueDay:parseInt(form.dueDay)||1,duration:parseInt(form.duration)||12,endDate:computeEnd(form.startDate,form.duration),permuteValue:parseFloat(form.permuteValue)||0,services:form.services||[]}
     if(modal==='add')dispatch({type:'ADD_SETTING',payload:{key:'clients',item}})
     else dispatch({type:'UPDATE_SETTING',payload:{key:'clients',item}})
     toast('Salvo');setModal(null)
   }
   function del(id){dispatch({type:'DELETE_SETTING',payload:{key:'clients',id}});toast('Removido','warn')}
-  function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas para todos os meses ✓')}
+  function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas ✓')}
+  function toggleStatus(c){
+    const newStatus=c.status==='inativo'?'ativo':'inativo'
+    dispatch({type:'UPDATE_SETTING',payload:{key:'clients',item:{...c,status:newStatus}}})
+  }
+  function toggleNF(entry,mk2){
+    dispatch({type:'UPDATE_ENTRY',payload:{monthKey:mk2,entry:{...entry,nf:!entry.nf}}})
+  }
+  function addSvc(){if(!svcInput.trim())return;setForm(f=>({...f,services:[...(f.services||[]),svcInput.trim()]}));setSvcInput('')}
+  function remSvc(i){setForm(f=>({...f,services:(f.services||[]).filter((_,idx)=>idx!==i)}))}
 
-  const scMap={active:{label:'Ativo',c:'#10b981',b:'#10b98120'},expiring:{label:'Vencendo',c:'#f59e0b',b:'#f59e0b20'},expired:{label:'Vencido',c:'#ef4444',b:'#ef444420'},no_contract:{label:'Sem contrato',c:'#64748b',b:'#64748b20'}}
-  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
-  const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
-  const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
-  const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
+  const scMap={
+    active:{label:'Ativo',c:'#10b981',b:'#10b98118'},
+    expiring:{label:'Vencendo',c:'#f59e0b',b:'#f59e0b18'},
+    expired:{label:'Vencido',c:'#ef4444',b:'#ef444418'},
+    inativo:{label:'Inativo',c:'#64748b',b:'#64748b18'},
+    no_contract:{label:'Ativo',c:'#10b981',b:'#10b98118'},
+  }
+
+  const filtered=filterStatus==='todos'?clients:clients.filter(c=>getCS(c)===filterStatus||(filterStatus==='ativo'&&getCS(c)==='no_contract'))
+  const activeCount=clients.filter(c=>!['inativo','expired'].includes(getCS(c))).length
+  const mrr=clients.filter(c=>c.status!=='inativo').reduce((s,c)=>s+(c.value||0),0)
 
   return(
     <div className="space-y-5">
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <SummaryCard label="Total de Clientes" value={clients.length} color="#3b82f6" icon={Briefcase}/>
-        <SummaryCard label="Receita Mensal" value={fmtBRL(clients.reduce((s,c)=>s+(c.value||0),0))} color="#10b981" icon={TrendingUp}/>
-        <SummaryCard label="Contratos Ativos" value={clients.filter(c=>getCS(c)==='active').length} color="#10b981" icon={CheckCircle}/>
-        <SummaryCard label="Vencendo (30d)" value={clients.filter(c=>['expiring','expired'].includes(getCS(c))).length} color="#f59e0b" icon={AlertCircle}/>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <SummaryCard label="Total" value={clients.length} color="#3b82f6" icon={Briefcase}/>
+        <SummaryCard label="Ativos" value={activeCount} color="#10b981" icon={CheckCircle}/>
+        <SummaryCard label="MRR" value={fmtBRL(mrr)} color="#10b981" icon={TrendingUp}/>
+        <SummaryCard label="Vencendo (30d)" value={clients.filter(c=>getCS(c)==='expiring').length} color="#f59e0b" icon={AlertCircle}/>
       </div>
-      <div className="flex justify-end">
-        <button onClick={openAdd} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-2 flex-wrap">
+          {['todos','ativo','expiring','expired','inativo'].map(s=>(
+            <button key={s} onClick={()=>setFilterStatus(s)} className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
+              style={{background:filterStatus===s?'#10b981':'var(--bg-overlay)',color:filterStatus===s?'#fff':'var(--text-3)',border:filterStatus===s?'1px solid #10b981':'1px solid var(--border)'}}>
+              {s==='todos'?'Todos':s==='ativo'?'Ativos':s==='expiring'?'Vencendo':s==='expired'?'Vencidos':'Inativos'}
+            </button>
+          ))}
+        </div>
+        <button onClick={openAdd} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl" style={{background:'#10b981',color:'#fff'}}>
           <Plus size={14}/> Novo Cliente
         </button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {clients.map(c=>{
-          const cs=getCS(c),sc=scMap[cs],dl=getDaysLeft(c.endDate),{r,t}=countReceived(c)
+        {filtered.map(c=>{
+          const cs=getCS(c),sc=scMap[cs]||scMap.active
+          const dl=getDaysLeft(c.endDate)
+          const hist=getPayHistory(c)
+          const received=hist.filter(e=>e.status==='Recebido').length
           return(
-            <div key={c.id} className="rounded-2xl p-5 space-y-3" style={{background:'var(--bg-card)',border:`1px solid ${(cs==='expiring'||cs==='expired')?sc.c+'40':'rgba(255,255,255,0.07)'}`}}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-semibold text-slate-100">{c.name}</div>
-                  <div className="text-xl font-bold mt-0.5" style={{color:'#10b981'}}>{fmtBRL(c.value)}<span className="text-xs text-slate-500 font-normal">/mês</span></div>
-                  {c.permuteValue>0&&<div className="text-xs mt-0.5" style={{color:'#a78bfa'}}>+ {fmtBRL(c.permuteValue)} permuta/mês</div>}
+            <div key={c.id} className="rounded-2xl p-4 space-y-3" style={{background:'var(--bg-card)',border:`1px solid ${cs==='expiring'||cs==='expired'?sc.c+'50':'var(--border)'}`}}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate" style={{color:'var(--text)'}}>{c.name}</div>
+                  {c.razaoSocial&&<div className="text-xs truncate mt-0.5" style={{color:'var(--text-3)'}}>{c.razaoSocial}</div>}
+                  <div className="text-lg font-bold mt-1" style={{color:'#10b981',fontVariantNumeric:'tabular-nums'}}>{fmtBRL(c.value)}<span className="text-xs font-normal ml-1" style={{color:'var(--text-3)'}}>/ mês</span></div>
+                  {c.permuteValue>0&&<div className="text-xs mt-0.5" style={{color:'#a78bfa'}}>+ {fmtBRL(c.permuteValue)} permuta</div>}
                 </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{background:sc.b,color:sc.c}}>{sc.label}</span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <button onClick={()=>toggleStatus(c)} className="text-xs font-semibold px-2 py-0.5 rounded-full transition-all" style={{background:sc.b,color:sc.c,border:`1px solid ${sc.c}40`}}>{sc.label}</button>
+                  {c.city&&<span className="text-xs" style={{color:'var(--text-3)'}}>{c.city}{c.state&&`, ${c.state}`}</span>}
+                </div>
               </div>
               {c.startDate&&(
-                <div className="space-y-1 text-xs text-slate-400">
-                  <div className="flex items-center gap-2"><CalendarCheck size={12}/><span>Início: {c.startDate.split('-').reverse().join('/')} · {c.duration} meses</span></div>
-                  {c.endDate&&<div className="flex items-center gap-2" style={{color:dl!==null&&dl<=30?sc.c:'#94a3b8'}}><Clock size={12}/><span>Venc: {c.endDate.split('-').reverse().join('/')}{dl!==null&&(dl>=0?` (${dl}d)`:` (venceu há ${Math.abs(dl)}d)`)}</span></div>}
-                  {t>0&&<div>
-                    <div className="flex justify-between text-xs text-slate-500 mb-1"><span>Meses recebidos</span><span>{r}/{t}</span></div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{background:'var(--bg-overlay)'}}><div className="h-full rounded-full" style={{width:`${(r/t)*100}%`,background:'#10b981'}}/></div>
-                  </div>}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs" style={{color:'var(--text-3)'}}>
+                    <CalendarCheck size={11}/><span>Início {c.startDate.split('-').reverse().join('/')} · {c.duration}m</span>
+                    {c.endDate&&<span style={{color:dl!==null&&dl<=30?sc.c:'inherit'}}>· Vence {c.endDate.split('-').reverse().join('/')}{dl!==null&&dl<=30&&(dl>=0?` (${dl}d)`:'(vencido)')}</span>}
+                  </div>
+                  {hist.length>0&&(
+                    <div>
+                      <div className="flex justify-between text-xs mb-0.5" style={{color:'var(--text-3)'}}><span>Recebimentos</span><span>{received}/{hist.length}</span></div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'var(--bg-overlay)'}}><div className="h-full rounded-full" style={{width:`${hist.length>0?(received/hist.length)*100:0}%`,background:'#10b981'}}/></div>
+                    </div>
+                  )}
                 </div>
               )}
-              {(c.phone||c.email)&&<div className="space-y-1 text-xs text-slate-500">
-                {c.phone&&<div className="flex items-center gap-1.5"><Phone size={11}/>{c.phone}</div>}
-                {c.email&&<div className="flex items-center gap-1.5"><Mail size={11}/>{c.email}</div>}
+              {c.services?.length>0&&(
+                <div className="flex flex-wrap gap-1">
+                  {c.services.map((s,i)=><span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{background:'var(--bg-overlay)',color:'var(--text-3)',border:'1px solid var(--border-s)'}}>{s}</span>)}
+                </div>
+              )}
+              {(c.phone||c.email)&&<div className="flex flex-wrap gap-3 text-xs" style={{color:'var(--text-3)'}}>
+                {c.phone&&<span className="flex items-center gap-1"><Phone size={11}/>{c.phone}</span>}
+                {c.email&&<span className="flex items-center gap-1 truncate"><Mail size={11}/>{c.email}</span>}
               </div>}
-              {c.contractNote&&<div className="text-xs text-slate-500 flex items-start gap-1.5"><FileText size={11} className="mt-0.5 shrink-0"/>{c.contractNote}</div>}
-              <div className="flex items-center gap-2 pt-1">
-                <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--bg-overlay)',color:'#94a3b8'}}><Pencil size={11}/> Editar</button>
-                {c.startDate&&c.duration&&<button onClick={()=>genEntries(c.id)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}><CalendarCheck size={11}/> Gerar meses</button>}
-                <button onClick={()=>del(c.id)} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{background:'#ef444420',color:'#ef4444'}}><Trash2 size={11}/></button>
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><Pencil size={11}/> Editar</button>
+                <button onClick={()=>setHistModal(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><FileText size={11}/> Histórico</button>
+                {c.startDate&&c.duration&&<button onClick={()=>genEntries(c.id)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#10b98118',color:'#10b981',border:'1px solid #10b98130'}}><CalendarCheck size={11}/> Gerar meses</button>}
+                <button onClick={()=>del(c.id)} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{background:'#ef444418',color:'#ef4444'}}><Trash2 size={11}/></button>
               </div>
             </div>
           )
         })}
+        {filtered.length===0&&<div className="col-span-full py-12 text-center text-sm" style={{color:'var(--text-3)'}}>Nenhum cliente encontrado</div>}
       </div>
-      {modal&&(
-        <Modal title={modal==='add'?'Novo Cliente':`Editar — ${form.name}`} onClose={()=>setModal(null)} wide>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Fld label="Nome do cliente"><Inp2 value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Empresa ABC"/></Fld>
-              <Fld label="Valor mensal (R$)"><Inp2 type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Fld>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Fld label="Dia de pagamento"><Inp2 type="number" value={form.dueDay||''} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Fld>
-              <Fld label="Telefone"><Inp2 value={form.phone||''} onChange={v=>setForm(f=>({...f,phone:v}))} placeholder="(11) 99999-9999"/></Fld>
-            </div>
-            <Fld label="E-mail"><Inp2 value={form.email||''} onChange={v=>setForm(f=>({...f,email:v}))} placeholder="contato@empresa.com"/></Fld>
-            <div className="border-t border-slate-700 pt-3">
-              <p className="text-xs mb-3 font-semibold uppercase tracking-wider" style={{color:'#a78bfa'}}>Permuta</p>
-              <Fld label="Valor em permuta por mês (R$) — deixe 0 se não houver permuta">
-                <Inp2 type="number" value={form.permuteValue||''} onChange={v=>setForm(f=>({...f,permuteValue:v}))} placeholder="0,00"/>
-              </Fld>
-              <p className="text-xs text-slate-500 mt-1">Ex: cliente paga R$500 + R$300 em permuta → coloque 300 aqui e 500 em "Valor mensal"</p>
-            </div>
-            <div className="border-t border-slate-700 pt-3">
-              <p className="text-xs text-slate-400 mb-3 font-semibold uppercase tracking-wider">Contrato</p>
-              <div className="grid grid-cols-2 gap-3">
-                <Fld label="Data de início"><Inp2 type="date" value={form.startDate||''} onChange={v=>{const e=computeEnd(v,form.duration);setForm(f=>({...f,startDate:v,endDate:e}))}}/></Fld>
-                <Fld label="Duração"><Sel2 value={String(form.duration||'12')} onChange={v=>{const e=computeEnd(form.startDate,v);setForm(f=>({...f,duration:v,endDate:e}))}} opts={[{v:'3',l:'3 meses'},{v:'6',l:'6 meses'},{v:'12',l:'12 meses'},{v:'24',l:'24 meses'}]}/></Fld>
+
+      {/* Modal histórico de pagamentos */}
+      {histModal&&(()=>{
+        const hist=getPayHistory(histModal)
+        return(
+          <Modal title={`Histórico — ${histModal.name}`} onClose={()=>setHistModal(null)} wide>
+            <div className="space-y-3">
+              {hist.length===0&&<p className="text-sm text-center py-6" style={{color:'var(--text-3)'}}>Nenhum lançamento encontrado</p>}
+              <div className="rounded-xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
+                <table className="w-full text-sm">
+                  <thead style={{background:'var(--bg-overlay)'}}><tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold" style={{color:'var(--text-3)'}}>Mês</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold" style={{color:'var(--text-3)'}}>Previsto</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold" style={{color:'var(--text-3)'}}>Recebido</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold" style={{color:'var(--text-3)'}}>Status</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold" style={{color:'var(--text-3)'}}>NF</th>
+                  </tr></thead>
+                  <tbody>{hist.map((e,i)=>{
+                    const{year:y,month:m}=parseMonthKey(e.mk)
+                    return(
+                      <tr key={e.id} style={{borderTop:'1px solid var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
+                        <td className="px-3 py-2" style={{color:'var(--text-2)'}}>{MONTH_NAMES[m-1].slice(0,3)} {y}</td>
+                        <td className="px-3 py-2 text-right font-mono text-xs" style={{color:'var(--text-2)'}}>{fmtBRL(e.expectedValue||0)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-xs" style={{color:e.status==='Recebido'?'#10b981':'var(--text-3)'}}>{e.status==='Recebido'?fmtBRL(e.realValue||0):'—'}</td>
+                        <td className="px-3 py-2 text-center"><span className="text-xs px-2 py-0.5 rounded-full" style={{background:e.status==='Recebido'?'#10b98118':'#64748b18',color:e.status==='Recebido'?'#10b981':'#64748b'}}>{e.status}</span></td>
+                        <td className="px-3 py-2 text-center"><button onClick={()=>toggleNF(e,e.mk)} className="w-5 h-5 rounded flex items-center justify-center mx-auto transition-all" style={{background:e.nf?'#10b98130':'var(--bg-overlay)',border:`1px solid ${e.nf?'#10b981':'var(--border)'}`,color:e.nf?'#10b981':'var(--text-4)'}}>{e.nf&&<Check size={11}/>}</button></td>
+                      </tr>
+                    )
+                  })}</tbody>
+                </table>
               </div>
-              {form.endDate&&<p className="text-xs text-slate-500 mt-1">Término: {form.endDate.split('-').reverse().join('/')}</p>}
             </div>
-            <Fld label="Observações (link Drive, notas...)"><Inp2 value={form.contractNote||''} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Ex: https://drive.google.com/..."/></Fld>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'#94a3b8'}}>Cancelar</button>
-              <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
+          </Modal>
+        )
+      })()}
+
+      {/* Modal cadastro/edição */}
+      {modal&&(
+        <Modal title={modal==='add'?'Novo Cliente':`${form.name||'Editar'}`} onClose={()=>setModal(null)} wide>
+          <div className="space-y-4">
+            <div className="flex gap-1 p-1 rounded-xl" style={{background:'var(--bg-overlay)'}}>
+              {['dados','endereco','contrato'].map(t=>(
+                <button key={t} onClick={()=>setFormTab(t)} className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all"
+                  style={{background:formTab===t?'var(--bg-card)':'transparent',color:formTab===t?'var(--text)':'var(--text-3)',boxShadow:formTab===t?'0 1px 4px rgba(0,0,0,0.2)':'none'}}>
+                  {t==='dados'?'Dados':t==='endereco'?'Endereço & Serviços':'Contrato & Docs'}
+                </button>
+              ))}
+            </div>
+            {formTab==='dados'&&(
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Fld label="Nome fantasia *"><Inp2 value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Empresa ABC"/></Fld>
+                  <Fld label="Status">
+                    <div className="flex gap-2 mt-1">
+                      {['ativo','inativo'].map(s=>(
+                        <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} className="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
+                          style={{background:(form.status||'ativo')===s?s==='ativo'?'#10b98130':'#64748b30':'var(--bg-overlay)',color:(form.status||'ativo')===s?s==='ativo'?'#10b981':'#94a3b8':'var(--text-3)',border:`1px solid ${(form.status||'ativo')===s?s==='ativo'?'#10b981':'#64748b':'var(--border)'}`}}>
+                          {s==='ativo'?'Ativo':'Inativo'}
+                        </button>
+                      ))}
+                    </div>
+                  </Fld>
+                </div>
+                <Fld label="Razão Social"><Inp2 value={form.razaoSocial} onChange={v=>setForm(f=>({...f,razaoSocial:v}))} placeholder="Ex: Empresa ABC Ltda"/></Fld>
+                <div className="flex gap-2">
+                  <div className="flex-1"><Fld label="CNPJ"><Inp2 value={form.cnpj} onChange={v=>setForm(f=>({...f,cnpj:v}))} placeholder="00.000.000/0001-00"/></Fld></div>
+                  <div className="flex items-end pb-0.5"><button onClick={fetchCNPJ} disabled={cnpjLoading} className="px-3 py-2 rounded-xl text-xs font-medium" style={{background:'#3b82f630',color:'#3b82f6',border:'1px solid #3b82f640',opacity:cnpjLoading?0.5:1}}>{cnpjLoading?'..':'Buscar'}</button></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Fld label="Valor mensal (R$) *"><Inp2 type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Fld>
+                  <Fld label="Dia de pagamento"><Inp2 type="number" value={form.dueDay} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Fld>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Fld label="Telefone"><Inp2 value={form.phone} onChange={v=>setForm(f=>({...f,phone:v}))} placeholder="(11) 99999-9999"/></Fld>
+                  <Fld label="E-mail"><Inp2 value={form.email} onChange={v=>setForm(f=>({...f,email:v}))} placeholder="contato@empresa.com"/></Fld>
+                </div>
+                <Fld label="Valor permuta/mês (R$)">
+                  <Inp2 type="number" value={form.permuteValue} onChange={v=>setForm(f=>({...f,permuteValue:v}))} placeholder="0,00"/>
+                  <p className="text-xs mt-1" style={{color:'var(--text-4)'}}>Deixe 0 se não houver permuta</p>
+                </Fld>
+              </div>
+            )}
+            {formTab==='endereco'&&(
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <div className="flex-1"><Fld label="CEP"><Inp2 value={form.cep} onChange={v=>{setForm(f=>({...f,cep:v}));if((v||'').replace(/\D/g,'').length===8)fetchCEP(v)}} placeholder="00000-000"/></Fld></div>
+                  <div className="flex items-end pb-0.5"><span className="px-3 py-2 text-xs" style={{color:'var(--text-4)'}}>{cepLoading?'Buscando...':'Auto'}</span></div>
+                </div>
+                <Fld label="Logradouro"><Inp2 value={form.street} onChange={v=>setForm(f=>({...f,street:v}))} placeholder="Rua, Av..."/></Fld>
+                <div className="grid grid-cols-3 gap-3">
+                  <Fld label="Número"><Inp2 value={form.number} onChange={v=>setForm(f=>({...f,number:v}))} placeholder="123"/></Fld>
+                  <div className="col-span-2"><Fld label="Complemento"><Inp2 value={form.complement} onChange={v=>setForm(f=>({...f,complement:v}))} placeholder="Sala 10"/></Fld></div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2"><Fld label="Cidade"><Inp2 value={form.city} onChange={v=>setForm(f=>({...f,city:v}))} placeholder="São Paulo"/></Fld></div>
+                  <Fld label="Estado"><Inp2 value={form.state} onChange={v=>setForm(f=>({...f,state:v}))} placeholder="SP"/></Fld>
+                </div>
+                <div className="border-t pt-3" style={{borderColor:'var(--sep)'}}>
+                  <p className="text-xs font-semibold mb-2" style={{color:'var(--text-2)'}}>Serviços contratados</p>
+                  <div className="flex gap-2 mb-2">
+                    <input value={svcInput} onChange={e=>setSvcInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addSvc()}}} placeholder="Ex: Social Media..." style={{...inputSt,flex:1}}/>
+                    <button onClick={addSvc} className="px-3 py-2 rounded-xl text-xs font-medium" style={{background:'#10b98130',color:'#10b981',border:'1px solid #10b98140'}}>+ Add</button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(form.services||[]).map((s,i)=>(
+                      <span key={i} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full" style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)'}}>
+                        {s}<button onClick={()=>remSvc(i)} style={{color:'var(--text-4)'}}><X size={10}/></button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {formTab==='contrato'&&(
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Fld label="Data de início">
+                    <Inp2 type="date" value={form.startDate} onChange={v=>{const e=computeEnd(v,form.duration);setForm(f=>({...f,startDate:v,endDate:e}))}}/>
+                  </Fld>
+                  <Fld label="Duração">
+                    <Sel2 value={String(form.duration||'12')} onChange={v=>{const e=computeEnd(form.startDate,v);setForm(f=>({...f,duration:v,endDate:e}))}} opts={[{v:'3',l:'3 meses'},{v:'6',l:'6 meses'},{v:'12',l:'12 meses'},{v:'18',l:'18 meses'},{v:'24',l:'24 meses'}]}/>
+                  </Fld>
+                </div>
+                {form.endDate&&<p className="text-xs" style={{color:'var(--text-3)'}}>Término previsto: {form.endDate.split('-').reverse().join('/')}</p>}
+                <Fld label="Link do contrato assinado (Google Drive)">
+                  <Inp2 value={form.contractUrl} onChange={v=>setForm(f=>({...f,contractUrl:v}))} placeholder="https://drive.google.com/..."/>
+                </Fld>
+                <Fld label="Link da proposta aceita (Google Drive)">
+                  <Inp2 value={form.proposalUrl} onChange={v=>setForm(f=>({...f,proposalUrl:v}))} placeholder="https://drive.google.com/..."/>
+                </Fld>
+                <Fld label="Observações">
+                  <Inp2 value={form.contractNote} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Notas adicionais..."/>
+                </Fld>
+                {modal!=='add'&&form.startDate&&form.duration&&(
+                  <button onClick={()=>{genEntries(form.id||modal?.id);setModal(null)}} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
+                    <CalendarCheck size={14}/> Gerar entradas para todos os meses do contrato
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2 border-t" style={{borderColor:'var(--sep)'}}>
+              <BtnG onClick={()=>setModal(null)}>Cancelar</BtnG>
+              <Btn onClick={save}><Save size={14}/> Salvar</Btn>
             </div>
           </div>
         </Modal>
@@ -2210,16 +2562,18 @@ const NAV=[
   {id:'cashflow',icon:CalendarDays,label:'Fluxo de Caixa'},
   {id:'entries',icon:TrendingUp,label:'Entradas'},
   {id:'exits',icon:TrendingDown,label:'Saídas'},
-  {id:'cards',icon:CreditCard,label:'Cartões'},
-  {id:'collaborators',icon:Users,label:'Colaboradores'},
-  {id:'clients',icon:Briefcase,label:'Clientes'},
   {id:'permuta',icon:ArrowLeftRight,label:'Permuta'},
   {id:'objetivos',icon:Flag,label:'Objetivos'},
   {id:'tasks',icon:ListTodo,label:'Tarefas'},
   {id:'calendar',icon:CalendarRange,label:'Calendário'},
   {id:'annual',icon:Target,label:'Projeção Anual'},
   {id:'simulator',icon:Zap,label:'Simulador'},
-  {id:'settings',icon:Settings,label:'Configurações'},
+]
+const SETTINGS_SUB=[
+  {id:'clients',icon:Briefcase,label:'Clientes'},
+  {id:'cards',icon:CreditCard,label:'Cartões'},
+  {id:'collaborators',icon:Users,label:'Colaboradores'},
+  {id:'settings',icon:Settings,label:'Dados & Backup'},
 ]
 
 function Sidebar({activePage,setActivePage,open,setOpen,state}){
@@ -2236,6 +2590,9 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
     const used=(state?.settings?.permuteUsages||[]).filter(u=>u.clientId===c.id).reduce((s,u)=>s+u.value,0)
     return(earned-used)<0
   }).length
+  const settingsPages=['clients','cards','collaborators','settings']
+  const [settingsOpen,setSettingsOpen]=useState(()=>settingsPages.includes(activePage))
+  const isSettingsActive=settingsPages.includes(activePage)
   return(
     <>
       {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'var(--modal-bg)',backdropFilter:'blur(4px)'}} onClick={()=>setOpen(false)}/>}
@@ -2256,11 +2613,28 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
             <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left"
               style={{background:activePage===id?'rgba(255,255,255,0.1)':'transparent',color:activePage===id?'#ffffff':'rgba(235,235,245,0.45)',fontWeight:activePage===id?600:400}}>
               <span style={{color:activePage===id?'#10b981':'rgba(235,235,245,0.3)'}}><Icon size={16}/></span>{label}
-              {id==='clients'&&expCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#f59e0b',color:'#000',fontSize:10}}>{expCount}</span>}
               {id==='permuta'&&permuteNegCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#ef4444',color:'#fff',fontSize:10}}>!</span>}
               {id==='tasks'&&openTasksCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:overdueCount>0?'#ef4444':'#3b82f6',color:'#fff',fontSize:10}}>{openTasksCount}</span>}
             </button>
           ))}
+          {/* Configurações accordion */}
+          <button onClick={()=>setSettingsOpen(o=>!o)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left"
+            style={{background:isSettingsActive&&!settingsOpen?'rgba(255,255,255,0.05)':'transparent',color:isSettingsActive?'#ffffff':'rgba(235,235,245,0.45)',fontWeight:isSettingsActive?600:400}}>
+            <span style={{color:isSettingsActive?'#10b981':'rgba(235,235,245,0.3)'}}><Settings size={16}/></span>
+            <span className="flex-1">Configurações</span>
+            <span style={{color:'rgba(235,235,245,0.3)',transition:'transform 0.2s',transform:settingsOpen?'rotate(180deg)':'rotate(0deg)'}}><ChevronDown size={14}/></span>
+          </button>
+          {settingsOpen&&(
+            <div className="ml-2 space-y-0.5">
+              {SETTINGS_SUB.map(({id,icon:Icon,label})=>(
+                <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-all text-left"
+                  style={{background:activePage===id?'rgba(16,185,129,0.12)':'transparent',color:activePage===id?'#10b981':'rgba(235,235,245,0.4)',fontWeight:activePage===id?600:400,borderLeft:activePage===id?'2px solid #10b981':'2px solid transparent'}}>
+                  <Icon size={14}/>{label}
+                  {id==='clients'&&expCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#f59e0b',color:'#000',fontSize:10}}>{expCount}</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
         <div className="p-3 border-t flex items-center justify-between" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2">
@@ -2458,6 +2832,10 @@ function PaiolFinanceApp({currentUser,onLogout}){
                   <span className="text-sm font-semibold min-w-[80px] text-center tracking-tight" style={{color:'var(--text)'}}>{selYear}</span>
                   <button onClick={nextYear} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronRight size={16}/></button>
                 </div>
+              ):['settings','clients','cards','collaborators'].includes(activePage)?(
+                <span className="text-sm font-semibold tracking-tight" style={{color:'var(--text)'}}>
+                  {activePage==='clients'?'Clientes':activePage==='cards'?'Cartões':activePage==='collaborators'?'Colaboradores':'Dados & Backup'}
+                </span>
               ):(
                 <div className="flex items-center gap-1.5">
                   <button onClick={prevMonth} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronLeft size={16}/></button>
