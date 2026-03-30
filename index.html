@@ -537,7 +537,7 @@ function reducer(state,action){
       const baseMonth=state.months[mk2]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},cardPayments:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}}
       const updatedMonth={...baseMonth,cardPayments:{...(baseMonth.cardPayments||{}),[cardId]:{paid:true,amount,date,notes,paidAt:new Date().toISOString()}}}
       if(createExit){
-        const exit={id:uid(),description:`Fatura ${card?.name||'Cartão'}`,category:'Cartões',value:amount,realValue:amount,date,status:'Pago',note:notes||''}
+        const exit={id:uid(),description:`Fatura ${card?.name||'Cartão'}`,category:'Cartão',value:amount,realValue:amount,date,status:'Pago',note:notes||''}
         updatedMonth.exits=[...(updatedMonth.exits||[]),exit]
       }
       return{...state,months:{...state.months,[mk2]:updatedMonth}}
@@ -1329,16 +1329,32 @@ function CardsPage({state,dispatch,monthKey:mk,toast}){
 function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
   const collabs=state.settings?.collaborators||[]
   const month=state.months[mk]||{}
-  const [modal,setModal]=useState(null)
+  const [modal,setModal]=useState(null) // null | 'newCollab' | collabObj | {extraFor: id}
   const [form,setForm]=useState({})
   const totalSal=collabs.reduce((s,c)=>s+(c.baseSalary||0),0)
   const totalExt=collabs.reduce((s,c)=>s+(month.collaboratorExtras?.[c.id]||[]).reduce((ss,e)=>ss+e.value,0),0)
+  function saveCollab(){
+    if(!form.name)return toast('Informe o nome','error')
+    const item={...form,baseSalary:parseFloat(form.baseSalary)||0}
+    if(modal==='newCollab')dispatch({type:'ADD_SETTING',payload:{key:'collaborators',item}})
+    else dispatch({type:'UPDATE_SETTING',payload:{key:'collaborators',item}})
+    toast('Salvo');setModal(null)
+  }
+  function delCollab(id){dispatch({type:'DELETE_SETTING',payload:{key:'collaborators',id}});toast('Removido','warn')}
+  function addExtra(collabId){
+    if(!form.description||!form.value)return toast('Preencha campos','error')
+    dispatch({type:'ADD_COLLAB_EXTRA',payload:{monthKey:mk,collabId,extra:{description:form.description,value:parseFloat(form.value)||0}}})
+    setModal(null);toast('Adicionado')
+  }
   return(
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard label="Salários" value={fmtBRL(totalSal)} color="#3b82f6" icon={Users}/>
-        <SummaryCard label="Extras" value={fmtBRL(totalExt)} color="#f59e0b" icon={Plus}/>
-        <SummaryCard label="Total" value={fmtBRL(totalSal+totalExt)} color="#10b981" icon={DollarSign}/>
+        <SummaryCard label="Salários base" value={fmtBRL(totalSal)} color="#3b82f6" icon={Users}/>
+        <SummaryCard label="Extras este mês" value={fmtBRL(totalExt)} color="#f59e0b" icon={Plus}/>
+        <SummaryCard label="Total este mês" value={fmtBRL(totalSal+totalExt)} color="#10b981" icon={DollarSign}/>
+      </div>
+      <div className="flex justify-end">
+        <Btn onClick={()=>{setForm({name:'',role:'',baseSalary:''});setModal('newCollab')}}><Plus size={13}/> Novo Colaborador</Btn>
       </div>
       <div className="space-y-4">{collabs.map(c=>{
         const extras=month.collaboratorExtras?.[c.id]||[]
@@ -1348,31 +1364,62 @@ function CollaboratorsPage({state,dispatch,monthKey:mk,toast}){
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{background:'#10b98130',color:'#10b981'}}>{c.name[0]}</div>
-                <div><div className="font-semibold text-slate-100">{c.name}</div><div className="text-xs text-slate-500">{c.role}</div></div>
+                <div>
+                  <div className="font-semibold" style={{color:'var(--text)'}}>{c.name}</div>
+                  <div className="text-xs" style={{color:'var(--text-3)'}}>{c.role}</div>
+                </div>
               </div>
-              <div className="text-right"><div className="text-lg font-bold text-slate-100">{fmtBRL(c.baseSalary+extTotal)}</div><div className="text-xs text-slate-500">Base: {fmtBRL(c.baseSalary)}{extTotal>0?` + ${fmtBRL(extTotal)}`:''}</div></div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-lg font-bold" style={{color:'var(--text)',fontVariantNumeric:'tabular-nums'}}>{fmtBRL(c.baseSalary+extTotal)}</div>
+                  <div className="text-xs" style={{color:'var(--text-3)'}}>Base: {fmtBRL(c.baseSalary)}{extTotal>0?` + ${fmtBRL(extTotal)}`:''}</div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button onClick={()=>{setForm({...c});setModal(c)}} className="p-1 rounded" style={{color:'var(--text-3)'}}><Pencil size={13}/></button>
+                  <button onClick={()=>delCollab(c.id)} className="p-1 rounded" style={{color:'var(--text-4)'}}><Trash2 size={13}/></button>
+                </div>
+              </div>
             </div>
-            {extras.length>0&&<div className="border-t border-slate-700 pt-3 mb-3 space-y-1.5">
+            {extras.length>0&&<div className="border-t pt-3 mb-3 space-y-1.5" style={{borderColor:'var(--sep)'}}>
               {extras.map(e=><div key={e.id} className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">{e.description}</span>
-                <div className="flex items-center gap-2"><span className="text-slate-300">{fmtBRL(e.value)}</span>
-                  <button onClick={()=>dispatch({type:'DELETE_COLLAB_EXTRA',payload:{monthKey:mk,collabId:c.id,id:e.id}})} className="p-0.5 rounded text-slate-500 hover:text-red-400"><Trash2 size={11}/></button>
+                <span style={{color:'var(--text-3)'}}>{e.description}</span>
+                <div className="flex items-center gap-2">
+                  <span style={{color:'var(--text-2)',fontVariantNumeric:'tabular-nums'}}>{fmtBRL(e.value)}</span>
+                  <button onClick={()=>dispatch({type:'DELETE_COLLAB_EXTRA',payload:{monthKey:mk,collabId:c.id,id:e.id}})} className="p-0.5 rounded" style={{color:'var(--text-4)'}}><Trash2 size={11}/></button>
                 </div>
               </div>)}
             </div>}
-            <button onClick={()=>{setForm({description:'',value:''});setModal(c.id)}} className="text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1"><Plus size={11}/> Adicionar extra</button>
+            <button onClick={()=>{setForm({description:'',value:''});setModal({extraFor:c.id})}} className="text-xs flex items-center gap-1" style={{color:'#10b981'}}><Plus size={11}/> Adicionar extra este mês</button>
           </div>
         )
-      })}</div>
-      {modal&&<Modal title="Novo Extra" onClose={()=>setModal(null)}>
-        <div className="space-y-4">
-          <Field label="Descrição"><Inp value={form.description} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Vale refeição"/></Field>
-          <Field label="Valor (R$)"><Inp type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
-          <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG>
-            <Btn onClick={()=>{if(!form.description||!form.value)return toast('Preencha campos','error');dispatch({type:'ADD_COLLAB_EXTRA',payload:{monthKey:mk,collabId:modal,extra:{description:form.description,value:parseFloat(form.value)||0}}});setModal(null);toast('Adicionado')}}><Save size={14}/> Salvar</Btn>
+      })}
+      {collabs.length===0&&<div className="py-12 text-center text-sm" style={{color:'var(--text-3)'}}>Nenhum colaborador cadastrado</div>}
+      </div>
+      {/* Modal novo/editar colaborador */}
+      {(modal==='newCollab'||typeof modal==='object'&&modal?.baseSalary!==undefined&&!modal?.extraFor)&&(
+        <Modal title={modal==='newCollab'?'Novo Colaborador':'Editar Colaborador'} onClose={()=>setModal(null)}>
+          <div className="space-y-4">
+            <Field label="Nome"><Inp value={form.name||''} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: João Silva"/></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Função"><Inp value={form.role||''} onChange={v=>setForm(f=>({...f,role:v}))} placeholder="Designer"/></Field>
+              <Field label="Salário base (R$)"><Inp type="number" value={form.baseSalary||''} onChange={v=>setForm(f=>({...f,baseSalary:v}))} placeholder="0,00"/></Field>
+            </div>
+            <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><Btn onClick={saveCollab}><Save size={14}/> Salvar</Btn></div>
           </div>
-        </div>
-      </Modal>}
+        </Modal>
+      )}
+      {/* Modal extra mensal */}
+      {typeof modal==='object'&&modal?.extraFor&&(
+        <Modal title="Novo Extra" onClose={()=>setModal(null)}>
+          <div className="space-y-4">
+            <Field label="Descrição"><Inp value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Ex: Vale refeição, Bônus..."/></Field>
+            <Field label="Valor (R$)"><Inp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Field>
+            <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG>
+              <Btn onClick={()=>addExtra(modal.extraFor)}><Save size={14}/> Salvar</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
