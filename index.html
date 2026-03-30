@@ -83,7 +83,7 @@
       --text:#ffffff;--text-2:rgba(235,235,245,0.6);--text-3:rgba(235,235,245,0.38);--text-4:rgba(235,235,245,0.22);
       --border:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.06);--sep:rgba(255,255,255,0.07);
       --inner:rgba(255,255,255,0.15);--modal-bg:rgba(0,0,0,0.72);
-      --row-alt:rgba(255,255,255,0.025);--row-hi:rgba(16,185,129,0.1);
+      --row-alt:rgba(255,255,255,0.025);--row-hi:rgba(16,185,129,0.1);--nav-active:rgba(255,255,255,0.1);
     }
     body.light{
       color-scheme:light;
@@ -92,7 +92,7 @@
       --text:#1c1c1e;--text-2:rgba(60,60,67,0.6);--text-3:rgba(60,60,67,0.45);--text-4:rgba(60,60,67,0.25);
       --border:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.07);--sep:rgba(0,0,0,0.08);
       --inner:rgba(255,255,255,0.7);--modal-bg:rgba(0,0,0,0.45);
-      --row-alt:rgba(0,0,0,0.03);--row-hi:rgba(16,185,129,0.07);
+      --row-alt:rgba(0,0,0,0.03);--row-hi:rgba(16,185,129,0.07);--nav-active:rgba(0,0,0,0.08);
     }
     body{margin:0;background:var(--bg);font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv02','cv03','cv04','cv11';font-variant-numeric:tabular-nums}
     ::-webkit-scrollbar{width:5px;height:5px}
@@ -661,7 +661,7 @@ function StatusBadge({status}){
     'Recebido':{bg:'#06522020',color:'#10b981',border:'#10b98130'},
     'Pendente':{bg:'#78350f20',color:'#f59e0b',border:'#f59e0b30'},
     'Pago':{bg:'#06522020',color:'#10b981',border:'#10b98130'},
-  }[status]||{bg:'#33415520',color:'#94a3b8',border:'#33415550'}
+  }[status]||{bg:'var(--bg-overlay)',color:'var(--text-3)',border:'var(--border)'}
   return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`}}>{status}</span>
 }
 
@@ -683,10 +683,10 @@ const iSty={background:'var(--bg-input)',border:'1px solid var(--border)',color:
 function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
 function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
 function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 4px 12px ${color}55`}}>{children}</button>}
-function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'var(--bg-overlay)',color:'rgba(235,235,245,0.7)',border:'1px solid var(--border)',borderRadius:10}}>{children}</button>}
+function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)',borderRadius:10}}>{children}</button>}
 
 function Th({children,right}){return <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-widest ${right?'text-right':'text-left'}`} style={{color:'var(--text-3)'}}>{children}</th>}
-function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 text-sm ${right?'text-right':''}`} style={{color:color||(muted?'rgba(235,235,245,0.35)':'rgba(235,235,245,0.85)'),borderBottom:'1px solid rgba(255,255,255,0.05)'}}>{children}</td>}
+function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 text-sm ${right?'text-right':''}`} style={{color:color||(muted?'var(--text-3)':'var(--text-2)'),borderBottom:'1px solid var(--sep)'}}>{children}</td>}
 
 const CTip=({active,payload,label})=>{
   if(!active||!payload?.length)return null
@@ -765,7 +765,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
               <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
               <Tooltip content={<CTip/>}/>
-              <Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+              <Legend wrapperStyle={{fontSize:11,color:'var(--text-3)'}}/>
               <Bar dataKey="Previsto" fill="#3b82f6" radius={[3,3,0,0]}/>
               <Bar dataKey="Realizado" fill="#10b981" radius={[3,3,0,0]}/>
             </BarChart>
@@ -982,7 +982,7 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
             <div className="flex gap-2 flex-wrap">
               {['Todos','Pendente','Pago'].map(s=>(
                 <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
-                  style={{background:filter===s?'#ef4444':'rgba(255,255,255,0.06)',color:filter===s?'#fff':'#94a3b8',border:'1px solid var(--border)'}}>{s}</button>
+                  style={{background:filter===s?'#ef4444':'var(--bg-overlay)',color:filter===s?'#fff':'var(--text-3)',border:'1px solid var(--border)'}}>{s}</button>
               ))}
             </div>
             <Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setModal('add')}}><Plus size={14}/> Adicionar</Btn>
@@ -1067,7 +1067,7 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
             <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} interval={4}/>
             <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`} width={32}/>
             <Tooltip content={<CTip/>}/>
-            <Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+            <Legend wrapperStyle={{fontSize:11,color:'var(--text-3)'}}/>
             <Area type="monotone" dataKey="Projetado" stroke="#10b981" fill="url(#gProj)" strokeWidth={2} dot={false}/>
             <Area type="monotone" dataKey="Real" stroke="#3b82f6" fill="url(#gReal)" strokeWidth={2} dot={false} connectNulls={false}/>
           </AreaChart>
@@ -1096,7 +1096,7 @@ function CashFlowPage({state,dispatch,monthKey:mk}){
                 <Td>{status}</Td>
                 <td className="px-3 py-1.5"><input defaultValue={mData.dailyNotes?.[String(d)]||''} placeholder="Observação..."
                   onBlur={e=>dispatch({type:'UPDATE_DAILY_NOTE',payload:{monthKey:mk,day:String(d),note:e.target.value}})}
-                  className="w-full px-2 py-1 rounded text-sm outline-none" style={{background:'transparent',border:'1px solid transparent',color:'#94a3b8'}}/></td>
+                  className="w-full px-2 py-1 rounded text-sm outline-none" style={{background:'transparent',border:'1px solid transparent',color:'var(--text-3)'}}/></td>
               </tr>
             )
           })}
@@ -1452,7 +1452,7 @@ function AnnualProjectionPage({state,selYear}){
             <CartesianGrid strokeDasharray="3 3" stroke="#2d3f55"/>
             <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
             <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
-            <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+            <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'var(--text-3)'}}/>
             <Area type="monotone" dataKey="Entradas" stroke="#10b981" fill="url(#gin)" strokeWidth={2}/>
             <Area type="monotone" dataKey="Saídas" stroke="#ef4444" fill="url(#gout)" strokeWidth={2}/>
           </AreaChart>
@@ -1507,7 +1507,7 @@ function SimulatorPage({state,monthKey:mk}){
         <div className="flex gap-2 mb-5 flex-wrap">
           {[['expense','💳 Compra'],['client','🤝 Novo Cliente'],['hire','👤 Contratação']].map(([k,l])=>(
             <button key={k} onClick={()=>{setType(k);setResult(null)}} className="px-3 py-2 rounded-lg text-xs font-medium transition-all"
-              style={{background:type===k?'#10b981':'rgba(255,255,255,0.06)',color:type===k?'#fff':'#94a3b8',border:`1px solid ${type===k?'#10b981':'rgba(255,255,255,0.07)'}`}}>{l}</button>
+              style={{background:type===k?'#10b981':'var(--bg-overlay)',color:type===k?'#fff':'var(--text-3)',border:`1px solid ${type===k?'#10b981':'var(--border)'}`}}>{l}</button>
           ))}
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -1527,7 +1527,7 @@ function SimulatorPage({state,monthKey:mk}){
                 <CartesianGrid strokeDasharray="3 3" stroke="#2d3f55"/>
                 <XAxis dataKey="name" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/>
                 <YAxis tick={{fill:'#64748b',fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${(v/1000).toFixed(0)}k`}/>
-                <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'#94a3b8'}}/>
+                <Tooltip content={<CTip/>}/><Legend wrapperStyle={{fontSize:11,color:'var(--text-3)'}}/>
                 <Bar dataKey="Sem simulação" fill="#475569" radius={[3,3,0,0]}/>
                 <Bar dataKey="Com simulação" fill="#10b981" radius={[3,3,0,0]}/>
               </BarChart>
@@ -2058,7 +2058,7 @@ function PermutaPage({state,dispatch,toast}){
                   </div>
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button onClick={()=>openModal(c.id,'use')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'var(--bg-overlay)',color:'#94a3b8'}}>
+                  <button onClick={()=>openModal(c.id,'use')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}>
                     <ShoppingBag size={11}/> Registrar uso
                   </button>
                   <button onClick={()=>openModal(c.id,'sale')} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg flex-1 justify-center" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
@@ -2129,7 +2129,7 @@ function PermutaPage({state,dispatch,toast}){
             )}
             {form.type==='sale'&&<p className="text-xs text-slate-500 flex items-start gap-1"><CheckCircle size={11} style={{marginTop:2,color:'#10b981',flexShrink:0}}/> Uma entrada "Venda Permuta — {form.clientName}" será criada automaticamente no mês escolhido.</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'var(--text-3)'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:form.type==='sale'?'#10b981':'#a78bfa',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -2196,7 +2196,7 @@ function TasksPage({state,dispatch,toast}){
           {ASSIGNEES.map(a=>(
             <button key={a.v} onClick={()=>setFilterAssignee(a.v)}
               className="px-3 py-1.5 text-xs rounded-lg transition-all"
-              style={{background:filterAssignee===a.v?'#3b82f6':'#33415530',color:filterAssignee===a.v?'#fff':'#94a3b8',fontWeight:filterAssignee===a.v?600:400}}>
+              style={{background:filterAssignee===a.v?'#3b82f6':'var(--bg-overlay)',color:filterAssignee===a.v?'#fff':'var(--text-3)',fontWeight:filterAssignee===a.v?600:400}}>
               {a.l}
             </button>
           ))}
@@ -2205,7 +2205,7 @@ function TasksPage({state,dispatch,toast}){
           {[{v:'todos',l:'Todas'},{v:'high',l:'Alta'},{v:'medium',l:'Média'},{v:'low',l:'Baixa'}].map(p=>(
             <button key={p.v} onClick={()=>setFilterPriority(p.v)}
               className="px-3 py-1.5 text-xs rounded-lg transition-all"
-              style={{background:filterPriority===p.v?(PRIORITIES[p.v]?.b||'#3b82f615'):'#33415530',color:filterPriority===p.v?(PRIORITIES[p.v]?.c||'#3b82f6'):'#94a3b8',fontWeight:filterPriority===p.v?600:400}}>
+              style={{background:filterPriority===p.v?(PRIORITIES[p.v]?.b||'#3b82f615'):'var(--bg-overlay)',color:filterPriority===p.v?(PRIORITIES[p.v]?.c||'#3b82f6'):'var(--text-3)',fontWeight:filterPriority===p.v?600:400}}>
               {p.l}
             </button>
           ))}
@@ -2318,7 +2318,7 @@ function TasksPage({state,dispatch,toast}){
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'#94a3b8'}}>Cancelar</button>
+              <button onClick={()=>setModal(null)} className="px-4 py-2 text-sm rounded-lg" style={{background:'var(--bg-input)',color:'var(--text-3)'}}>Cancelar</button>
               <button onClick={save} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg" style={{background:'#10b981',color:'#fff'}}><Save size={14}/> Salvar</button>
             </div>
           </div>
@@ -2523,7 +2523,7 @@ function GoalsPage({state,dispatch,toast}){
           {['Todos',...GOAL_STATUSES].map(s=>(
             <button key={s} onClick={()=>setFilterStatus(s)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-              style={{background:filterStatus===s?'#10b981':'rgba(255,255,255,0.06)',color:filterStatus===s?'#fff':'#94a3b8',border:filterStatus===s?'none':'1px solid var(--sep)'}}>
+              style={{background:filterStatus===s?'#10b981':'var(--bg-overlay)',color:filterStatus===s?'#fff':'var(--text-3)',border:filterStatus===s?'none':'1px solid var(--border)'}}>
               {s}
             </button>
           ))}
@@ -2658,24 +2658,24 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
         <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto">
           {NAV.map(({id,icon:Icon,label})=>(
             <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left"
-              style={{background:activePage===id?'rgba(255,255,255,0.1)':'transparent',color:activePage===id?'#ffffff':'rgba(235,235,245,0.45)',fontWeight:activePage===id?600:400}}>
-              <span style={{color:activePage===id?'#10b981':'rgba(235,235,245,0.3)'}}><Icon size={16}/></span>{label}
+              style={{background:activePage===id?'var(--nav-active)':'transparent',color:activePage===id?'var(--text)':'var(--text-3)',fontWeight:activePage===id?600:400}}>
+              <span style={{color:activePage===id?'#10b981':'var(--text-4)'}}><Icon size={16}/></span>{label}
               {id==='permuta'&&permuteNegCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#ef4444',color:'#fff',fontSize:10}}>!</span>}
               {id==='tasks'&&openTasksCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:overdueCount>0?'#ef4444':'#3b82f6',color:'#fff',fontSize:10}}>{openTasksCount}</span>}
             </button>
           ))}
           {/* Configurações accordion */}
           <button onClick={()=>setSettingsOpen(o=>!o)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left"
-            style={{background:isSettingsActive&&!settingsOpen?'rgba(255,255,255,0.05)':'transparent',color:isSettingsActive?'#ffffff':'rgba(235,235,245,0.45)',fontWeight:isSettingsActive?600:400}}>
-            <span style={{color:isSettingsActive?'#10b981':'rgba(235,235,245,0.3)'}}><Settings size={16}/></span>
+            style={{background:isSettingsActive&&!settingsOpen?'var(--nav-active)':'transparent',color:isSettingsActive?'var(--text)':'var(--text-3)',fontWeight:isSettingsActive?600:400}}>
+            <span style={{color:isSettingsActive?'#10b981':'var(--text-4)'}}><Settings size={16}/></span>
             <span className="flex-1">Configurações</span>
-            <span style={{color:'rgba(235,235,245,0.3)',transition:'transform 0.2s',transform:settingsOpen?'rotate(180deg)':'rotate(0deg)'}}><ChevronDown size={14}/></span>
+            <span style={{color:'var(--text-4)',transition:'transform 0.2s',transform:settingsOpen?'rotate(180deg)':'rotate(0deg)'}}><ChevronDown size={14}/></span>
           </button>
           {settingsOpen&&(
             <div className="ml-2 space-y-0.5">
               {SETTINGS_SUB.map(({id,icon:Icon,label})=>(
                 <button key={id} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-all text-left"
-                  style={{background:activePage===id?'rgba(16,185,129,0.12)':'transparent',color:activePage===id?'#10b981':'rgba(235,235,245,0.4)',fontWeight:activePage===id?600:400,borderLeft:activePage===id?'2px solid #10b981':'2px solid transparent'}}>
+                  style={{background:activePage===id?'rgba(16,185,129,0.12)':'transparent',color:activePage===id?'#10b981':'var(--text-3)',fontWeight:activePage===id?600:400,borderLeft:activePage===id?'2px solid #10b981':'2px solid transparent'}}>
                   <Icon size={14}/>{label}
                   {id==='clients'&&expCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#f59e0b',color:'#000',fontSize:10}}>{expCount}</span>}
                 </button>
@@ -2903,7 +2903,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
                   style={{background:(currentUser.color||'#10b981')+'25',border:`1.5px solid ${currentUser.color||'#10b981'}45`,color:currentUser.color||'#10b981'}}>
                   {currentUser.initials||currentUser.name?.slice(0,2).toUpperCase()}
                 </div>
-                <span className="text-xs font-medium hidden sm:block" style={{color:'rgba(235,235,245,0.7)'}}>{currentUser.name}</span>
+                <span className="text-xs font-medium hidden sm:block" style={{color:'var(--text-2)'}}>{currentUser.name}</span>
                 <button onClick={onLogout} title="Sair" className="p-1 rounded-lg transition-colors" style={{color:'var(--text-3)'}}>
                   <LogOut size={14}/>
                 </button>
