@@ -86,6 +86,7 @@
       --border:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.06);--sep:rgba(255,255,255,0.07);
       --inner:rgba(255,255,255,0.15);--modal-bg:rgba(0,0,0,0.72);
       --row-alt:rgba(255,255,255,0.025);--row-hi:rgba(16,185,129,0.1);--nav-active:rgba(255,255,255,0.1);
+      --bg-modal:rgba(20,20,20,0.95);--shadow-modal:0 32px 80px rgba(0,0,0,0.7);
     }
     body.light{
       color-scheme:light;
@@ -95,6 +96,7 @@
       --border:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.07);--sep:rgba(0,0,0,0.08);
       --inner:rgba(255,255,255,0.7);--modal-bg:rgba(0,0,0,0.45);
       --row-alt:rgba(0,0,0,0.03);--row-hi:rgba(16,185,129,0.07);--nav-active:rgba(0,0,0,0.08);
+      --bg-modal:rgba(255,255,255,0.98);--shadow-modal:0 32px 80px rgba(0,0,0,0.15);
     }
     body{margin:0;background:var(--bg);font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv02','cv03','cv04','cv11';font-variant-numeric:tabular-nums}
     ::-webkit-scrollbar{width:5px;height:5px}
@@ -621,10 +623,10 @@ async function gasPost(data){await fetch(GAS_URL,{method:'POST',body:JSON.string
 function Modal({title,onClose,children,wide}){
   return(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'var(--modal-bg)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)'}} onClick={onClose}>
-      <div className={`relative rounded-3xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'rgba(20,20,20,0.92)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',border:'1px solid var(--border)',boxShadow:'0 32px 80px rgba(0,0,0,0.7),inset 0 0.5px 0 var(--inner)'}} onClick={e=>e.stopPropagation()}>
+      <div className={`relative rounded-3xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'var(--bg-modal)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',border:'1px solid var(--border)',boxShadow:'var(--shadow-modal),inset 0 0.5px 0 var(--inner)'}} onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'var(--bg-overlay)',color:'rgba(255,255,255,0.6)'}}><X size={15}/></button>
+          <h2 className="text-base font-semibold tracking-tight" style={{color:'var(--text)'}}>{title}</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><X size={15}/></button>
         </div>
         {children}
       </div>
@@ -683,7 +685,7 @@ function ProgressBar({label,current,total,color}){
 
 function Field({label,children}){return <div><label className="block text-xs font-medium mb-1.5" style={{color:'var(--text-2)',letterSpacing:'0.02em'}}>{label}</label>{children}</div>}
 const iCls="w-full px-3.5 py-2.5 rounded-2xl text-sm outline-none transition-all glass-input"
-const iSty={background:'var(--bg-input)',border:'1px solid var(--border)',color:'#ffffff'}
+const iSty={background:'var(--bg-input)',border:'1px solid var(--border)',color:'var(--text)'}
 function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
 function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
 function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 4px 12px ${color}55`}}>{children}</button>}
