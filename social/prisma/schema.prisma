@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clients        Client[]
+  socialAccounts SocialAccount[]
+  posts          Post[]
+  competitors    Competitor[]
+  reports        Report[]
+}
+
+model Client {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  company       String?
+  contactEmail  String?
+  contactPhone  String?
+  notes         String?
+  monthlyBudget Float?
+  costPerPost   Float    @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts    Post[]
+  accounts SocialAccount[]
+}
+
+model SocialAccount {
+  id             String    @id @default(cuid())
+  userId         String
+  clientId       String?
+  platform       String
+  platformUserId String
+  username       String
+  displayName    String
+  avatarUrl      String?
+  accessToken    String
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  scopes         String?
+  isActive       Boolean   @default(true)
+  metadata       String?
+  connectedAt    DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client    Client?             @relation(fields: [clientId], references: [id])
+  targets   PostTarget[]
+  analytics AnalyticsSnapshot[]
+
+  @@unique([userId, platform, platformUserId])
+}
+
+model Post {
+  id            String    @id @default(cuid())
+  userId        String
+  clientId      String?
+  content       String
+  mediaUrls     String?
+  mediaType     String?
+  status        String    @default("draft")
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  failureReason String?
+  cost          Float     @default(0)
+  tags          String?
+  campaignId    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client   Client?     @relation(fields: [clientId], references: [id])
+  campaign Campaign?   @relation(fields: [campaignId], references: [id])
+  targets  PostTarget[]
+}
+
+model PostTarget {
+  id              String    @id @default(cuid())
+  postId          String
+  socialAccountId String
+  platformPostId  String?
+  status          String    @default("pending")
+  publishedAt     DateTime?
+  failureReason   String?
+  platformContent String?
+  engagementData  String?
+
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, socialAccountId])
+}
+
+model AnalyticsSnapshot {
+  id              String   @id @default(cuid())
+  socialAccountId String
+  date            DateTime
+  followers       Int      @default(0)
+  following       Int      @default(0)
+  postsCount      Int      @default(0)
+  reach           Int      @default(0)
+  impressions     Int      @default(0)
+  engagementRate  Float    @default(0)
+  likes           Int      @default(0)
+  comments        Int      @default(0)
+  shares          Int      @default(0)
+  saves           Int      @default(0)
+  profileViews    Int      @default(0)
+  websiteClicks   Int      @default(0)
+  rawData         String?
+
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([socialAccountId, date])
+}
+
+model Competitor {
+  id          String   @id @default(cuid())
+  userId      String
+  platform    String
+  username    String
+  displayName String
+  avatarUrl   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots CompetitorSnapshot[]
+
+  @@unique([userId, platform, username])
+}
+
+model CompetitorSnapshot {
+  id             String   @id @default(cuid())
+  competitorId   String
+  date           DateTime
+  followers      Int      @default(0)
+  postsCount     Int      @default(0)
+  engagementRate Float    @default(0)
+  avgLikes       Int      @default(0)
+  avgComments    Int      @default(0)
+  topPostUrl     String?
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@unique([competitorId, date])
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  name        String
+  platform    String?
+  externalId  String?
+  status      String    @default("active")
+  budget      Float?
+  spent       Float?
+  startDate   DateTime?
+  endDate     DateTime?
+  impressions Int       @default(0)
+  clicks      Int       @default(0)
+  conversions Int       @default(0)
+  cpc         Float?
+  cpm         Float?
+  roas        Float?
+  rawData     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  posts Post[]
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String
+  config      String
+  generatedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ClickUpTask {
+  id            String    @id @default(cuid())
+  clickupTaskId String    @unique
+  title         String
+  description   String?
+  status        String
+  assignee      String?
+  dueDate       DateTime?
+  linkedPostId  String?
+  rawData       String?
+  syncedAt      DateTime  @default(now())
+}
