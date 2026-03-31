@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>FORJA</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23111'/%3E%3Ctext x='16' y='23' font-family='system-ui' font-size='20' font-weight='900' fill='%23f97316' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            forge: {
+              bg: '#0a0a0a',
+              card: '#141414',
+              border: '#1f1f1f',
+              orange: '#f97316',
+              red: '#ef4444',
+              green: '#22c55e',
+              muted: '#737373',
+              text: '#e5e5e5',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a0a0a; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade { animation: fade-in 0.3s ease-out; }
+    .animate-pulse-slow { animation: pulse-slow 2s ease-in-out infinite; }
+    @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(249,115,22,0.15); } 50% { box-shadow: 0 0 40px rgba(249,115,22,0.3); } }
+    .glow-orange { animation: glow 2s ease-in-out infinite; }
+    input, textarea { font-family: 'Inter', system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+    // ═══════════════════════════════════════════════
+    // STORAGE
+    // ═══════════════════════════════════════════════
+    const STORAGE_KEY = 'forja_data';
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { sessions: [] };
+        return JSON.parse(raw);
+      } catch { return { sessions: [] }; }
+    }
+
+    function saveData(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function getTodayKey() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function getTodaySession(data) {
+      return data.sessions.find(s => s.date === getTodayKey()) || null;
+    }
+
+    // ═══════════════════════════════════════════════
+    // MESSAGES
+    // ═══════════════════════════════════════════════
+    const MESSAGES_ENTER = [
+      "Hora de trabalhar.",
+      "Sem desculpas hoje.",
+      "Foco. Executa. Finaliza.",
+      "O trabalho nao espera.",
+      "Menos plano, mais acao.",
+    ];
+
+    const MESSAGES_COMPLETE = [
+      "Voce fez o que precisava. Amanha, de novo.",
+      "Dia executado. Sem negociacao.",
+      "Missao cumprida. Descanse. Amanha cobra de novo.",
+    ];
+
+    const MESSAGES_INCOMPLETE = [
+      "Voce quebrou o acordo com voce mesmo.",
+      "Hoje voce escolheu o conforto. O resultado vai cobrar.",
+      "Nao terminou. Engole e volta amanha com mais.",
+    ];
+
+    function randomMsg(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // ═══════════════════════════════════════════════
+    // TIMER HELPERS
+    // ═══════════════════════════════════════════════
+    function formatTime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    // ═══════════════════════════════════════════════
+    // APP
+    // ═══════════════════════════════════════════════
+    function App() {
+      const [data, setData] = useState(loadData);
+      const [screen, setScreen] = useState('home'); // home | setup | execute | check | history
+      const [activeMission, setActiveMission] = useState(null);
+
+      // Persist on every change
+      useEffect(() => { saveData(data); }, [data]);
+
+      // Auto-detect where user should be
+      useEffect(() => {
+        const session = getTodaySession(data);
+        if (!session) {
+          setScreen('home');
+        } else if (session.completed) {
+          // Already checked today — show home
+        } else if (session.missions && session.missions.length > 0) {
+          setScreen('execute');
+        }
+      }, []);
+
+      const todaySession = getTodaySession(data);
+
+      function createSession(missions, training, study) {
+        const newSession = {
+          date: getTodayKey(),
+          missions: missions.map((m, i) => ({
+            id: i,
+            text: m,
+            started: false,
+            completed: false,
+            timeSpent: 0,
+          })),
+          training: { text: training, completed: false },
+          study: { text: study, completed: false },
+          completed: false,
+          completedAt: null,
+        };
+        setData(prev => ({
+          ...prev,
+          sessions: [...prev.sessions.filter(s => s.date !== getTodayKey()), newSession],
+        }));
+        setScreen('execute');
+      }
+
+      function updateSession(updater) {
+        setData(prev => ({
+          ...prev,
+          sessions: prev.sessions.map(s =>
+            s.date === getTodayKey() ? updater(s) : s
+          ),
+        }));
+      }
+
+      function completeDay() {
+        updateSession(s => ({ ...s, completed: true, completedAt: new Date().toISOString() }));
+        setScreen('home');
+      }
+
+      // ── Stats ──
+      const stats = useMemo(() => {
+        const completed = data.sessions.filter(s => s.completed);
+        const total = completed.length;
+        const perfect = completed.filter(s => {
+          const allMissions = s.missions.every(m => m.completed);
+          const train = s.training.completed;
+          const stud = s.study.completed;
+          return allMissions && train && stud;
+        }).length;
+
+        // Streak
+        let streak = 0;
+        const sorted = [...completed].sort((a, b) => b.date.localeCompare(a.date));
+        const today = getTodayKey();
+        for (let i = 0; i < sorted.length; i++) {
+          const expected = new Date();
+          expected.setDate(expected.getDate() - i);
+          const key = expected.toISOString().split('T')[0];
+          // Also count today if session exists but not yet completed
+          if (sorted.find(s => s.date === key)) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+
+        const rate = total > 0 ? Math.round((perfect / total) * 100) : 0;
+        return { total, perfect, streak, rate };
+      }, [data]);
+
+      return (
+        <div className="min-h-screen bg-forge-bg text-white flex flex-col items-center justify-center overflow-auto" style={{ minHeight: '100dvh' }}>
+          {screen === 'home' && (
+            <HomeScreen
+              todaySession={todaySession}
+              stats={stats}
+              onEnterCave={() => {
+                const session = getTodaySession(data);
+                if (session && !session.completed) {
+                  setScreen('execute');
+                } else if (session && session.completed) {
+                  // Already done today
+                } else {
+                  setScreen('setup');
+                }
+              }}
+              onHistory={() => setScreen('history')}
+              onCheck={() => setScreen('check')}
+            />
+          )}
+          {screen === 'setup' && (
+            <SetupScreen
+              onStart={createSession}
+              onBack={() => setScreen('home')}
+            />
+          )}
+          {screen === 'execute' && todaySession && (
+            <ExecuteScreen
+              session={todaySession}
+              updateSession={updateSession}
+              activeMission={activeMission}
+              setActiveMission={setActiveMission}
+              onFinishDay={() => setScreen('check')}
+            />
+          )}
+          {screen === 'check' && todaySession && (
+            <CheckScreen
+              session={todaySession}
+              updateSession={updateSession}
+              onComplete={completeDay}
+              onBackToExecute={() => setScreen('execute')}
+            />
+          )}
+          {screen === 'history' && (
+            <HistoryScreen
+              sessions={data.sessions}
+              stats={stats}
+              onBack={() => setScreen('home')}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    // HOME SCREEN
+    // ═══════════════════════════════════════════════
+    function HomeScreen({ todaySession, stats, onEnterCave, onHistory, onCheck }) {
+      const isDone = todaySession && todaySession.completed;
+      const isActive = todaySession && !todaySession.completed;
+
+      return (
+        <div className="animate-fade flex flex-col items-center justify-center px-6 py-12 w-full max-w-md mx-auto text-center" style={{ minHeight: '100dvh' }}>
+          {/* Logo */}
+          <div className="mb-2">
+            <h1 className="text-5xl font-black tracking-tight text-white" style={{ letterSpacing: '-0.04em' }}>
+              FORJA
+            </h1>
+            <div className="w-12 h-1 bg-forge-orange mx-auto mt-3 rounded-full"></div>
+          </div>
+
+          <p className="text-forge-muted text-sm mt-4 mb-12 max-w-xs leading-relaxed">
+            {isDone
+              ? "Dia executado. Volte amanha."
+              : isActive
+                ? "Voce tem trabalho pendente."
+                : randomMsg(MESSAGES_ENTER)
+            }
+          </p>
+
+          {/* Main Button */}
+          {!isDone && (
+            <button
+              onClick={onEnterCave}
+              className="glow-orange bg-forge-orange hover:bg-orange-600 text-black font-bold text-lg px-10 py-4 rounded-xl transition-all active:scale-95 w-full max-w-xs"
+            >
+              {isActive ? "Voltar pra Caverna" : "Entrar no Modo Caverna"}
+            </button>
+          )}
+
+          {isDone && (
+            <div className="bg-forge-card border border-forge-border rounded-xl p-6 w-full max-w-xs">
+              <div className="text-forge-green text-sm font-semibold mb-1">DIA COMPLETO</div>
+              <p className="text-forge-muted text-xs">{randomMsg(MESSAGES_COMPLETE)}</p>
+            </div>
+          )}
+
+          {/* Stats mini */}
+          {stats.total > 0 && (
+            <div className="mt-10 flex gap-6 text-center">
+              <div>
+                <div className="text-2xl font-bold text-white">{stats.streak}</div>
+                <div className="text-xs text-forge-muted mt-1">Sequencia</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white">{stats.total}</div>
+                <div className="text-xs text-forge-muted mt-1">Dias</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-white">{stats.rate}%</div>
+                <div className="text-xs text-forge-muted mt-1">Execucao</div>
+              </div>
+            </div>
+          )}
+
+          {/* Nav */}
+          <div className="mt-auto pt-12 flex gap-4">
+            {stats.total > 0 && (
+              <button onClick={onHistory} className="text-forge-muted hover:text-white text-sm transition-colors">
+                Historico
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    // SETUP SCREEN
+    // ═══════════════════════════════════════════════
+    function SetupScreen({ onStart, onBack }) {
+      const [missions, setMissions] = useState(['']);
+      const [training, setTraining] = useState('');
+      const [study, setStudy] = useState('');
+
+      function addMission() {
+        if (missions.length < 3) {
+          setMissions([...missions, '']);
+        }
+      }
+
+      function updateMission(i, val) {
+        const copy = [...missions];
+        copy[i] = val;
+        setMissions(copy);
+      }
+
+      function removeMission(i) {
+        if (missions.length > 1) {
+          setMissions(missions.filter((_, idx) => idx !== i));
+        }
+      }
+
+      function handleStart() {
+        const validMissions = missions.map(m => m.trim()).filter(Boolean);
+        if (validMissions.length === 0) return;
+        onStart(validMissions, training.trim(), study.trim());
+      }
+
+      const canStart = missions.some(m => m.trim().length > 0);
+
+      return (
+        <div className="animate-fade flex flex-col px-6 py-8 w-full max-w-md mx-auto" style={{ minHeight: '100dvh' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <button onClick={onBack} className="text-forge-muted hover:text-white transition-colors text-sm">
+              &larr; Voltar
+            </button>
+            <h2 className="text-sm font-semibold text-forge-muted tracking-widest uppercase">Definir o dia</h2>
+            <div className="w-14"></div>
+          </div>
+
+          <p className="text-forge-muted text-xs mb-8 text-center">
+            Maximo 3 missoes. Sem enrolacao. Defina e execute.
+          </p>
+
+          {/* Missions */}
+          <div className="mb-6">
+            <label className="text-xs font-semibold text-forge-muted tracking-wider uppercase mb-3 block">
+              Missoes do dia
+            </label>
+            {missions.map((m, i) => (
+              <div key={i} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={m}
+                  onChange={e => updateMission(i, e.target.value)}
+                  placeholder={`Missao ${i + 1}`}
+                  maxLength={80}
+                  className="flex-1 bg-forge-card border border-forge-border rounded-lg px-4 py-3 text-white text-sm placeholder-neutral-600 outline-none focus:border-forge-orange transition-colors"
+                />
+                {missions.length > 1 && (
+                  <button
+                    onClick={() => removeMission(i)}
+                    className="text-forge-muted hover:text-forge-red px-2 transition-colors"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            ))}
+            {missions.length < 3 && (
+              <button
+                onClick={addMission}
+                className="text-forge-orange text-xs font-medium mt-1 hover:underline"
+              >
+                + Adicionar missao
+              </button>
+            )}
+          </div>
+
+          {/* Training */}
+          <div className="mb-6">
+            <label className="text-xs font-semibold text-forge-muted tracking-wider uppercase mb-3 block">
+              Treino do dia
+            </label>
+            <input
+              type="text"
+              value={training}
+              onChange={e => setTraining(e.target.value)}
+              placeholder="Ex: Treino A — Peito e Triceps"
+              maxLength={80}
+              className="w-full bg-forge-card border border-forge-border rounded-lg px-4 py-3 text-white text-sm placeholder-neutral-600 outline-none focus:border-forge-orange transition-colors"
+            />
+          </div>
+
+          {/* Study */}
+          <div className="mb-10">
+            <label className="text-xs font-semibold text-forge-muted tracking-wider uppercase mb-3 block">
+              Estudo do dia
+            </label>
+            <input
+              type="text"
+              value={study}
+              onChange={e => setStudy(e.target.value)}
+              placeholder="Ex: Modulo 3 — Automacao com IA"
+              maxLength={80}
+              className="w-full bg-forge-card border border-forge-border rounded-lg px-4 py-3 text-white text-sm placeholder-neutral-600 outline-none focus:border-forge-orange transition-colors"
+            />
+          </div>
+
+          {/* Start */}
+          <div className="mt-auto">
+            <button
+              onClick={handleStart}
+              disabled={!canStart}
+              className={`w-full font-bold text-lg py-4 rounded-xl transition-all active:scale-95 ${
+                canStart
+                  ? 'bg-forge-orange text-black hover:bg-orange-600'
+                  : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+              }`}
+            >
+              Iniciar Modo Caverna
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    // EXECUTE SCREEN
+    // ═══════════════════════════════════════════════
+    function ExecuteScreen({ session, updateSession, activeMission, setActiveMission, onFinishDay }) {
+      const [timer, setTimer] = useState(0);
+      const timerRef = useRef(null);
+
+      // Timer logic
+      useEffect(() => {
+        if (activeMission !== null) {
+          timerRef.current = setInterval(() => {
+            setTimer(t => t + 1);
+          }, 1000);
+        } else {
+          clearInterval(timerRef.current);
+        }
+        return () => clearInterval(timerRef.current);
+      }, [activeMission]);
+
+      function startMission(id) {
+        setActiveMission(id);
+        setTimer(session.missions[id].timeSpent || 0);
+        updateSession(s => ({
+          ...s,
+          missions: s.missions.map(m => m.id === id ? { ...m, started: true } : m),
+        }));
+      }
+
+      function completeMission(id) {
+        setActiveMission(null);
+        updateSession(s => ({
+          ...s,
+          missions: s.missions.map(m => m.id === id ? { ...m, completed: true, timeSpent: timer } : m),
+        }));
+        setTimer(0);
+      }
+
+      function pauseMission(id) {
+        setActiveMission(null);
+        updateSession(s => ({
+          ...s,
+          missions: s.missions.map(m => m.id === id ? { ...m, timeSpent: timer } : m),
+        }));
+      }
+
+      // Active mission focus mode
+      if (activeMission !== null) {
+        const mission = session.missions[activeMission];
+        return (
+          <div className="animate-fade flex flex-col items-center justify-center px-6 w-full max-w-md mx-auto text-center" style={{ minHeight: '100dvh' }}>
+            <div className="text-forge-muted text-xs font-semibold tracking-widest uppercase mb-6">
+              EXECUTANDO
+            </div>
+
+            <h2 className="text-xl font-bold text-white mb-10 px-4">
+              {mission.text}
+            </h2>
+
+            <div className="text-5xl font-mono font-bold text-forge-orange mb-12 animate-pulse-slow">
+              {formatTime(timer)}
+            </div>
+
+            <div className="flex gap-3 w-full max-w-xs">
+              <button
+                onClick={() => pauseMission(activeMission)}
+                className="flex-1 bg-forge-card border border-forge-border text-forge-muted hover:text-white font-semibold py-3 rounded-xl transition-all active:scale-95"
+              >
+                Pausar
+              </button>
+              <button
+                onClick={() => completeMission(activeMission)}
+                className="flex-1 bg-forge-green text-black font-bold py-3 rounded-xl transition-all active:scale-95 hover:bg-green-600"
+              >
+                Concluir
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // Mission list view
+      const allMissionsDone = session.missions.every(m => m.completed);
+
+      return (
+        <div className="animate-fade flex flex-col px-6 py-8 w-full max-w-md mx-auto" style={{ minHeight: '100dvh' }}>
+          <div className="text-center mb-8">
+            <div className="text-xs font-semibold text-forge-orange tracking-widest uppercase mb-1">
+              MODO CAVERNA
+            </div>
+            <h2 className="text-lg font-bold text-white">
+              {getTodayKey().split('-').reverse().join('/')}
+            </h2>
+          </div>
+
+          {/* Missions */}
+          <div className="mb-6">
+            <div className="text-xs font-semibold text-forge-muted tracking-wider uppercase mb-3">
+              Missoes
+            </div>
+            {session.missions.map((m) => (
+              <div
+                key={m.id}
+                className={`flex items-center gap-3 p-4 rounded-xl mb-2 border transition-all ${
+                  m.completed
+                    ? 'bg-forge-green/10 border-forge-green/20'
+                    : 'bg-forge-card border-forge-border'
+                }`}
+              >
+                <div className="flex-1">
+                  <div className={`text-sm font-medium ${m.completed ? 'text-forge-green line-through' : 'text-white'}`}>
+                    {m.text}
+                  </div>
+                  {m.timeSpent > 0 && (
+                    <div className="text-xs text-forge-muted mt-1">{formatTime(m.timeSpent)}</div>
+                  )}
+                </div>
+                {!m.completed && (
+                  <button
+                    onClick={() => startMission(m.id)}
+                    className="bg-forge-orange text-black text-xs font-bold px-4 py-2 rounded-lg hover:bg-orange-600 transition-all active:scale-95"
+                  >
+                    {m.started ? 'Retomar' : 'Iniciar'}
+                  </button>
+                )}
+                {m.completed && (
+                  <span className="text-forge-green text-lg">&#10003;</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Training */}
+          {session.training.text && (
+            <div className="mb-6">
+              <div className="text-xs font-semibold text-forge-muted tracking-wider uppercase mb-3">
+                Treino
+              </div>
+              <div
+                className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                  session.training.completed
+                    ? 'bg-forge-green/10 border-forge-green/20'
+                    : 'bg-forge-card border-forge-border'
+                }`}
+              >
+                <div className="flex-1 text-sm font-medium text-white">
+                  {session.training.text}
+                </div>
+                {!session.training.completed ? (
+                  <button
+                    onClick={() => updateSession(s => ({ ...s, training: { ...s.training, completed: true } }))}
+                    className="bg-neutral-700 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-neutral-600 transition-all active:scale-95"
+                  >
+                    Feito
+                  </button>
+                ) : (
+                  <span className="text-forge-green text-lg">&#10003;</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Study */}
+          {session.study.text && (
+            <div className="mb-8">
+              <div className="text-xs font-semibold text-forge-muted tracking-wider uppercase mb-3">
+                Estudo
+              </div>
+              <div
+                className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                  session.study.completed
+                    ? 'bg-forge-green/10 border-forge-green/20'
+                    : 'bg-forge-card border-forge-border'
+                }`}
+              >
+                <div className="flex-1 text-sm font-medium text-white">
+                  {session.study.text}
+                </div>
+                {!session.study.completed ? (
+                  <button
+                    onClick={() => updateSession(s => ({ ...s, study: { ...s.study, completed: true } }))}
+                    className="bg-neutral-700 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-neutral-600 transition-all active:scale-95"
+                  >
+                    Feito
+                  </button>
+                ) : (
+                  <span className="text-forge-green text-lg">&#10003;</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Finish Day */}
+          <div className="mt-auto">
+            <button
+              onClick={onFinishDay}
+              className="w-full bg-neutral-800 border border-forge-border text-white font-semibold py-4 rounded-xl transition-all active:scale-95 hover:bg-neutral-700"
+            >
+              Finalizar o Dia
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    // CHECK SCREEN
+    // ═══════════════════════════════════════════════
+    function CheckScreen({ session, updateSession, onComplete, onBackToExecute }) {
+      const allMissions = session.missions.every(m => m.completed);
+      const trainDone = !session.training.text || session.training.completed;
+      const studyDone = !session.study.text || session.study.completed;
+      const allDone = allMissions && trainDone && studyDone;
+
+      const missionsCompleted = session.missions.filter(m => m.completed).length;
+      const missionsTotal = session.missions.length;
+
+      return (
+        <div className="animate-fade flex flex-col items-center justify-center px-6 py-12 w-full max-w-md mx-auto text-center" style={{ minHeight: '100dvh' }}>
+          <div className="text-xs font-semibold text-forge-muted tracking-widest uppercase mb-8">
+            PRESTACAO DE CONTAS
+          </div>
+
+          {/* Summary */}
+          <div className="w-full max-w-xs space-y-3 mb-10">
+            <div className={`flex justify-between items-center p-4 rounded-xl border ${
+              allMissions ? 'bg-forge-green/10 border-forge-green/20' : 'bg-forge-red/10 border-forge-red/20'
+            }`}>
+              <span className="text-sm text-white">Missoes</span>
+              <span className={`text-sm font-bold ${allMissions ? 'text-forge-green' : 'text-forge-red'}`}>
+                {missionsCompleted}/{missionsTotal}
+              </span>
+            </div>
+
+            {session.training.text && (
+              <div className={`flex justify-between items-center p-4 rounded-xl border ${
+                session.training.completed ? 'bg-forge-green/10 border-forge-green/20' : 'bg-forge-red/10 border-forge-red/20'
+              }`}>
+                <span className="text-sm text-white">Treino</span>
+                <span className={`text-sm font-bold ${session.training.completed ? 'text-forge-green' : 'text-forge-red'}`}>
+                  {session.training.completed ? 'Feito' : 'Nao feito'}
+                </span>
+              </div>
+            )}
+
+            {session.study.text && (
+              <div className={`flex justify-between items-center p-4 rounded-xl border ${
+                session.study.completed ? 'bg-forge-green/10 border-forge-green/20' : 'bg-forge-red/10 border-forge-red/20'
+              }`}>
+                <span className="text-sm text-white">Estudo</span>
+                <span className={`text-sm font-bold ${session.study.completed ? 'text-forge-green' : 'text-forge-red'}`}>
+                  {session.study.completed ? 'Feito' : 'Nao feito'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Verdict */}
+          <div className={`text-lg font-bold mb-2 ${allDone ? 'text-forge-green' : 'text-forge-red'}`}>
+            {allDone ? 'DIA EXECUTADO.' : 'DIA INCOMPLETO.'}
+          </div>
+          <p className="text-forge-muted text-sm mb-10 max-w-xs leading-relaxed">
+            {allDone ? randomMsg(MESSAGES_COMPLETE) : randomMsg(MESSAGES_INCOMPLETE)}
+          </p>
+
+          {/* Actions */}
+          <div className="w-full max-w-xs space-y-3">
+            {!allDone && (
+              <button
+                onClick={onBackToExecute}
+                className="w-full bg-forge-card border border-forge-border text-forge-muted font-semibold py-3 rounded-xl transition-all active:scale-95 hover:text-white"
+              >
+                Voltar e terminar
+              </button>
+            )}
+            <button
+              onClick={onComplete}
+              className={`w-full font-bold py-4 rounded-xl transition-all active:scale-95 ${
+                allDone
+                  ? 'bg-forge-green text-black hover:bg-green-600'
+                  : 'bg-neutral-800 border border-forge-border text-forge-muted hover:text-white'
+              }`}
+            >
+              {allDone ? 'Fechar o dia' : 'Fechar mesmo assim'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    // HISTORY SCREEN
+    // ═══════════════════════════════════════════════
+    function HistoryScreen({ sessions, stats, onBack }) {
+      const sorted = [...sessions]
+        .filter(s => s.completed)
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      function isFullDay(s) {
+        return s.missions.every(m => m.completed)
+          && (!s.training.text || s.training.completed)
+          && (!s.study.text || s.study.completed);
+      }
+
+      return (
+        <div className="animate-fade flex flex-col px-6 py-8 w-full max-w-md mx-auto overflow-auto" style={{ minHeight: '100dvh' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <button onClick={onBack} className="text-forge-muted hover:text-white transition-colors text-sm">
+              &larr; Voltar
+            </button>
+            <h2 className="text-sm font-semibold text-forge-muted tracking-widest uppercase">Historico</h2>
+            <div className="w-14"></div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            <div className="bg-forge-card border border-forge-border rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-white">{stats.streak}</div>
+              <div className="text-xs text-forge-muted mt-1">Sequencia</div>
+            </div>
+            <div className="bg-forge-card border border-forge-border rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-white">{stats.total}</div>
+              <div className="text-xs text-forge-muted mt-1">Dias</div>
+            </div>
+            <div className="bg-forge-card border border-forge-border rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-white">{stats.rate}%</div>
+              <div className="text-xs text-forge-muted mt-1">Execucao</div>
+            </div>
+          </div>
+
+          {/* Day list */}
+          <div className="space-y-2">
+            {sorted.length === 0 && (
+              <p className="text-forge-muted text-sm text-center py-8">Nenhum dia registrado.</p>
+            )}
+            {sorted.map(s => {
+              const full = isFullDay(s);
+              const mc = s.missions.filter(m => m.completed).length;
+              const mt = s.missions.length;
+              const dateStr = s.date.split('-').reverse().join('/');
+              return (
+                <div key={s.date} className={`flex items-center gap-3 p-4 rounded-xl border ${
+                  full ? 'bg-forge-green/5 border-forge-green/15' : 'bg-forge-card border-forge-border'
+                }`}>
+                  <div className={`w-3 h-3 rounded-full ${full ? 'bg-forge-green' : 'bg-forge-red'}`}></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-white">{dateStr}</div>
+                    <div className="text-xs text-forge-muted mt-0.5">
+                      {mc}/{mt} missoes
+                      {s.training.text && (s.training.completed ? ' · Treinou' : ' · Sem treino')}
+                      {s.study.text && (s.study.completed ? ' · Estudou' : ' · Sem estudo')}
+                    </div>
+                  </div>
+                  <div className={`text-xs font-bold ${full ? 'text-forge-green' : 'text-forge-red'}`}>
+                    {full ? 'EXECUTADO' : 'PARCIAL'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════
+    // RENDER
+    // ═══════════════════════════════════════════════
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
