@@ -72,6 +72,7 @@
     window.LogOut=ic([p('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'),pl('16 17 21 12 16 7'),ln(21,12,9,12)])
     window.Send=ic([p('M22 2L11 13'),p('M22 2L15 22 11 13 2 9l20-7z')])
     window.KeyRound=ic([ci(7.5,15.5,5.5),p('m21 2-9.6 9.6'),p('m15.5 7.5 3 3L22 7l-3-3'),p('m7 22 3-3')])
+    window.Activity=ic([pl('22 12 18 12 15 21 9 3 6 12 2 12')])
   })()
   </script>
   <style>
@@ -587,7 +588,8 @@ function reducer(state,action){
     case'ADD_SETTING':return{...state,settings:{...state.settings,[payload.key]:[...(state.settings[payload.key]||[]),{...payload.item,id:uid()}]}}
     case'UPDATE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].map(i=>i.id===payload.item.id?payload.item:i)}}
     case'DELETE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].filter(i=>i.id!==payload.id)}}
-    case'IMPORT':{const d=payload.data;if(!d.settings)d.settings={};if(!d.settings.permuteUsages)d.settings.permuteUsages=[];if(!d.settings.goals)d.settings.goals=[];if(!d.tasks)d.tasks=[];return d}
+    case'IMPORT':{const d=payload.data;if(!d.settings)d.settings={};if(!d.settings.permuteUsages)d.settings.permuteUsages=[];if(!d.settings.goals)d.settings.goals=[];if(!d.tasks)d.tasks=[];if(!d.activityLog)d.activityLog=[];return d}
+    case'LOG_ACTIVITY':return{...state,activityLog:[payload,...(state.activityLog||[])].slice(0,500)}
     default:return state
   }
 }
@@ -603,6 +605,7 @@ function loadState(){
     if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
     if(!data.settings.goals)data.settings.goals=[]
     if(!data.tasks)data.tasks=[]
+    if(!data.activityLog)data.activityLog=[]
     return data
   }catch{return SEED}
 }
@@ -2604,6 +2607,102 @@ function GoalsPage({state,dispatch,toast}){
   )
 }
 
+// ─── ATIVIDADE ────────────────────────────────────────────────────────────────
+function ActivityPage({state}){
+  const log=state.activityLog||[]
+  const [filterUser,setFilterUser]=useState('todos')
+  const users=[{id:'todos',label:'Todos'},{id:'Fabiano',label:'Fabiano'},{id:'Mainara',label:'Mainara'}]
+
+  const filtered=filterUser==='todos'?log:log.filter(e=>e.user===filterUser)
+
+  function relTime(iso){
+    const diff=Date.now()-new Date(iso).getTime()
+    const min=Math.floor(diff/60000)
+    if(min<1)return'agora'
+    if(min<60)return`${min}min atrás`
+    const h=Math.floor(min/60)
+    if(h<24)return`${h}h atrás`
+    const d=Math.floor(h/24)
+    if(d===1)return'ontem'
+    if(d<7)return`${d} dias atrás`
+    return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})
+  }
+  function dayLabel(iso){
+    const d=new Date(iso)
+    const today=new Date()
+    const diff=Math.floor((today.setHours(0,0,0,0)-d.setHours(0,0,0,0))/86400000)
+    if(diff===0)return'Hoje'
+    if(diff===1)return'Ontem'
+    return new Date(iso).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})
+  }
+
+  // Agrupar por dia
+  const groups=[]
+  let lastDay=null
+  filtered.forEach(entry=>{
+    const day=entry.at?entry.at.slice(0,10):'?'
+    if(day!==lastDay){groups.push({day,label:dayLabel(entry.at),entries:[]});lastDay=day}
+    groups[groups.length-1].entries.push(entry)
+  })
+
+  return(
+    <div className="space-y-5 max-w-2xl">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-base font-semibold" style={{color:'var(--text)'}}>Registro de Atividade</h2>
+          <p className="text-xs mt-0.5" style={{color:'var(--text-3)'}}>Tudo que foi feito no app, por quem e quando</p>
+        </div>
+        <div className="flex gap-2">
+          {users.map(u=>(
+            <button key={u.id} onClick={()=>setFilterUser(u.id)} className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+              style={{background:filterUser===u.id?'#10b981':'var(--bg-overlay)',color:filterUser===u.id?'#fff':'var(--text-3)',border:filterUser===u.id?'1px solid #10b981':'1px solid var(--border)'}}>
+              {u.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length===0&&(
+        <div className="py-16 text-center" style={{color:'var(--text-3)'}}>
+          <div className="text-4xl mb-3">📭</div>
+          <p className="text-sm">Nenhuma atividade registrada ainda</p>
+          <p className="text-xs mt-1" style={{color:'var(--text-4)'}}>As ações feitas no app aparecerão aqui</p>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        {groups.map(group=>(
+          <div key={group.day}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="text-xs font-semibold uppercase tracking-wider" style={{color:'var(--text-3)'}}>{group.label}</div>
+              <div className="flex-1 h-px" style={{background:'var(--sep)'}}/>
+              <div className="text-xs" style={{color:'var(--text-4)'}}>{group.entries.length} ação{group.entries.length!==1?'ões':''}</div>
+            </div>
+            <div className="space-y-1">
+              {group.entries.map(entry=>(
+                <div key={entry.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-all"
+                  style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
+                    style={{background:`${entry.userColor||'#10b981'}25`,color:entry.userColor||'#10b981',border:`1px solid ${entry.userColor||'#10b981'}40`}}>
+                    {entry.userInitials||'??'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1.5 flex-wrap">
+                      <span className="text-xs font-semibold" style={{color:entry.userColor||'var(--text)'}}>{entry.user}</span>
+                      <span className="text-sm" style={{color:'var(--text-2)'}}>{entry.text}</span>
+                    </div>
+                  </div>
+                  <div className="text-xs shrink-0" style={{color:'var(--text-4)'}}>{relTime(entry.at)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
   {id:'dashboard',icon:LayoutDashboard,label:'Dashboard'},
@@ -2616,6 +2715,7 @@ const NAV=[
   {id:'calendar',icon:CalendarRange,label:'Calendário'},
   {id:'annual',icon:Target,label:'Projeção Anual'},
   {id:'simulator',icon:Zap,label:'Simulador'},
+  {id:'activity',icon:Activity,label:'Atividade'},
 ]
 const SETTINGS_SUB=[
   {id:'clients',icon:Briefcase,label:'Clientes'},
@@ -2815,6 +2915,36 @@ function LoginScreen({onLogin}){
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
+// ─── ACTIVITY LOG ─────────────────────────────────────────────────────────────
+const ENTITY_LABELS={clients:'cliente',cards:'cartão',collaborators:'colaborador',fixedExpenses:'despesa fixa',goals:'objetivo',permuteUsages:'permuta'}
+function buildLog(action,user,state){
+  const{type,payload}=action
+  const u={user:user.name,userColor:user.color,userInitials:user.initials,id:uid(),at:new Date().toISOString()}
+  const mk2label=mk=>{if(!mk)return'';const{year,month}=parseMonthKey(mk);return` · ${MONTH_NAMES[month-1].slice(0,3)}/${year}`}
+  switch(type){
+    case'ADD_ENTRY':return{...u,icon:'➕',text:`Adicionou entrada — ${payload.entry.client||'?'} ${fmtBRL(payload.entry.expectedValue||0)}${mk2label(payload.monthKey)}`}
+    case'UPDATE_ENTRY':return{...u,icon:'✏️',text:`Editou entrada — ${payload.entry.client||'?'} ${fmtBRL(payload.entry.expectedValue||0)}${mk2label(payload.monthKey)}`}
+    case'DELETE_ENTRY':{const e=(state.months[payload.monthKey]?.entries||[]).find(x=>x.id===payload.id);return{...u,icon:'🗑️',text:`Removeu entrada${e?` — ${e.client} ${fmtBRL(e.expectedValue||0)}`:''}`}}
+    case'ADD_EXIT':return{...u,icon:'➕',text:`Adicionou saída — ${payload.exit.description||'?'} ${fmtBRL(payload.exit.expectedValue||0)}${mk2label(payload.monthKey)}`}
+    case'UPDATE_EXIT':return{...u,icon:'✏️',text:`Editou saída — ${payload.exit.description||'?'} ${fmtBRL(payload.exit.expectedValue||0)}${mk2label(payload.monthKey)}`}
+    case'DELETE_EXIT':{const e=(state.months[payload.monthKey]?.exits||[]).find(x=>x.id===payload.id);return{...u,icon:'🗑️',text:`Removeu saída${e?` — ${e.description} ${fmtBRL(e.expectedValue||0)}`:''}`}}
+    case'ADD_CARD_EXPENSE':{const c=(state.settings?.cards||[]).find(x=>x.id===payload.cardId);return{...u,icon:'💳',text:`Lançou no cartão ${c?.name||'?'} — ${payload.expense.description||'?'} ${fmtBRL(payload.expense.value||0)}`}}
+    case'DELETE_CARD_EXPENSE':{const c=(state.settings?.cards||[]).find(x=>x.id===payload.cardId);return{...u,icon:'🗑️',text:`Removeu lançamento do cartão ${c?.name||'?'}`}}
+    case'PAY_CARD_BILL':{const c=(state.settings?.cards||[]).find(x=>x.id===payload.cardId);return{...u,icon:'✅',text:`Pagou fatura ${c?.name||'?'} — ${fmtBRL(payload.amount)}`}}
+    case'ADD_SETTING':{const lbl=ENTITY_LABELS[payload.key]||payload.key;return{...u,icon:'➕',text:`Cadastrou ${lbl} — ${payload.item.name||payload.item.description||'?'}`}}
+    case'UPDATE_SETTING':{const lbl=ENTITY_LABELS[payload.key]||payload.key;return{...u,icon:'✏️',text:`Editou ${lbl} — ${payload.item.name||payload.item.description||'?'}`}}
+    case'DELETE_SETTING':{const lbl=ENTITY_LABELS[payload.key]||payload.key;return{...u,icon:'🗑️',text:`Removeu ${lbl}`}}
+    case'ADD_TASK':return{...u,icon:'📋',text:`Criou tarefa — ${payload.task.title||'?'}`}
+    case'UPDATE_TASK':return{...u,icon:'✏️',text:`Atualizou tarefa — ${payload.task.title||'?'}`}
+    case'DELETE_TASK':{const t=(state.tasks||[]).find(x=>x.id===payload.id);return{...u,icon:'🗑️',text:`Removeu tarefa${t?` — ${t.title}`:''}`}}
+    case'GENERATE_CONTRACT_ENTRIES':{const c=(state.settings?.clients||[]).find(x=>x.id===payload.clientId);return{...u,icon:'📅',text:`Gerou entradas do contrato — ${c?.name||'?'}`}}
+    case'CLOSE_MONTH':return{...u,icon:'🔒',text:`Fechou o mês${mk2label(payload.monthKey)}`}
+    case'COPY_FROM_PREV':return{...u,icon:'📋',text:`Copiou dados do mês anterior para${mk2label(payload.monthKey)}`}
+    case'ADD_COLLAB_EXTRA':{const c=(state.settings?.collaborators||[]).find(x=>x.id===payload.collabId);return{...u,icon:'➕',text:`Adicionou extra para ${c?.name||'?'} — ${fmtBRL(payload.extra.value)}`}}
+    default:return null
+  }
+}
+
 function PaiolFinanceApp({currentUser,onLogout}){
   const [state,dispatch]=useReducer(reducer,null,loadState)
   const [activePage,setActivePage]=useState('dashboard')
@@ -2847,21 +2977,31 @@ function PaiolFinanceApp({currentUser,onLogout}){
     setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),3000)
   },[])
 
+  // trackedDispatch: intercepta ações e grava no log de atividade
+  const stateRef=useRef(state)
+  useEffect(()=>{stateRef.current=state},[state])
+  const trackedDispatch=useCallback((action)=>{
+    dispatch(action)
+    const log=buildLog(action,currentUser,stateRef.current)
+    if(log)dispatch({type:'LOG_ACTIVITY',payload:log})
+  },[dispatch,currentUser])
+
   function prevMonth(){if(selMonth===1){setSelYear(y=>y-1);setSelMonth(12)}else setSelMonth(m=>m-1)}
   function nextMonth(){if(selMonth===12){setSelYear(y=>y+1);setSelMonth(1)}else setSelMonth(m=>m+1)}
   function prevYear(){setSelYear(y=>y-1)}
   function nextYear(){setSelYear(y=>y+1)}
 
-  const pp={state,dispatch,monthKey:mk,toast}
+  const pp={state,dispatch:trackedDispatch,monthKey:mk,toast}
   const pages={
     dashboard:<DashboardPage {...pp} setActivePage={setActivePage}/>,cashflow:<CashFlowPage {...pp}/>,entries:<EntriesPage {...pp}/>,
     exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,collaborators:<CollaboratorsPage {...pp}/>,
-    clients:<ClientsPage state={state} dispatch={dispatch} toast={toast}/>,
-    permuta:<PermutaPage state={state} dispatch={dispatch} toast={toast}/>,
-    objetivos:<GoalsPage state={state} dispatch={dispatch} toast={toast}/>,
-    tasks:<TasksPage state={state} dispatch={dispatch} toast={toast}/>,
-    calendar:<CalendarPage state={state} dispatch={dispatch} monthKey={mk} toast={toast}/>,
+    clients:<ClientsPage state={state} dispatch={trackedDispatch} toast={toast}/>,
+    permuta:<PermutaPage state={state} dispatch={trackedDispatch} toast={toast}/>,
+    objetivos:<GoalsPage state={state} dispatch={trackedDispatch} toast={toast}/>,
+    tasks:<TasksPage state={state} dispatch={trackedDispatch} toast={toast}/>,
+    calendar:<CalendarPage state={state} dispatch={trackedDispatch} monthKey={mk} toast={toast}/>,
     annual:<AnnualProjectionPage state={state} selYear={selYear}/>,simulator:<SimulatorPage {...pp}/>,settings:<SettingsPage {...pp}/>,
+    activity:<ActivityPage state={state}/>,
   }
   const monthData=state.months[mk]||{}
 
@@ -2880,9 +3020,9 @@ function PaiolFinanceApp({currentUser,onLogout}){
                   <span className="text-sm font-semibold min-w-[80px] text-center tracking-tight" style={{color:'var(--text)'}}>{selYear}</span>
                   <button onClick={nextYear} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronRight size={16}/></button>
                 </div>
-              ):['settings','clients','cards','collaborators'].includes(activePage)?(
+              ):['settings','clients','cards','collaborators','activity'].includes(activePage)?(
                 <span className="text-sm font-semibold tracking-tight" style={{color:'var(--text)'}}>
-                  {activePage==='clients'?'Clientes':activePage==='cards'?'Cartões':activePage==='collaborators'?'Colaboradores':'Dados & Backup'}
+                  {activePage==='clients'?'Clientes':activePage==='cards'?'Cartões':activePage==='collaborators'?'Colaboradores':activePage==='activity'?'Atividade':'Dados & Backup'}
                 </span>
               ):(
                 <div className="flex items-center gap-1.5">
