@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Paiol Finance — Documentação</title>
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 32px; color: #1a1a1a; line-height: 1.6; font-size: 14px; }
+  h1 { font-size: 28px; color: #10b981; margin-bottom: 4px; }
+  h2 { font-size: 18px; color: #10b981; margin-top: 36px; border-bottom: 2px solid #10b981; padding-bottom: 6px; }
+  h3 { font-size: 14px; font-weight: 700; margin-top: 20px; margin-bottom: 6px; }
+  .subtitle { color: #555; font-size: 15px; margin-bottom: 32px; }
+  .badge { display: inline-block; background: #10b981; color: white; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+  .badge.gray { background: #6b7280; }
+  .badge.purple { background: #8b5cf6; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { background: #f0fdf4; text-align: left; padding: 8px 10px; font-size: 12px; border: 1px solid #d1d5db; }
+  td { padding: 7px 10px; border: 1px solid #d1d5db; font-size: 13px; vertical-align: top; }
+  .note { background: #f0fdf4; border-left: 3px solid #10b981; padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 13px; }
+  @media print {
+    body { padding: 20px; }
+    h2 { page-break-before: auto; }
+    .page-break { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Paiol Finance</h1>
+<p class="subtitle">Documentação do sistema — Paiol Mídias · Abril 2026</p>
+
+<h2>O que é</h2>
+<p>Aplicativo web de gestão financeira desenvolvido exclusivamente para a Paiol Mídias. Roda direto no navegador em <strong>paiol-finance.vercel.app</strong>. Todos os dados ficam sincronizados via Google Sheets — qualquer alteração feita por um usuário aparece para o outro em tempo real.</p>
+
+<h2>Usuários</h2>
+<table>
+  <tr><th>Usuário</th><th>Papel</th><th>Identificação</th></tr>
+  <tr><td><span class="badge">FA</span> Fabiano</td><td>Administrador</td><td>Avatar verde</td></tr>
+  <tr><td><span class="badge purple">MA</span> Mainara</td><td>Gestora</td><td>Avatar roxo</td></tr>
+</table>
+<p>Login feito com PIN de 4 dígitos. Cada um entra com o próprio PIN e todas as ações ficam registradas com o nome de quem fez.</p>
+
+<h2>Navegação por meses</h2>
+<p>O app trabalha mês a mês. Na parte superior há botões <strong>&lt; &gt;</strong> para navegar entre meses. Cada mês tem seus próprios dados de entradas, saídas, fluxo de caixa, etc.</p>
+
+<div class="page-break"></div>
+<h2>Módulos do sistema</h2>
+
+<h3>Dashboard</h3>
+<p>Página inicial. Mostra um resumo do mês: saldo em caixa, entradas e saídas previstas, gráfico previsto vs realizado, lista de contas a receber e a pagar, e alertas de contratos vencendo.</p>
+
+<h3>Entradas</h3>
+<p>Registro de todas as receitas do mês. Cada entrada tem:</p>
+<ul>
+  <li>Nome do cliente, dia de vencimento, valor previsto e valor real recebido</li>
+  <li>Status: <em>Previsto → Cobrado → Recebido</em></li>
+  <li>Campo para observações e controle de emissão de nota fiscal (NF)</li>
+</ul>
+
+<h3>Saídas</h3>
+<p>Registro de todas as despesas do mês. Cada saída tem:</p>
+<ul>
+  <li>Nome, categoria, dia, valor previsto e valor real pago</li>
+  <li>Status: <em>Pendente → Pago</em></li>
+  <li>Vinculação a um cartão de crédito (opcional)</li>
+</ul>
+
+<h3>Fluxo de Caixa</h3>
+<p>Visão dia a dia do mês. Mostra o saldo projetado ao longo do mês com base nas entradas e saídas cadastradas. É possível registrar o saldo real de cada dia manualmente e adicionar observações diárias.</p>
+
+<h3>Cartões</h3>
+<p>Gestão de cartões de crédito. Para cada cartão, exibe duas faturas lado a lado:</p>
+<ul>
+  <li><strong>Fatura Fechada</strong> — mês anterior, com botão "Pagar Fatura". Ao pagar, pode gerar automaticamente uma saída no mês atual.</li>
+  <li><strong>Fatura Aberta</strong> — mês atual, com lista dos lançamentos do mês. Suporta parcelamentos.</li>
+</ul>
+
+<h3>Clientes (CRM)</h3>
+<p>Cadastro completo de clientes com:</p>
+<ul>
+  <li>Dados básicos: nome, razão social, CNPJ (com preenchimento automático via API), telefone, e-mail</li>
+  <li>Endereço: CEP com preenchimento automático, rua, número, cidade, estado</li>
+  <li>Contrato: data de início, duração em meses, data de encerramento calculada automaticamente, links para contrato e proposta</li>
+  <li>Serviços contratados: lista de tags com os serviços prestados</li>
+  <li>Status: <span class="badge">Ativo</span> ou <span class="badge gray">Inativo</span></li>
+  <li>Histórico de cobranças: visualiza todas as entradas do cliente, mês a mês, com controle de NF emitida</li>
+  <li>Botão "Gerar meses": cria automaticamente as entradas mensais para toda a duração do contrato</li>
+</ul>
+
+<h3>Colaboradores</h3>
+<p>Cadastro da equipe com salário base. A cada mês é possível adicionar extras (vale refeição, bônus, etc.). O sistema mostra o total de salários base + extras do mês.</p>
+
+<h3>Permuta</h3>
+<p>Controle de permutas com clientes. Cada cliente pode ter um valor de permuta mensal. O módulo registra vendas e usos de permuta, e alerta quando o saldo está negativo (usou mais do que ganhou).</p>
+
+<h3>Objetivos</h3>
+<p>Metas financeiras com título, descrição, custo estimado, prioridade (Alta/Média/Baixa) e status (Ideia → Planejando → Em Progresso → Concluído). Mostra totais de investimento previsto e já realizado.</p>
+
+<h3>Tarefas</h3>
+<p>Quadro Kanban com três colunas: <em>A Fazer, Em Andamento, Concluído</em>. Cada tarefa pode ter responsável (Fabiano ou Mainara), prioridade, prazo e cliente relacionado. Suporta arrastar entre colunas.</p>
+
+<h3>Calendário</h3>
+<p>Visão mensal com todos os eventos financeiros: vencimentos de entradas, saídas, tarefas com prazo, contratos expirando e movimentações de permuta. Cada tipo tem uma cor diferente.</p>
+
+<h3>Projeção Anual</h3>
+<p>Tabela com todos os 12 meses do ano mostrando entradas, saídas e resultado previsto e realizado, com acumulado corrente. Inclui gráfico de área comparativo.</p>
+
+<h3>Simulador</h3>
+<p>Ferramenta para testar cenários hipotéticos sem alterar os dados reais. Simula o impacto de uma nova compra parcelada, um novo cliente recorrente ou uma nova contratação nos próximos meses. Exibe comparativo em gráfico.</p>
+
+<h3>Atividade</h3>
+<p>Log completo de tudo que foi feito no app. Mostra quem fez, o quê e quando. Armazena até 500 registros. Exemplos: "Fabiano adicionou entrada — Cliente X R$ 2.000", "Mainara fechou o mês Jan/2026".</p>
+
+<h3>Dados & Backup</h3>
+<p>Configurações gerais:</p>
+<ul>
+  <li><strong>Despesas Fixas</strong>: lista de gastos recorrentes que podem ser copiados para o mês seguinte</li>
+  <li><strong>Copiar mês anterior</strong>: replica entradas e saídas do mês anterior para o mês atual</li>
+  <li><strong>Exportar / Importar JSON</strong>: backup completo de todos os dados do app</li>
+</ul>
+
+<div class="page-break"></div>
+<h2>Rotina recomendada de uso</h2>
+
+<h3>Todo dia</h3>
+<ul>
+  <li>Abrir o <strong>Dashboard</strong> e verificar pendências (a receber e a pagar)</li>
+  <li>Ao receber um pagamento: ir em <strong>Entradas</strong>, localizar o cliente e mudar status para <em>Recebido</em>, informando o valor real</li>
+  <li>Ao pagar uma conta: ir em <strong>Saídas</strong> e mudar status para <em>Pago</em></li>
+  <li>Ao fazer compra no cartão: ir em <strong>Cartões</strong>, selecionar o cartão e lançar o gasto na fatura aberta</li>
+</ul>
+
+<h3>Início do mês</h3>
+<ul>
+  <li>Usar <em>"Copiar mês anterior"</em> em Dados & Backup para trazer as despesas fixas</li>
+  <li>Revisar e ajustar valores que mudaram</li>
+  <li>Atualizar o <strong>saldo em caixa</strong> no Dashboard com o saldo real da conta</li>
+</ul>
+
+<h3>Final do mês</h3>
+<ul>
+  <li>Conferir se todas as entradas e saídas estão com status correto</li>
+  <li>Pagar as faturas dos cartões em <strong>Cartões → Fatura Fechada → Pagar Fatura</strong></li>
+  <li>Adicionar extras dos colaboradores em <strong>Colaboradores</strong></li>
+  <li>Clicar em <strong>"Fechar mês"</strong> no Dashboard para travar os dados</li>
+  <li>Exportar backup em <strong>Dados & Backup → Exportar JSON</strong></li>
+</ul>
+
+<div class="note">
+  <strong>Dica:</strong> O botão "Gerar meses" na ficha de um cliente cria automaticamente todas as entradas mensais para toda a duração do contrato. Use isso ao cadastrar um novo cliente para não precisar lançar mês a mês.
+</div>
+
+<h2>Sincronização de dados</h2>
+<p>Os dados são salvos localmente no navegador e sincronizados automaticamente com o Google Sheets a cada alteração (com 2 segundos de delay). Isso significa que Fabiano e Mainara veem sempre os mesmos dados, independente de qual dispositivo estão usando.</p>
+
+<br>
+<p style="color:#aaa; font-size:12px; text-align:center;">Paiol Finance · Documentação interna · Abril 2026</p>
+
+</body>
+</html>
