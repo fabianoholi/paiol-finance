@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Paiol Finance — Migração de dados</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#111;border:1px solid #222;border-radius:20px;padding:32px;max-width:480px;width:100%}
+  h1{font-size:20px;font-weight:700;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:24px}
+  .log{background:#0a0a0a;border-radius:12px;padding:16px;font-size:12px;font-family:monospace;line-height:1.8;max-height:320px;overflow-y:auto;margin-bottom:20px}
+  .ok{color:#10b981}.warn{color:#f59e0b}.err{color:#ef4444}.info{color:#60a5fa}
+  .btn{display:block;width:100%;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+  .btn-run{background:#10b981;color:#fff}
+  .btn-go{background:#1a1a1a;border:1px solid #333;color:#aaa;margin-top:8px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .step{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px solid #1a1a1a}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔄 Migração de dados</h1>
+  <p class="sub">Atualiza o histórico de cobranças e configurações do Paiol Finance.</p>
+  <div class="log" id="log"><span class="info">Pronto para executar. Clique em "Executar migração".</span></div>
+  <button class="btn btn-run" id="btnRun" onclick="run()">Executar migração</button>
+  <button class="btn btn-go" id="btnGo" style="display:none" onclick="location.href='/'">→ Abrir o app</button>
+</div>
+
+<script>
+const logEl=document.getElementById('log')
+function log(msg,cls=''){logEl.innerHTML+=`<div class="${cls}">${msg}</div>`;logEl.scrollTop=logEl.scrollHeight}
+
+function run(){
+  document.getElementById('btnRun').disabled=true
+  logEl.innerHTML=''
+  try{ exec() }
+  catch(e){ log('Erro inesperado: '+e.message,'err') }
+}
+
+function exec(){
+  const raw=localStorage.getItem('paiolfinance_v3')
+  if(!raw){log('❌ Dados do app não encontrados. Abra o app primeiro.','err');document.getElementById('btnRun').disabled=false;return}
+
+  const data=JSON.parse(raw)
+  const uid=()=>Math.random().toString(36).slice(2,10)
+  const byName=n=>(data.settings.clients||[]).find(c=>c.name.toLowerCase().includes(n.toLowerCase()))
+  const hasEntry=(mk,cid)=>{const m=data.months[mk];return m&&(m.entries||[]).some(e=>e.clientId===cid)}
+  const getMonth=mk=>data.months[mk]||{entries:[],exits:[],cardExpenses:{},cardPayments:{},collaboratorExtras:{},dailyCash:{},dailyNotes:{}}
+
+  function addEntry(mk,client,value,status,note=''){
+    if(hasEntry(mk,client.id))return false
+    const m=getMonth(mk)
+    m.entries=[...(m.entries||[]),{id:uid(),client:client.name,clientId:client.id,dueDay:client.dueDay||10,status,expectedValue:value,realValue:status==='Recebido'?value:0,note}]
+    data.months[mk]=m
+    return true
+  }
+
+  function months(from,to){
+    const r=[];let[y,m]=from.split('-').map(Number);const[ty,tm]=to.split('-').map(Number)
+    while(y<ty||(y===ty&&m<=tm)){r.push(`${y}-${String(m).padStart(2,'0')}`);m++;if(m>12){m=1;y++}}
+    return r
+  }
+
+  // 1. INVOLT
+  const involt=byName('involt')
+  if(involt){
+    let n=0
+    months('2024-08','2025-10').forEach(mk=>{if(addEntry(mk,involt,750,'Recebido','Retroativo — pacote R$750'))n++})
+    months('2025-11','2026-03').forEach(mk=>{if(addEntry(mk,involt,2000,'Recebido','Retroativo'))n++})
+    log(`✅ Involt — ${n} meses lançados (ago/2024–mar/2026)`,'ok')
+  } else log('⚠️ Involt não encontrado','warn')
+
+  // 2. SA Hair
+  const sahair=byName('sa hair')||byName('simone')
+  if(sahair){
+    let n=0
+    months('2023-11','2026-03').forEach(mk=>{if(addEntry(mk,sahair,sahair.value,'Recebido','Retroativo'))n++})
+    log(`✅ SA Hair — ${n} meses lançados (nov/2023–mar/2026)`,'ok')
+  } else log('⚠️ SA Hair não encontrado','warn')
+
+  // 3. Pitoco
+  const pitoco=byName('pitoco')
+  if(pitoco){
+    let n=0
+    months('2025-06','2026-03').forEach(mk=>{if(addEntry(mk,pitoco,pitoco.value,'Recebido','Retroativo'))n++})
+    log(`✅ Pitoco — ${n} meses lançados (jun/2025–mar/2026)`,'ok')
+  } else log('⚠️ Pitoco não encontrado no cadastro — cadastre o cliente e reexecute','warn')
+
+  // 4. OpenGD
+  const opengd=byName('open')
+  if(opengd){
+    let n=0
+    months('2025-11','2026-03').forEach(mk=>{if(addEntry(mk,opengd,opengd.value,'Recebido','Retroativo'))n++})
+    log(`✅ OpenGD — ${n} meses lançados (nov/2025–mar/2026)`,'ok')
+  } else log('⚠️ OpenGD não encontrado no cadastro — cadastre o cliente e reexecute','warn')
+
+  // 5. Harlem Hambúrgueria: dez/2025–mar/2026 retroativo
+  const hhamb=byName('harlem hambur')
+  if(hhamb){
+    let n=0
+    months('2025-12','2026-03').forEach(mk=>{if(addEntry(mk,hhamb,hhamb.value,'Recebido','Retroativo'))n++})
+    log(`✅ Harlem Hambúrgueria — ${n} meses retroativos lançados`,'ok')
+  } else log('⚠️ Harlem Hambúrgueria não encontrado','warn')
+
+  // 6. Entradas futuras mai–dez/2026 (Previsto)
+  const alvos=['involt','sa hair','pitoco','open','ianesko','berti','mbx','rhede','harlem hambur']
+  let totalFuturos=0
+  months('2026-05','2026-12').forEach(mk=>{
+    ;(data.settings.clients||[]).forEach(c=>{
+      if(c.status==='inativo')return
+      if(!alvos.some(n=>c.name.toLowerCase().includes(n)))return
+      if(addEntry(mk,c,c.value,'Previsto',''))totalFuturos++
+    })
+  })
+  log(`✅ Entradas futuras — ${totalFuturos} lançamentos mai–dez/2026 como Previsto`,'ok')
+
+  // 7. Harlem Pizzaria → inativo
+  const hpiz=byName('pizzaria')
+  if(hpiz){
+    hpiz.status='inativo'
+    log('✅ Harlem Pizzaria marcada como inativa','ok')
+  } else log('⚠️ Harlem Pizzaria não encontrada','warn')
+
+  // 8. Harlem Hambúrgueria permuta → 1050
+  if(hhamb){
+    hhamb.permuteValue=1050
+    log('✅ Permuta Harlem Hambúrgueria atualizada para R$1.050','ok')
+  }
+
+  // 9. Tarefa: Bia / saldo permuta
+  if(!data.tasks)data.tasks=[]
+  const jaExiste=data.tasks.some(t=>t.title&&t.title.includes('Bia'))
+  if(!jaExiste){
+    data.tasks.push({
+      id:uid(),
+      title:'Conversar com Bia — saldo de permuta',
+      description:'Verificar saldo de permuta da Harlem Hambúrgueria e da Harlem Pizzaria. Confirmar se há dívida de algum dos lados antes de encerrar o contrato da Pizzaria.',
+      status:'todo',priority:'high',assignee:'fabiano',
+      dueDate:'',relatedClientId:hhamb?hhamb.id:'',
+      createdAt:new Date().toISOString()
+    })
+    log('✅ Tarefa criada: "Conversar com Bia — saldo de permuta"','ok')
+  } else log('ℹ️ Tarefa da Bia já existe, pulando','info')
+
+  // Salvar
+  localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  log('','')
+  log('💾 Dados salvos com sucesso!','ok')
+  log('Clique em "Abrir o app" para continuar.','info')
+  document.getElementById('btnGo').style.display='block'
+  document.getElementById('btnRun').style.display='none'
+}
+</script>
+</body>
+</html>
