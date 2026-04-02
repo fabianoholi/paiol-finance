@@ -601,7 +601,7 @@ function loadState(){
     const s=localStorage.getItem('paiolfinance_v3')
     const data=s?JSON.parse(s):SEED
     if(data.settings?.clients){
-      data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,razaoSocial:'',cnpj:'',cep:'',street:'',number:'',complement:'',city:'',state:'',status:'ativo',services:[],contractUrl:'',proposalUrl:'',...c}))
+      data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,permuteAccumulates:true,razaoSocial:'',cnpj:'',cep:'',street:'',number:'',complement:'',city:'',state:'',status:'ativo',services:[],contractUrl:'',proposalUrl:'',...c}))
     }
     if(!data.settings)data.settings={}
     if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
@@ -1708,7 +1708,7 @@ function ClientsPage({state,dispatch,toast}){
     setCepLoading(false)
   }
   function openAdd(){
-    setForm({name:'',value:'',dueDay:'',startDate:'',duration:'12',endDate:'',contractNote:'',phone:'',email:'',permuteValue:'',razaoSocial:'',cnpj:'',cep:'',street:'',number:'',complement:'',city:'',state:'',status:'ativo',services:[],contractUrl:'',proposalUrl:''})
+    setForm({name:'',value:'',dueDay:'',startDate:'',duration:'12',endDate:'',contractNote:'',phone:'',email:'',permuteValue:'',permuteAccumulates:true,razaoSocial:'',cnpj:'',cep:'',street:'',number:'',complement:'',city:'',state:'',status:'ativo',services:[],contractUrl:'',proposalUrl:''})
     setFormTab('dados');setModal('add')
   }
   function openEdit(c){setForm({...c,services:c.services||[]});setFormTab('dados');setModal(c)}
@@ -1898,6 +1898,15 @@ function ClientsPage({state,dispatch,toast}){
                   <Inp2 type="number" value={form.permuteValue} onChange={v=>setForm(f=>({...f,permuteValue:v}))} placeholder="0,00"/>
                   <p className="text-xs mt-1" style={{color:'var(--text-4)'}}>Deixe 0 se não houver permuta</p>
                 </Fld>
+                {parseFloat(form.permuteValue)>0&&(
+                  <Fld label="Acumula saldo não consumido?">
+                    <div className="flex gap-2 mt-1">
+                      {[{v:true,l:'✅ Sim, acumula pro próximo mês'},{v:false,l:'❌ Não acumula (perde se não usar)'}].map(opt=>(
+                        <button key={opt.l} onClick={()=>setForm(f=>({...f,permuteAccumulates:opt.v}))} className="flex-1 px-3 py-2 rounded-xl text-xs font-medium transition-all" style={{background:form.permuteAccumulates===opt.v?'#a78bfa22':'var(--bg-overlay)',border:`1px solid ${form.permuteAccumulates===opt.v?'#a78bfa':'var(--border)'}`,color:form.permuteAccumulates===opt.v?'#a78bfa':'var(--text-3)'}}>{opt.l}</button>
+                      ))}
+                    </div>
+                  </Fld>
+                )}
               </div>
             )}
             {formTab==='endereco'&&(
@@ -2050,6 +2059,7 @@ function PermutaPage({state,dispatch,toast}){
                   <div>
                     <div className="font-semibold text-slate-100">{c.name}</div>
                     <div className="text-sm mt-0.5" style={{color:'#a78bfa'}}>{fmtBRL(c.permuteValue)}/mês em permuta</div>
+                    <div className="text-xs mt-0.5" style={{color:'var(--text-4)'}}>{c.permuteAccumulates===false?'❌ Não acumula':'✅ Acumula saldo'}</div>
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{background:neg?'#ef444420':balance===0?'#f59e0b20':'#10b98120',color:neg?'#ef4444':balance===0?'#f59e0b':'#10b981'}}>
                     {neg?'Negativo':balance===0?'Zerado':'Disponível'}
