@@ -2974,8 +2974,15 @@ function PaiolFinanceApp({currentUser,onLogout}){
     return()=>clearTimeout(t)
   },[state])
 
-  // Na inicialização, sincroniza do Sheets (substitui localStorage se houver dado)
+  // Na inicialização, sincroniza do Sheets — exceto quando migrate.html acabou de rodar
   useEffect(()=>{
+    const migFlag=localStorage.getItem('paiolfinance_migrated')
+    if(migFlag&&(Date.now()-parseInt(migFlag))<120000){
+      // Migration recente: envia local → Sheets em vez de buscar do Sheets
+      localStorage.removeItem('paiolfinance_migrated')
+      gasPost(state).catch(()=>{})
+      return
+    }
     gasGet().then(data=>{
       if(data){
         dispatch({type:'IMPORT',payload:{data}})

@@ -144,8 +144,9 @@ function exec(){
     log('✅ Tarefa criada: "Conversar com Bia — saldo de permuta"','ok')
   } else log('ℹ️ Tarefa da Bia já existe, pulando','info')
 
-  // Salvar localmente
+  // Salvar localmente + flag para o app não sobrescrever ao abrir
   localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  localStorage.setItem('paiolfinance_migrated',Date.now())
   log('','')
   log('💾 Salvo localmente. Sincronizando com Google Sheets...','info')
 
