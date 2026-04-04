@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Paiol Finance — Migração 2</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#111;border:1px solid #222;border-radius:20px;padding:32px;max-width:480px;width:100%}
+  h1{font-size:20px;font-weight:700;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:24px}
+  .log{background:#0a0a0a;border-radius:12px;padding:16px;font-size:12px;font-family:monospace;line-height:1.8;max-height:320px;overflow-y:auto;margin-bottom:20px}
+  .ok{color:#10b981}.warn{color:#f59e0b}.err{color:#ef4444}.info{color:#60a5fa}
+  .btn{display:block;width:100%;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer}
+  .btn-run{background:#10b981;color:#fff}
+  .btn-go{background:#1a1a1a;border:1px solid #333;color:#aaa;margin-top:8px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🗓 Datas de início dos clientes</h1>
+  <p class="sub">Atualiza startDate e duração dos contratos no Paiol Finance.</p>
+  <div class="log" id="log"><span class="info">Pronto. Clique em "Executar".</span></div>
+  <button class="btn btn-run" id="btnRun" onclick="run()">Executar</button>
+  <button class="btn btn-go" id="btnGo" style="display:none" onclick="location.href='/'">→ Abrir o app</button>
+</div>
+
+<script>
+const logEl=document.getElementById('log')
+function log(msg,cls=''){logEl.innerHTML+=`<div class="${cls}">${msg}</div>`;logEl.scrollTop=logEl.scrollHeight}
+
+function computeEnd(start,months){
+  if(!start||!months)return''
+  const d=new Date(start)
+  d.setMonth(d.getMonth()+parseInt(months))
+  d.setDate(d.getDate()-1)
+  return d.toISOString().split('T')[0]
+}
+
+function run(){
+  document.getElementById('btnRun').disabled=true
+  logEl.innerHTML=''
+
+  const raw=localStorage.getItem('paiolfinance_v3')
+  if(!raw){log('❌ Dados do app não encontrados. Abra o app primeiro.','err');document.getElementById('btnRun').disabled=false;return}
+
+  const data=JSON.parse(raw)
+  const clients=data.settings?.clients||[]
+
+  const updates=[
+    {search:'sa hair',  startDate:'2023-11-01', duration:36},
+    {search:'reddogz',  startDate:'2026-02-26', duration:12},
+    {search:'harlem hambur', startDate:'2025-12-01', duration:12},
+    {search:'pitoco',   startDate:'2025-06-01', duration:12},
+    {search:'open',     startDate:'2025-11-01', duration:12},
+  ]
+
+  let changed=0
+  updates.forEach(u=>{
+    const c=clients.find(x=>x.name.toLowerCase().includes(u.search))
+    if(!c){log(`⚠️ "${u.search}" não encontrado`,'warn');return}
+    c.startDate=u.startDate
+    c.duration=u.duration
+    c.endDate=computeEnd(u.startDate,u.duration)
+    log(`✅ ${c.name} → Início ${u.startDate.split('-').reverse().join('/')} · ${u.duration}m · Vence ${c.endDate.split('-').reverse().join('/')}`, 'ok')
+    changed++
+  })
+
+  if(changed===0){log('Nenhum cliente foi alterado.','warn');document.getElementById('btnRun').disabled=false;return}
+
+  localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  localStorage.setItem('paiolfinance_migrated',Date.now())
+
+  const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
+  const GAS_TOKEN='paiol2026secret'
+  log('','')
+  log('💾 Sincronizando com Google Sheets...','info')
+  fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})
+    .then(()=>log('✅ Sincronizado!','ok'))
+    .catch(()=>log('⚠️ Sync falhou — o app vai sincronizar ao abrir.','warn'))
+    .finally(()=>{
+      document.getElementById('btnGo').style.display='block'
+      document.getElementById('btnRun').style.display='none'
+    })
+}
+</script>
+</body>
+</html>
