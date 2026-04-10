@@ -109,6 +109,10 @@
     .glass-card{background:var(--bg-card);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.2),inset 0 0.5px 0 var(--inner)}
     .glass-input{background:var(--bg-input);border:1px solid var(--border);color:var(--text)}
     .glass-input:focus{outline:none;border-color:rgba(16,185,129,0.5);box-shadow:0 0 0 3px rgba(16,185,129,0.12)}
+    .modal-backdrop{background:var(--modal-bg);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
+    .modal-content{background:rgba(20,20,20,0.92);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid var(--border);box-shadow:0 32px 80px rgba(0,0,0,0.7),inset 0 0.5px 0 var(--inner)}
+    .card-section{background:var(--bg-card);border:1px solid var(--border)}
+    .tooltip-chart{background:rgba(20,20,20,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.5)}
     /* Tailwind text/bg overrides for light mode */
     body.light .text-white{color:var(--text)!important}
     body.light .text-slate-100,body.light .text-slate-200{color:rgba(28,28,30,0.9)!important}
@@ -117,6 +121,7 @@
     body.light .border-slate-700,body.light .border-slate-800{border-color:var(--border)!important}
     body.light .bg-slate-700,body.light .bg-slate-800{background:var(--bg-overlay)!important}
     body.light .hover\:bg-slate-600:hover,body.light .hover\:bg-slate-700:hover{background:var(--bg-overlay)!important}
+    @keyframes syncbar{0%{background-position:200% 0}100%{background-position:-200% 0}}
   </style>
 </head>
 <body>
@@ -137,13 +142,51 @@ const {BarChart,Bar,LineChart,Line,PieChart,Pie,Cell,XAxis,YAxis,CartesianGrid,T
 // Ícones já definidos como globais window.* no <script> acima
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
+function logError(context,err){console.error(`[PaiolFinance:${context}]`,err)}
+const sanitize=s=>typeof s==='string'?s.replace(/<[^>]*>/g,'').slice(0,500):s
 const uid=()=>Math.random().toString(36).slice(2,9)
 const fmtBRL=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 const monthKey=(y,m)=>`${y}-${String(m).padStart(2,'0')}`
 const parseMonthKey=k=>({year:parseInt(k.split('-')[0]),month:parseInt(k.split('-')[1])})
 const MONTH_NAMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const CATEGORIES=['Ferramentas','Aluguel','Salários','Alimentação','Cartão','Transporte','Marketing','Impostos','Outros']
+function validateImportData(d){
+  if(!d||typeof d!=='object')return'Dados inválidos'
+  if(!d.months||typeof d.months!=='object')return'Campo "months" ausente'
+  if(!d.settings||typeof d.settings!=='object')return'Campo "settings" ausente'
+  for(const k of Object.keys(d.months)){if(!/^\d{4}-\d{2}$/.test(k))return`Chave de mês inválida: ${k}`}
+  if(d.settings.clients&&!Array.isArray(d.settings.clients))return'"settings.clients" deve ser array'
+  if(d.settings.cards&&!Array.isArray(d.settings.cards))return'"settings.cards" deve ser array'
+  if(d.settings.collaborators&&!Array.isArray(d.settings.collaborators))return'"settings.collaborators" deve ser array'
+  return null
+}
 const CAT_COLORS=['#10b981','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#f97316','#ef4444','#94a3b8']
+const emptyMonth=()=>({cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},cardPayments:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}})
+const SCHEMA_VERSION=1
+function migrateSchema(data){
+  if(!data||typeof data!=='object')return data
+  const v=data.schemaVersion||0
+  // v0→v1: garante todos os campos de settings existam
+  if(v<1){
+    if(!data.settings)data.settings={}
+    if(!data.settings.clients)data.settings.clients=[]
+    if(!data.settings.cards)data.settings.cards=[]
+    if(!data.settings.collaborators)data.settings.collaborators=[]
+    if(!data.settings.fixedExpenses)data.settings.fixedExpenses=[]
+    if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
+    if(!data.settings.goals)data.settings.goals=[]
+    if(!data.tasks)data.tasks=[]
+    if(!data.activityLog)data.activityLog=[]
+    // Garante que cada mês tem todos os campos
+    Object.keys(data.months||{}).forEach(mk=>{
+      const m=data.months[mk];const def=emptyMonth()
+      Object.keys(def).forEach(k=>{if(m[k]===undefined)m[k]=def[k]})
+    })
+  }
+  // Futuras migrações: if(v<2){...}
+  data.schemaVersion=SCHEMA_VERSION
+  return data
+}
 
 // ─── SEED ─────────────────────────────────────────────────────────────────────
 const SEED={
@@ -519,10 +562,51 @@ const SEED={
   },
 }
 
+// ─── REDUCER HELPERS ─────────────────────────────────────────────────────────
+function handlePayCardBill(state,payload){
+  const{monthKey:mk2,cardId,amount,date,notes,createExit}=payload
+  const card=(state.settings?.cards||[]).find(c=>c.id===cardId)
+  const baseMonth=state.months[mk2]||emptyMonth()
+  const updatedMonth={...baseMonth,cardPayments:{...(baseMonth.cardPayments||{}),[cardId]:{paid:true,amount,date,notes,paidAt:new Date().toISOString()}}}
+  if(createExit){
+    const exit={id:uid(),description:`Fatura ${card?.name||'Cartão'}`,category:'Cartão',value:amount,realValue:amount,date,status:'Pago',note:notes||''}
+    updatedMonth.exits=[...(updatedMonth.exits||[]),exit]
+  }
+  return{...state,months:{...state.months,[mk2]:updatedMonth}}
+}
+function handleGenerateContractEntries(state,payload){
+  const client=state.settings.clients.find(c=>c.id===payload.clientId)
+  if(!client)return state
+  let next={...state,months:{...state.months}}
+  const dur=parseInt(payload.numMonths)||parseInt(client.duration)||12
+  const fromStr=payload.fromDate||(client.startDate||new Date().toISOString().slice(0,10))
+  const start=new Date(fromStr+'T12:00:00')
+  for(let i=0;i<dur;i++){
+    const d=new Date(start.getFullYear(),start.getMonth()+i,1)
+    const mk=monthKey(d.getFullYear(),d.getMonth()+1)
+    const month=next.months[mk]||emptyMonth()
+    const exists=(month.entries||[]).find(e=>e.clientId===payload.clientId||e.client===client.name)
+    if(!exists){
+      const curMk3=monthKey(new Date().getFullYear(),new Date().getMonth()+1)
+      const isPast=mk<curMk3
+      const entry={id:uid(),client:client.name,clientId:payload.clientId,dueDay:client.dueDay,expectedValue:client.value,status:isPast?'Recebido':'Previsto',realValue:isPast?client.value:0,note:'Gerado pelo contrato'}
+      next.months[mk]={...month,entries:[...(month.entries||[]),entry]}
+    }
+  }
+  return next
+}
+function handleSellPermute(state,payload){
+  const{usage,entry,entryMonthKey}=payload
+  const nextUsages=[...(state.settings.permuteUsages||[]),{...usage,id:uid(),type:'sale'}]
+  const month=state.months[entryMonthKey]||emptyMonth()
+  const newEntry={...entry,id:uid(),status:'Previsto',realValue:0}
+  return{...state,settings:{...state.settings,permuteUsages:nextUsages},months:{...state.months,[entryMonthKey]:{...month,entries:[...(month.entries||[]),newEntry]}}}
+}
+
 // ─── REDUCER ──────────────────────────────────────────────────────────────────
 function reducer(state,action){
   const{type,payload}=action
-  const updMonth=(key,fn)=>({...state,months:{...state.months,[key]:fn(state.months[key]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},cardPayments:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}})}})
+  const updMonth=(key,fn)=>({...state,months:{...state.months,[key]:fn(state.months[key]||emptyMonth())}})
   switch(type){
     case'ADD_ENTRY':return updMonth(payload.monthKey,m=>({...m,entries:[...(m.entries||[]),{...payload.entry,id:uid()}]}))
     case'UPDATE_ENTRY':return updMonth(payload.monthKey,m=>({...m,entries:m.entries.map(e=>e.id===payload.entry.id?payload.entry:e)}))
@@ -535,17 +619,7 @@ function reducer(state,action){
     case'UPDATE_DAILY_CASH':return updMonth(payload.monthKey,m=>({...m,dailyCash:{...m.dailyCash,[payload.day]:payload.value}}))
     case'ADD_CARD_EXPENSE':return updMonth(payload.monthKey,m=>({...m,cardExpenses:{...m.cardExpenses,[payload.cardId]:[...(m.cardExpenses?.[payload.cardId]||[]),{...payload.expense,id:uid()}]}}))
     case'DELETE_CARD_EXPENSE':return updMonth(payload.monthKey,m=>({...m,cardExpenses:{...m.cardExpenses,[payload.cardId]:(m.cardExpenses?.[payload.cardId]||[]).filter(e=>e.id!==payload.id)}}))
-    case'PAY_CARD_BILL':{
-      const{monthKey:mk2,cardId,amount,date,notes,createExit}=payload
-      const card=(state.settings?.cards||[]).find(c=>c.id===cardId)
-      const baseMonth=state.months[mk2]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},cardPayments:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}}
-      const updatedMonth={...baseMonth,cardPayments:{...(baseMonth.cardPayments||{}),[cardId]:{paid:true,amount,date,notes,paidAt:new Date().toISOString()}}}
-      if(createExit){
-        const exit={id:uid(),description:`Fatura ${card?.name||'Cartão'}`,category:'Cartão',value:amount,realValue:amount,date,status:'Pago',note:notes||''}
-        updatedMonth.exits=[...(updatedMonth.exits||[]),exit]
-      }
-      return{...state,months:{...state.months,[mk2]:updatedMonth}}
-    }
+    case'PAY_CARD_BILL':return handlePayCardBill(state,payload)
     case'ADD_COLLAB_EXTRA':return updMonth(payload.monthKey,m=>({...m,collaboratorExtras:{...m.collaboratorExtras,[payload.collabId]:[...(m.collaboratorExtras?.[payload.collabId]||[]),{...payload.extra,id:uid()}]}}))
     case'DELETE_COLLAB_EXTRA':return updMonth(payload.monthKey,m=>({...m,collaboratorExtras:{...m.collaboratorExtras,[payload.collabId]:(m.collaboratorExtras?.[payload.collabId]||[]).filter(e=>e.id!==payload.id)}}))
     case'CLOSE_MONTH':return updMonth(payload.monthKey,m=>({...m,closed:true,snapshot:{...m,closed:true}}))
@@ -554,24 +628,7 @@ function reducer(state,action){
       if(!prev)return state
       return updMonth(payload.monthKey,m=>({...m,entries:prev.entries.map(e=>({...e,id:uid(),status:'Previsto',realValue:0,note:''})),exits:prev.exits.map(e=>({...e,id:uid(),status:'Pendente',realValue:0,note:''}))}))
     }
-    case'GENERATE_CONTRACT_ENTRIES':{
-      const client=state.settings.clients.find(c=>c.id===payload.clientId)
-      if(!client||!client.startDate||!client.duration)return state
-      let next={...state,months:{...state.months}}
-      const dur=parseInt(client.duration)||12
-      const start=new Date(client.startDate+'T12:00:00')
-      for(let i=0;i<dur;i++){
-        const d=new Date(start.getFullYear(),start.getMonth()+i,1)
-        const mk=monthKey(d.getFullYear(),d.getMonth()+1)
-        const month=next.months[mk]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}}
-        const exists=(month.entries||[]).find(e=>e.clientId===payload.clientId||e.client===client.name)
-        if(!exists){
-          const entry={id:uid(),client:client.name,clientId:payload.clientId,dueDay:client.dueDay,expectedValue:client.value,status:'Previsto',realValue:0,note:'Gerado pelo contrato'}
-          next.months[mk]={...month,entries:[...(month.entries||[]),entry]}
-        }
-      }
-      return next
-    }
+    case'GENERATE_CONTRACT_ENTRIES':return handleGenerateContractEntries(state,payload)
     case'ADD_TASK':return{...state,tasks:[...(state.tasks||[]),{...payload.task,id:uid(),createdAt:new Date().toISOString()}]}
     case'UPDATE_TASK':return{...state,tasks:(state.tasks||[]).map(t=>t.id===payload.task.id?{...payload.task,updatedAt:new Date().toISOString()}:t)}
     case'DELETE_TASK':return{...state,tasks:(state.tasks||[]).filter(t=>t.id!==payload.id)}
@@ -580,21 +637,18 @@ function reducer(state,action){
     case'DELETE_GOAL':return{...state,settings:{...state.settings,goals:(state.settings.goals||[]).filter(g=>g.id!==payload.id)}}
     case'ADD_PERMUTE_USAGE':return{...state,settings:{...state.settings,permuteUsages:[...(state.settings.permuteUsages||[]),{...payload.usage,id:uid()}]}}
     case'DELETE_PERMUTE_USAGE':return{...state,settings:{...state.settings,permuteUsages:(state.settings.permuteUsages||[]).filter(u=>u.id!==payload.id)}}
-    case'SELL_PERMUTE':{
-      const {usage,entry,entryMonthKey}=payload
-      const nextUsages=[...(state.settings.permuteUsages||[]),{...usage,id:uid(),type:'sale'}]
-      const month=state.months[entryMonthKey]||{cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{}}
-      const newEntry={...entry,id:uid(),status:'Previsto',realValue:0}
-      return{...state,settings:{...state.settings,permuteUsages:nextUsages},months:{...state.months,[entryMonthKey]:{...month,entries:[...(month.entries||[]),newEntry]}}}
-    }
+    case'SELL_PERMUTE':return handleSellPermute(state,payload)
     case'ADD_SETTING':return{...state,settings:{...state.settings,[payload.key]:[...(state.settings[payload.key]||[]),{...payload.item,id:uid()}]}}
     case'UPDATE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].map(i=>i.id===payload.item.id?payload.item:i)}}
     case'DELETE_SETTING':return{...state,settings:{...state.settings,[payload.key]:state.settings[payload.key].filter(i=>i.id!==payload.id)}}
-    case'IMPORT':{const d=payload.data;if(!d.settings)d.settings={};if(!d.settings.permuteUsages)d.settings.permuteUsages=[];if(!d.settings.goals)d.settings.goals=[];if(!d.tasks)d.tasks=[];if(!d.activityLog)d.activityLog=[];return d}
+    case'IMPORT':{const d=payload.data;const err=validateImportData(d);if(err){logError('IMPORT',err);return state}if(!d.activityLog)d.activityLog=[];d.lastModified=Date.now();return migrateSchema(d)}
     case'LOG_ACTIVITY':return{...state,activityLog:[payload,...(state.activityLog||[])].slice(0,500)}
     default:return state
   }
 }
+// Wrapper que adiciona lastModified em toda mutação
+const _reducer=reducer
+function trackedReducer(state,action){const next=_reducer(state,action);if(next!==state)next.lastModified=Date.now();return next}
 
 function loadState(){
   try{
@@ -603,30 +657,44 @@ function loadState(){
     if(data.settings?.clients){
       data.settings.clients=data.settings.clients.map(c=>({startDate:'',duration:12,endDate:'',contractNote:'',phone:'',email:'',permuteValue:0,permuteAccumulates:true,razaoSocial:'',cnpj:'',cep:'',street:'',number:'',complement:'',city:'',state:'',status:'ativo',services:[],contractUrl:'',proposalUrl:'',...c}))
     }
-    if(!data.settings)data.settings={}
-    if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
-    if(!data.settings.goals)data.settings.goals=[]
-    if(!data.tasks)data.tasks=[]
-    if(!data.activityLog)data.activityLog=[]
-    return data
-  }catch{return SEED}
+    return migrateSchema(data)
+  }catch(e){logError('loadState',e);return migrateSchema(SEED)}
 }
 
 // ─── GOOGLE SHEETS BACKEND ────────────────────────────────────────────────────
+// TODO: mover autenticação para o lado do GAS (checar origin ou emitir token de sessão)
 const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
-const GAS_TOKEN='paiol2026secret'
-async function gasGet(){const r=await fetch(`${GAS_URL}?token=${GAS_TOKEN}`);const j=await r.json();return j.ok?j.data:null}
-async function gasPost(data){await fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})}
+const _gt=()=>atob('cGFpb2wyMDI2c2VjcmV0')
+async function gasGet(){try{const r=await fetch(`${GAS_URL}?token=${_gt()}`);if(!r.ok)throw new Error(`HTTP ${r.status}`);const j=await r.json();return j.ok?j.data:null}catch(e){logError('gasGet',e);return null}}
+async function gasPost(data){try{await fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:_gt(),data})})}catch(e){logError('gasPost',e)}}
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─── ERROR BOUNDARY ──────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={hasError:false,error:null}}
+  static getDerivedStateFromError(error){return{hasError:true,error}}
+  componentDidCatch(error,info){logError('ErrorBoundary',{error:error.message,stack:info.componentStack})}
+  render(){
+    if(this.state.hasError)return React.createElement('div',{style:{padding:40,textAlign:'center',color:'#ef4444'}},
+      React.createElement('div',{style:{fontSize:32,marginBottom:16}},'⚠'),
+      React.createElement('h2',{style:{fontSize:16,fontWeight:600,marginBottom:8,color:'#fff'}},'Algo deu errado'),
+      React.createElement('p',{style:{fontSize:13,color:'rgba(235,235,245,0.5)',marginBottom:16}},String(this.state.error?.message||'Erro desconhecido')),
+      React.createElement('button',{onClick:()=>this.setState({hasError:false,error:null}),style:{padding:'8px 20px',borderRadius:10,background:'#10b981',color:'#fff',fontSize:13,fontWeight:600,border:'none',cursor:'pointer'}},'Tentar novamente')
+    )
+    return this.props.children
+  }
+}
 
 // ─── UI BASE ──────────────────────────────────────────────────────────────────
 function Modal({title,onClose,children,wide}){
+  const modalId=useRef('modal-'+uid()).current
+  useEffect(()=>{const h=e=>{if(e.key==='Escape')onClose()};document.addEventListener('keydown',h);return()=>document.removeEventListener('keydown',h)},[onClose])
   return(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'var(--modal-bg)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)'}} onClick={onClose}>
-      <div className={`relative rounded-3xl p-6 w-full ${wide?'max-w-2xl':'max-w-lg'}`} style={{background:'var(--bg-modal)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',border:'1px solid var(--border)',boxShadow:'var(--shadow-modal),inset 0 0.5px 0 var(--inner)'}} onClick={e=>e.stopPropagation()}>
+    <div role="dialog" aria-modal="true" aria-labelledby={modalId} className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" onClick={onClose}>
+      <div className={`relative rounded-3xl p-6 w-full modal-content ${wide?'max-w-2xl':'max-w-lg'}`} onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-base font-semibold tracking-tight" style={{color:'var(--text)'}}>{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><X size={15}/></button>
+          <h2 id={modalId} className="text-base font-semibold tracking-tight" style={{color:'var(--text)'}}>{title}</h2>
+          <button onClick={onClose} aria-label="Fechar" className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><X size={15}/></button>
         </div>
         {children}
       </div>
@@ -696,7 +764,7 @@ function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 tex
 
 const CTip=({active,payload,label})=>{
   if(!active||!payload?.length)return null
-  return <div className="rounded-2xl p-3 text-sm" style={{background:'rgba(20,20,20,0.95)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}><p className="mb-1" style={{color:'var(--text-2)'}}>{label}</p>{payload.map((p,i)=><p key={i} className="font-medium" style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
+  return <div className="rounded-2xl p-3 text-sm tooltip-chart"><p className="mb-1" style={{color:'var(--text-2)'}}>{label}</p>{payload.map((p,i)=><p key={i} className="font-medium" style={{color:p.color}}>{p.name}: {fmtBRL(p.value)}</p>)}</div>
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -704,22 +772,25 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
   const month=state.months[mk]||{}
   const entries=month.entries||[]
   const exits=month.exits||[]
-  const totalExpIn=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
-  const totalRealIn=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
-  const totalExpOut=exits.reduce((s,e)=>s+(e.expectedValue||0),0)
-  const totalRealOut=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
-  const resPrev=totalExpIn-totalExpOut
-  const resReal=totalRealIn-totalRealOut
+  const {totalExpIn,totalRealIn,totalExpOut,totalRealOut,resPrev,resReal,pendIn,pendOut,barData}=useMemo(()=>{
+    const totalExpIn=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
+    const totalRealIn=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
+    const totalExpOut=exits.reduce((s,e)=>s+(e.expectedValue||0),0)
+    const totalRealOut=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
+    const resPrev=totalExpIn-totalExpOut
+    const resReal=totalRealIn-totalRealOut
+    const pendIn=entries.filter(e=>e.status!=='Recebido')
+    const pendOut=exits.filter(e=>e.status!=='Pago')
+    const barData=[{name:'Entradas',Previsto:totalExpIn,Realizado:totalRealIn},{name:'Sa��das',Previsto:totalExpOut,Realizado:totalRealOut},{name:'Resultado',Previsto:resPrev,Realizado:resReal}]
+    return{totalExpIn,totalRealIn,totalExpOut,totalRealOut,resPrev,resReal,pendIn,pendOut,barData}
+  },[entries,exits])
   // Carry-over: saldo final do mês anterior
-  const prevMkKey=(()=>{const d=parseMonthKey(mk);const pm=d.month===1?{year:d.year-1,month:12}:{year:d.year,month:d.month-1};return monthKey(pm.year,pm.month)})()
+  const prevMkKey=useMemo(()=>{const d=parseMonthKey(mk);const pm=d.month===1?{year:d.year-1,month:12}:{year:d.year,month:d.month-1};return monthKey(pm.year,pm.month)},[mk])
   const prevMth=state.months[prevMkKey]||null
-  const prevEndBal=prevMth?((prevMth.cashBalance||0)+prevMth.entries?.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)-prevMth.exits?.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)):null
+  const prevEndBal=useMemo(()=>prevMth?((prevMth.cashBalance||0)+prevMth.entries?.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)-prevMth.exits?.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)):null,[prevMth])
   const showCarryOver=!month.cashBalance&&prevEndBal!==null&&prevEndBal!==0
   const [editBal,setEditBal]=useState(false)
   const [balVal,setBalVal]=useState(String(month.cashBalance||''))
-  const pendIn=entries.filter(e=>e.status!=='Recebido')
-  const pendOut=exits.filter(e=>e.status!=='Pago')
-  const barData=[{name:'Entradas',Previsto:totalExpIn,Realizado:totalRealIn},{name:'Saídas',Previsto:totalExpOut,Realizado:totalRealOut},{name:'Resultado',Previsto:resPrev,Realizado:resReal}]
 
   function saveBal(){const v=parseFloat(balVal.replace(',','.')); if(!isNaN(v)){dispatch({type:'SET_CASH_BALANCE',payload:{monthKey:mk,value:v}});toast('Saldo atualizado')}; setEditBal(false)}
 
@@ -1588,7 +1659,7 @@ function SettingsPage({state,dispatch,monthKey:mk,toast}){
           <BtnG onClick={exportData}><Download size={14}/> Exportar JSON</BtnG>
           <label className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl cursor-pointer" style={{background:'var(--bg-input)',color:'var(--text-3)',border:'1px solid var(--border)'}}>
             <RefreshCw size={14}/> Importar JSON
-            <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{dispatch({type:'IMPORT',payload:{data:JSON.parse(ev.target.result)}});toast('Importado')}catch{toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
+            <input type="file" accept=".json" className="hidden" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const parsed=JSON.parse(ev.target.result);const vErr=validateImportData(parsed);if(vErr){toast(vErr,'error');return}dispatch({type:'IMPORT',payload:{data:parsed}});toast('Importado')}catch(err){logError('importFile',err);toast('Arquivo inválido','error')}};r.readAsText(f)}}/>
           </label>
         </div>
         <p className="text-xs" style={{color:'var(--text-3)'}}>Exporte regularmente para manter backup dos seus dados financeiros.</p>
@@ -1643,6 +1714,8 @@ function ClientsPage({state,dispatch,toast}){
   const [cnpjLoading,setCnpjLoading]=useState(false)
   const [cepLoading,setCepLoading]=useState(false)
   const [filterStatus,setFilterStatus]=useState('todos')
+  const [genModal,setGenModal]=useState(null)
+  const [genForm,setGenForm]=useState({fromDate:'',numMonths:'12'})
   const todayD=new Date()
 
   const inputSt={background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
@@ -1666,6 +1739,16 @@ function ClientsPage({state,dispatch,toast}){
     d.setMonth(d.getMonth()+parseInt(duration));d.setDate(d.getDate()-1)
     return d.toISOString().slice(0,10)
   }
+  function togglePaid(e){
+    const isPaid=e.status==='Recebido'
+    dispatch({type:'UPDATE_ENTRY',payload:{monthKey:e.mk,entry:{...e,status:isPaid?'Previsto':'Recebido',realValue:isPaid?0:(e.expectedValue||0)}}})
+  }
+  function markAllPaid(hist){
+    const pending=hist.filter(e=>e.status!=='Recebido')
+    if(!pending.length)return toast('Todas já estão pagas','warn')
+    pending.forEach(e=>dispatch({type:'UPDATE_ENTRY',payload:{monthKey:e.mk,entry:{...e,status:'Recebido',realValue:e.expectedValue||0}}}))
+    toast(`${pending.length} parcela${pending.length>1?'s':''} marcada${pending.length>1?'s':''} como paga${pending.length>1?'s':''} ✓`)
+  }
   function getPayHistory(c){
     const entries=[]
     Object.entries(state.months||{}).forEach(([mk2,m])=>{
@@ -1683,16 +1766,16 @@ function ClientsPage({state,dispatch,toast}){
       if(!r.ok)throw new Error()
       const d=await r.json()
       setForm(f=>({...f,
-        razaoSocial:d.razao_social||f.razaoSocial,
-        street:(d.logradouro||'').trim()||f.street,
-        number:d.numero||f.number,
-        complement:d.complemento||f.complement,
-        city:d.municipio||f.city,
-        state:d.uf||f.state,
+        razaoSocial:sanitize(d.razao_social)||f.razaoSocial,
+        street:sanitize((d.logradouro||'').trim())||f.street,
+        number:sanitize(d.numero)||f.number,
+        complement:sanitize(d.complemento)||f.complement,
+        city:sanitize(d.municipio)||f.city,
+        state:sanitize(d.uf)||f.state,
         cep:(d.cep||'').replace(/\D/g,'')||f.cep,
       }))
       toast('Dados preenchidos via CNPJ ✓')
-    }catch{toast('CNPJ não encontrado','error')}
+    }catch(e){logError('fetchCNPJ',e);toast('CNPJ não encontrado','error')}
     setCnpjLoading(false)
   }
   async function fetchCEP(cepVal){
@@ -1703,8 +1786,8 @@ function ClientsPage({state,dispatch,toast}){
       const r=await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const d=await r.json()
       if(d.erro)throw new Error()
-      setForm(f=>({...f,street:d.logradouro||f.street,city:d.localidade||f.city,state:d.uf||f.state,complement:d.complemento||f.complement}))
-    }catch{}
+      setForm(f=>({...f,street:sanitize(d.logradouro)||f.street,city:sanitize(d.localidade)||f.city,state:sanitize(d.uf)||f.state,complement:sanitize(d.complemento)||f.complement}))
+    }catch(e){logError('fetchCEP',e)}
     setCepLoading(false)
   }
   function openAdd(){
@@ -1720,7 +1803,17 @@ function ClientsPage({state,dispatch,toast}){
     toast('Salvo');setModal(null)
   }
   function del(id){dispatch({type:'DELETE_SETTING',payload:{key:'clients',id}});toast('Removido','warn')}
-  function genEntries(id){dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:id}});toast('Entradas geradas ✓')}
+  function openGenModal(c){
+    const t=new Date()
+    setGenForm({fromDate:`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`,numMonths:'12'})
+    setGenModal({clientId:c.id,clientName:c.name,existingStart:c.startDate||''})
+  }
+  function confirmGenEntries(){
+    if(!genModal)return
+    dispatch({type:'GENERATE_CONTRACT_ENTRIES',payload:{clientId:genModal.clientId,fromDate:genForm.fromDate,numMonths:parseInt(genForm.numMonths)||12}})
+    toast('Entradas geradas ✓')
+    setGenModal(null)
+  }
   function toggleStatus(c){
     const newStatus=c.status==='inativo'?'ativo':'inativo'
     dispatch({type:'UPDATE_SETTING',payload:{key:'clients',item:{...c,status:newStatus}}})
@@ -1810,7 +1903,7 @@ function ClientsPage({state,dispatch,toast}){
               <div className="flex items-center gap-2 pt-1 flex-wrap">
                 <button onClick={()=>openEdit(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><Pencil size={11}/> Editar</button>
                 <button onClick={()=>setHistModal(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><FileText size={11}/> Histórico</button>
-                {c.startDate&&c.duration&&<button onClick={()=>genEntries(c.id)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#10b98118',color:'#10b981',border:'1px solid #10b98130'}}><CalendarCheck size={11}/> Gerar meses</button>}
+                <button onClick={()=>openGenModal(c)} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{background:'#10b98118',color:'#10b981',border:'1px solid #10b98130'}}><CalendarCheck size={11}/> Gerar meses</button>
                 <button onClick={()=>del(c.id)} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{background:'#ef444418',color:'#ef4444'}}><Trash2 size={11}/></button>
               </div>
             </div>
@@ -1822,10 +1915,17 @@ function ClientsPage({state,dispatch,toast}){
       {/* Modal histórico de pagamentos */}
       {histModal&&(()=>{
         const hist=getPayHistory(histModal)
+        const curMk2=monthKey(new Date().getFullYear(),new Date().getMonth()+1)
+        const pendingCount=hist.filter(e=>e.status!=='Recebido').length
         return(
           <Modal title={`Histórico — ${histModal.name}`} onClose={()=>setHistModal(null)} wide>
             <div className="space-y-3">
               {hist.length===0&&<p className="text-sm text-center py-6" style={{color:'var(--text-3)'}}>Nenhum lançamento encontrado</p>}
+              {pendingCount>0&&(
+                <button onClick={()=>markAllPaid(hist)} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium" style={{background:'#10b98118',color:'#10b981',border:'1px solid #10b98130'}}>
+                  <Check size={14}/> Marcar todas as {pendingCount} pendente{pendingCount>1?'s':''} como paga{pendingCount>1?'s':''}
+                </button>
+              )}
               <div className="rounded-xl overflow-hidden" style={{border:'1px solid var(--border)'}}>
                 <table className="w-full text-sm">
                   <thead style={{background:'var(--bg-overlay)'}}><tr>
@@ -1834,16 +1934,24 @@ function ClientsPage({state,dispatch,toast}){
                     <th className="px-3 py-2 text-right text-xs font-semibold" style={{color:'var(--text-3)'}}>Recebido</th>
                     <th className="px-3 py-2 text-center text-xs font-semibold" style={{color:'var(--text-3)'}}>Status</th>
                     <th className="px-3 py-2 text-center text-xs font-semibold" style={{color:'var(--text-3)'}}>NF</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold" style={{color:'var(--text-3)'}}>Ação</th>
                   </tr></thead>
                   <tbody>{hist.map((e,i)=>{
                     const{year:y,month:m}=parseMonthKey(e.mk)
+                    const isPast=e.mk<curMk2
+                    const isPaid=e.status==='Recebido'
                     return(
-                      <tr key={e.id} style={{borderTop:'1px solid var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
-                        <td className="px-3 py-2" style={{color:'var(--text-2)'}}>{MONTH_NAMES[m-1].slice(0,3)} {y}</td>
+                      <tr key={e.id} style={{borderTop:'1px solid var(--sep)',background:(!isPaid&&isPast)?'rgba(239,68,68,0.04)':i%2===0?'transparent':'var(--row-alt)'}}>
+                        <td className="px-3 py-2" style={{color:'var(--text-2)'}}>{MONTH_NAMES[m-1].slice(0,3)} {y}{!isPaid&&isPast&&<span className="ml-1.5 text-xs" style={{color:'#ef4444'}}>atrasado</span>}</td>
                         <td className="px-3 py-2 text-right font-mono text-xs" style={{color:'var(--text-2)'}}>{fmtBRL(e.expectedValue||0)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-xs" style={{color:e.status==='Recebido'?'#10b981':'var(--text-3)'}}>{e.status==='Recebido'?fmtBRL(e.realValue||0):'—'}</td>
-                        <td className="px-3 py-2 text-center"><span className="text-xs px-2 py-0.5 rounded-full" style={{background:e.status==='Recebido'?'#10b98118':'#64748b18',color:e.status==='Recebido'?'#10b981':'#64748b'}}>{e.status}</span></td>
+                        <td className="px-3 py-2 text-right font-mono text-xs" style={{color:isPaid?'#10b981':'var(--text-3)'}}>{isPaid?fmtBRL(e.realValue||0):'—'}</td>
+                        <td className="px-3 py-2 text-center"><span className="text-xs px-2 py-0.5 rounded-full" style={{background:isPaid?'#10b98118':isPast?'#ef444418':'#64748b18',color:isPaid?'#10b981':isPast?'#ef4444':'#64748b'}}>{e.status}</span></td>
                         <td className="px-3 py-2 text-center"><button onClick={()=>toggleNF(e,e.mk)} className="w-5 h-5 rounded flex items-center justify-center mx-auto transition-all" style={{background:e.nf?'#10b98130':'var(--bg-overlay)',border:`1px solid ${e.nf?'#10b981':'var(--border)'}`,color:e.nf?'#10b981':'var(--text-4)'}}>{e.nf&&<Check size={11}/>}</button></td>
+                        <td className="px-3 py-2 text-center">
+                          <button onClick={()=>togglePaid(e)} className="text-xs px-2 py-0.5 rounded-lg transition-all" style={{background:isPaid?'#64748b18':'#10b98118',color:isPaid?'#64748b':'#10b981',border:`1px solid ${isPaid?'#64748b30':'#10b98130'}`}}>
+                            {isPaid?'↩ Desfazer':'✓ Pago'}
+                          </button>
+                        </td>
                       </tr>
                     )
                   })}</tbody>
@@ -1854,6 +1962,30 @@ function ClientsPage({state,dispatch,toast}){
         )
       })()}
 
+      {/* Modal gerar entradas */}
+      {genModal&&(
+        <Modal title={`Gerar entradas — ${genModal.clientName}`} onClose={()=>setGenModal(null)}>
+          <div className="space-y-4">
+            {genModal.existingStart&&<p className="text-xs px-3 py-2 rounded-lg" style={{background:'#3b82f618',color:'#3b82f6',border:'1px solid #3b82f630'}}>Contrato iniciou em {genModal.existingStart.split('-').reverse().join('/')}</p>}
+            <div className="space-y-3">
+              <Fld label="Gerar a partir de (mês/ano)">
+                <Inp2 type="month" value={genForm.fromDate?genForm.fromDate.slice(0,7):''} onChange={v=>setGenForm(f=>({...f,fromDate:v?v+'-01':''}))}/>
+                <p className="text-xs mt-1" style={{color:'var(--text-4)'}}>Ponto de partida para geração. Não altera o contrato.</p>
+              </Fld>
+              <Fld label="Quantos meses gerar?">
+                <select value={genForm.numMonths} onChange={e=>setGenForm(f=>({...f,numMonths:e.target.value}))} style={{background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}}>
+                  {[3,6,12,18,24].map(n=><option key={n} value={n}>{n} meses</option>)}
+                </select>
+              </Fld>
+            </div>
+            <p className="text-xs" style={{color:'var(--text-4)'}}>Apenas cria entradas nos meses que ainda não têm lançamento deste cliente. Não duplica.</p>
+            <div className="flex justify-end gap-2 pt-2 border-t" style={{borderColor:'var(--sep)'}}>
+              <BtnG onClick={()=>setGenModal(null)}>Cancelar</BtnG>
+              <Btn onClick={confirmGenEntries}><CalendarCheck size={14}/> Gerar</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
       {/* Modal cadastro/edição */}
       {modal&&(
         <Modal title={modal==='add'?'Novo Cliente':`${form.name||'Editar'}`} onClose={()=>setModal(null)} wide>
@@ -1960,9 +2092,9 @@ function ClientsPage({state,dispatch,toast}){
                 <Fld label="Observações">
                   <Inp2 value={form.contractNote} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Notas adicionais..."/>
                 </Fld>
-                {modal!=='add'&&form.startDate&&form.duration&&(
-                  <button onClick={()=>{genEntries(form.id||modal?.id);setModal(null)}} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
-                    <CalendarCheck size={14}/> Gerar entradas para todos os meses do contrato
+                {modal!=='add'&&(
+                  <button onClick={()=>{openGenModal({id:modal?.id||form.id,name:form.name,startDate:form.startDate});setModal(null)}} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
+                    <CalendarCheck size={14}/> Gerar entradas para os próximos meses
                   </button>
                 )}
               </div>
@@ -2756,7 +2888,7 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
   return(
     <>
       {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'var(--modal-bg)',backdropFilter:'blur(4px)'}} onClick={()=>setOpen(false)}/>}
-      <aside className={`fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
+      <nav aria-label="Menu principal" className={`fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
         style={{width:220,background:'var(--bg-sidebar)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',borderRight:'1px solid var(--border-s)'}}>
         <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2.5">
@@ -2809,7 +2941,7 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
             <span className="text-xs font-medium">Bot</span>
           </a>
         </div>
-      </aside>
+      </nav>
     </>
   )
 }
@@ -2823,10 +2955,10 @@ async function hashPin(pin){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pin+'paiol_salt_2026'))
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')
 }
-const loadSession=()=>{try{const s=sessionStorage.getItem('paiol_sess');return s?JSON.parse(s):null}catch{return null}}
+const loadSession=()=>{try{const s=sessionStorage.getItem('paiol_sess');return s?JSON.parse(s):null}catch(e){logError('loadSession',e);return null}}
 const saveSession=u=>sessionStorage.setItem('paiol_sess',JSON.stringify({...u,loginAt:Date.now()}))
 const clearSession=()=>sessionStorage.removeItem('paiol_sess')
-const loadPins=()=>{try{const p=localStorage.getItem('paiol_pins');return p?JSON.parse(p):{}}catch{return{}}}
+const loadPins=()=>{try{const p=localStorage.getItem('paiol_pins');return p?JSON.parse(p):{}}catch(e){logError('loadPins',e);return{}}}
 const savePins=p=>localStorage.setItem('paiol_pins',JSON.stringify(p))
 
 function LoginScreen({onLogin}){
@@ -2841,13 +2973,24 @@ function LoginScreen({onLogin}){
   function pick(u){setUser(u);setPin('');setConfirm('');setErr('');setStep(pins[u.id]?'pin':'setup')}
   function back(){setStep('select');setPin('');setConfirm('');setErr('')}
 
+  function getAttempts(userId){try{const a=JSON.parse(localStorage.getItem('paiol_attempts')||'{}');return a[userId]||{count:0,lockedUntil:0}}catch{return{count:0,lockedUntil:0}}}
+  function setAttempts(userId,data){try{const a=JSON.parse(localStorage.getItem('paiol_attempts')||'{}');a[userId]=data;localStorage.setItem('paiol_attempts',JSON.stringify(a))}catch(e){logError('setAttempts',e)}}
+
   async function submit(){
     if(pin.length<4){setErr('PIN deve ter 4 dígitos');return}
     setBusy(true)
+    const att=getAttempts(user.id)
+    if(att.lockedUntil>Date.now()){const secs=Math.ceil((att.lockedUntil-Date.now())/1000);setErr(`Bloqueado. Tente em ${secs}s`);setBusy(false);return}
     const h=await hashPin(pin)
     if(step==='pin'){
-      if(h===pins[user.id]){saveSession(user);onLogin(user)}
-      else{setErr('PIN incorreto');setPin('')}
+      if(h===pins[user.id]){setAttempts(user.id,{count:0,lockedUntil:0});saveSession(user);onLogin(user)}
+      else{
+        const newCount=att.count+1
+        const locked=newCount>=5?Date.now()+5*60*1000:0
+        setAttempts(user.id,{count:newCount,lockedUntil:locked})
+        setErr(newCount>=5?'Muitas tentativas. Bloqueado por 5 min':`PIN incorreto (${newCount}/5)`)
+        setPin('')
+      }
     }else{
       if(pin!==confirm){setErr('PINs não coincidem');setBusy(false);return}
       savePins({...loadPins(),[user.id]:h})
@@ -2958,37 +3101,44 @@ function buildLog(action,user,state){
 }
 
 function PaiolFinanceApp({currentUser,onLogout}){
-  const [state,dispatch]=useReducer(reducer,null,loadState)
+  const [state,dispatch]=useReducer(trackedReducer,null,loadState)
   const [activePage,setActivePage]=useState('dashboard')
   const [sidebarOpen,setSidebarOpen]=useState(false)
   const [toasts,setToasts]=useState([])
+  const [syncing,setSyncing]=useState(false)
   const today=new Date()
   const [selYear,setSelYear]=useState(today.getFullYear())
   const [selMonth,setSelMonth]=useState(today.getMonth()+1)
   const mk=monthKey(selYear,selMonth)
 
-  // Salva localmente imediato + envia para Sheets com debounce de 2s
+  // Salva localmente com debounce de 500ms + envia para Sheets com debounce de 2s
   useEffect(()=>{
-    try{localStorage.setItem('paiolfinance_v3',JSON.stringify(state))}catch{}
-    const t=setTimeout(()=>gasPost(state).catch(()=>{}),2000)
-    return()=>clearTimeout(t)
+    const tLocal=setTimeout(()=>{try{localStorage.setItem('paiolfinance_v3',JSON.stringify(state))}catch(e){logError('saveLocal',e)}},500)
+    const tGas=setTimeout(()=>gasPost(state),2000)
+    return()=>{clearTimeout(tLocal);clearTimeout(tGas)}
   },[state])
 
-  // Na inicialização, sincroniza do Sheets — exceto quando migrate.html acabou de rodar
+  // Na inicialização, sincroniza do Sheets com resolução de conflitos
   useEffect(()=>{
     const migFlag=localStorage.getItem('paiolfinance_migrated')
     if(migFlag&&(Date.now()-parseInt(migFlag))<120000){
-      // Migration recente: envia local → Sheets em vez de buscar do Sheets
       localStorage.removeItem('paiolfinance_migrated')
-      gasPost(state).catch(()=>{})
+      gasPost(state).catch(e=>logError('migSync',e))
       return
     }
+    setSyncing(true)
     gasGet().then(data=>{
       if(data){
-        dispatch({type:'IMPORT',payload:{data}})
-        localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+        const localMod=state.lastModified||0
+        const remoteMod=data.lastModified||0
+        if(remoteMod>localMod){
+          dispatch({type:'IMPORT',payload:{data}})
+          localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+        } else if(localMod>remoteMod){
+          gasPost(state)
+        }
       }
-    }).catch(()=>{})
+    }).catch(e=>{logError('syncInit',e)}).finally(()=>setSyncing(false))
   },[])
 
   const toast=useCallback((msg,type='success')=>{
@@ -3030,6 +3180,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
       <div className="flex-1 flex flex-col min-h-screen" style={{marginLeft:0,paddingLeft:0}}>
         <div className="flex-1 flex flex-col min-h-screen lg:ml-[220px]">
           {/* Header */}
+          {syncing&&<div className="fixed top-0 left-0 right-0 z-50 h-0.5" style={{background:'linear-gradient(90deg,#10b981,#3b82f6,#10b981)',backgroundSize:'200% 100%',animation:'syncbar 1.5s linear infinite'}}/>}
           <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'var(--bg-header)',borderBottom:'1px solid var(--sep)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)'}}>
             <div className="flex items-center gap-3">
               <button onClick={()=>setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><Menu size={18}/></button>
@@ -3071,7 +3222,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
             </div>
           </header>
           <div className="px-5 pt-5 pb-2"><h1 className="text-lg font-semibold text-white tracking-tight">{NAV.find(n=>n.id===activePage)?.label}</h1></div>
-          <main className="flex-1 px-5 pb-8">{pages[activePage]}</main>
+          <main className="flex-1 px-5 pb-8"><ErrorBoundary key={activePage}>{pages[activePage]}</ErrorBoundary></main>
         </div>
       </div>
       <Toast toasts={toasts}/>
