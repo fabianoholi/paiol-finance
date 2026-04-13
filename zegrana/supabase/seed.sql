@@ -1,0 +1,16 @@
+-- Categorias padrão criadas na primeira mensagem do usuário via trigger de onboarding.
+-- Esta seed serve pra devs — NÃO roda em prod.
+-- Use como referência; no código a criação acontece em lib/onboarding.ts.
+
+-- Exemplo de categorias padrão (em ordem sugerida de UI)
+-- nome · icon · color
+-- Mercado       🛒 #10b981
+-- Alimentação   🍽️ #f59e0b
+-- Transporte    🚗 #3b82f6
+-- Lazer         🎬 #a855f7
+-- Contas        🧾 #64748b
+-- Saúde         💊 #ef4444
+-- Educação      📚 #0ea5e9
+-- Assinaturas   🔁 #8b5cf6
+-- Casa          🏠 #f97316
+-- Outros        ✨ #6b7280
