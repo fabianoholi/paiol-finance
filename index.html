@@ -3003,9 +3003,11 @@ function mockAsstRespond(userMsg,state,curMk){
   if(cMatch&&/\b(quanto|deve|cobran|pag|recebe|mensal|valor)\b/i.test(txt)){
     return {reply:`📇 ${cMatch.name}\n• Mensalidade: ${fmtBRL(cMatch.value)}\n• Permuta: ${cMatch.permuteValue>0?fmtBRL(cMatch.permuteValue):'—'}\n• Vence dia ${cMatch.dueDay}\n• Telefone: ${cMatch.phone||'❌ não cadastrado'}${cMatch.endDate?`\n• Encerra: ${cMatch.endDate}`:''}${cMatch.contractNote?`\n• Nota: ${cMatch.contractNote}`:''}`}
   }
-  // Saudação
-  if(/^(oi|ol[áa]|opa|eai|e a[ií]|bom dia|boa tarde|boa noite|hey|hello)\b/i.test(txt)){
-    return {reply:`Oi! 👋 Sou o Assistente do Paiol Finance — ainda em modo shell (Fase 1a). Já reconheço:\n\n• *"Recebi R$ 500 do Harlem"* → registra entrada\n• *"Gastei R$ 120 no posto"* → registra saída\n• *"Qual o saldo?"* → resumo do mês\n• *"Quanto o Harlem paga?"* → info do cliente\n\nNa Fase 1b pluga a Claude e eu entendo qualquer coisa (texto livre, foto, PDF, áudio). Manda ver!`}
+  // Saudação (sem \b pra funcionar com acentos tipo "olá")
+  const greets=['oi','olá','ola','opa','eai','e aí','e ai','bom dia','boa tarde','boa noite','hey','hello','tudo bem','tudo bom','alo','alô']
+  const firstWord=txt.split(/[\s!?.,]+/)[0]
+  if(greets.includes(firstWord)||greets.some(g=>txt.startsWith(g+' ')||txt.startsWith(g+'!')||txt.startsWith(g+','))){
+    return {reply:`Oi! 👋 Sou o Assistente do Paiol Finance — ainda em modo shell (Fase 1a). Já reconheço:\n\n• *"Recebi R$ 500 do Harlem"* → registra entrada\n• *"Gastei R$ 120 no posto"* → registra saída\n• *"Qual o saldo?"* → resumo do mês\n• *"Quanto o Harlem paga?"* → info do cliente\n\nNa Fase 1b a IA Claude pluga e eu entendo qualquer coisa — inclusive *"gastei 2 real no mercado com o nubank"* já com cartão e categoria certos 😅`}
   }
   // Ajuda
   if(/\b(ajuda|help|comandos|o que|como funciona)\b/i.test(txt)){
