@@ -2932,11 +2932,105 @@ function ActivityPage({state}){
   )
 }
 
-// ─── ASSISTENTE (Fase 1a: shell com mock) ────────────────────────────────────
+// ─── ASSISTENTE (Fase 1b: IA real via Groq/Gemini + fallback mock) ───────────
+const AI_GAS_URL='https://script.google.com/macros/s/AKfycbxbwYy_iU09rd1_RIv-bdzk9mY4vSKsad-RkpC0Y4IKsJadNuIPlLLt92xk_di5OyFF2Q/exec'
+const AI_TOKEN='paiol2026secret'
 const loadAsstMsgs=()=>{try{const s=localStorage.getItem('paiol_asst_msgs');return s?JSON.parse(s):[]}catch(e){return[]}}
 const saveAsstMsgs=m=>{try{localStorage.setItem('paiol_asst_msgs',JSON.stringify(m.slice(-200)))}catch(e){}}
+const loadAsstProvider=()=>{try{return localStorage.getItem('paiol_asst_provider')||'groq'}catch(e){return 'groq'}}
+const saveAsstProvider=p=>{try{localStorage.setItem('paiol_asst_provider',p)}catch(e){}}
 const fmtDur=s=>{const m=Math.floor(s/60);const sec=s%60;return `${m}:${String(sec).padStart(2,'0')}`}
 const fmtSize=b=>b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'
+
+function buildAsstSystemPrompt(state,curMk){
+  const s=state.settings||{}
+  const m=state.months?.[curMk]||{}
+  const today=new Date().toISOString().slice(0,10)
+  const cli=(s.clients||[]).map(c=>`  - ${c.name} (id:${c.id}) · R$${c.value}/mês${c.permuteValue>0?` + R$${c.permuteValue} permuta`:''} · vence dia ${c.dueDay}${c.phone?` · tel ${c.phone}`:''}${c.endDate?` · encerra ${c.endDate}`:''}${c.contractNote?` · "${c.contractNote}"`:''}`).join('\n')
+  const crd=(s.cards||[]).map(c=>`  - ${c.name} (id:${c.id}) · ${c.type} · limite R$${c.limit} · fecha ${c.closeDay}, vence ${c.dueDay}${c.description?` · ${c.description}`:''}`).join('\n')
+  const col=(s.collaborators||[]).map(c=>`  - ${c.name} (id:${c.id}) · ${c.role} · R$${c.baseSalary}/mês`).join('\n')
+  const fix=(s.fixedExpenses||[]).map(e=>`  - ${e.name} · ${e.category} · R$${e.value} · dia ${e.day}`).join('\n')
+  const ent=(m.entries||[]).filter(e=>e.status==='Recebido').reduce((a,e)=>a+(e.realValue||0),0)
+  const sai=(m.exits||[]).filter(e=>e.status==='Pago').reduce((a,e)=>a+(e.realValue||0),0)
+  const pend=(m.entries||[]).filter(e=>e.status!=='Recebido').reduce((a,e)=>a+(e.expectedValue||0),0)
+  return `Você é o Assistente Paiol, copiloto financeiro da Paiol Mídias (agência de mídias no interior do Brasil).
+
+MISSÃO: ajudar Fabiano e Mainara a registrar entradas/saídas, editar clientes/colaboradores/cartões, e responder sobre o negócio. pt-BR coloquial, direto, emojis moderados.
+
+REGRAS:
+1. NUNCA invente dados. Se faltar algo ou houver ambiguidade, pergunte no "reply" e deixe "preview": null.
+2. Só monte "preview" se tiver TODOS os campos necessários e sem dúvida. O usuário vai confirmar antes de gravar.
+3. SEMPRE devolva JSON válido no formato abaixo. Sem markdown, sem fences, sem texto fora do JSON.
+4. Categorias válidas pra saídas: ${CATEGORIES.join(', ')}.
+5. Status válidos entrada: Previsto, Cobrado, Recebido. Saída: Pendente, Pago.
+6. dueDay/day: inteiro 1-31. Valores em reais como número (não string).
+
+HOJE: ${today} · MÊS ATUAL: ${curMk}
+SALDO CAIXA: R$ ${(m.cashBalance||0).toFixed(2)} · ENTRADAS RECEBIDAS: R$ ${ent.toFixed(2)} · SAÍDAS PAGAS: R$ ${sai.toFixed(2)} · A RECEBER: R$ ${pend.toFixed(2)}
+
+CLIENTES:
+${cli||'  (nenhum)'}
+
+CARTÕES:
+${crd||'  (nenhum)'}
+
+COLABORADORES:
+${col||'  (nenhum)'}
+
+DESPESAS FIXAS MENSAIS:
+${fix||'  (nenhuma)'}
+
+FORMATO DE RESPOSTA (JSON):
+{
+  "reply": "texto pro usuário (pergunta, resposta ou confirmação)",
+  "preview": null OR {
+    "title": "Nova entrada" | "Nova saída" | "Atualizar cliente" | "Novo cliente" | etc,
+    "icon": emoji apropriado,
+    "color": "#10b981" entrada | "#ef4444" saída | "#8b5cf6" cliente | "#3b82f6" outro,
+    "fields": [["Rótulo","Valor"], ...],
+    "action": {"type": TIPO, "payload": OBJETO},
+    "okLabel": "string curta tipo 'Entrada R$500 — Harlem'"
+  }
+}
+
+TIPOS DE ACTION:
+- ADD_ENTRY: payload={monthKey:"${curMk}", entry:{client, clientId, expectedValue, realValue, status, dueDay, note}}
+- ADD_EXIT: payload={monthKey:"${curMk}", exit:{name, description, category, expectedValue, realValue, status, day, note, cardId (opcional, id do cartão se mencionado)}}
+- ADD_SETTING: payload={key:"clients"|"cards"|"collaborators", item:{...campos}}
+- UPDATE_SETTING: payload={key:"clients"|"cards"|"collaborators", item:{id, ...campos atualizados}}
+
+Se for só consulta ("qual o saldo?", "quanto Harlem paga?"), responda em "reply" e deixe "preview": null.
+Se o usuário mencionar cartão pelo nome, use o id exato da lista acima no campo "cardId".
+Se o usuário citar um cliente, tente casar pelo nome e use o "clientId" exato.`
+}
+
+async function askAssistantAI({userMsg,state,history,provider,curMk}){
+  const system=buildAsstSystemPrompt(state,curMk)
+  let userText=userMsg.text||''
+  if(userMsg.attachment){
+    const a=userMsg.attachment
+    userText+=`\n\n[Anexo: ${a.type==='audio'?`áudio de ${fmtDur(a.duration||0)}`:`arquivo "${a.name}"`}. Conteúdo ainda não processado pela IA (multimodal chega na Fase 1c). Peça pro usuário descrever em texto o que tem no anexo.]`
+  }
+  const messages=[{role:'system',content:system}]
+  for(const h of history.slice(-8)){
+    if(h.role==='user')messages.push({role:'user',content:h.text||''})
+    else if(h.role==='assistant')messages.push({role:'assistant',content:h.text||''})
+  }
+  messages.push({role:'user',content:userText})
+  try{
+    const res=await fetch(AI_GAS_URL,{method:'POST',body:JSON.stringify({token:AI_TOKEN,action:'chat',provider,messages,jsonMode:true,temperature:0.2})})
+    if(!res.ok)throw new Error('HTTP '+res.status)
+    const data=await res.json()
+    if(!data.ok)throw new Error(data.error||'ia retornou erro')
+    let parsed
+    try{parsed=JSON.parse(data.content)}catch(err){
+      return {reply:data.content||'(resposta vazia)',preview:null}
+    }
+    return {reply:parsed.reply||'(sem reply)',preview:parsed.preview||null}
+  }catch(e){
+    return {reply:`⚠️ Não consegui falar com a IA (${e.message}). Usando modo básico — tenta de novo ou reformula?`,preview:null,error:e.message}
+  }
+}
 
 function mockAsstRespond(userMsg,state,curMk){
   const txt=(userMsg.text||'').toLowerCase().trim()
@@ -3026,6 +3120,8 @@ function AssistantPage({state,dispatch,toast}){
   const [recording,setRecording]=useState(false)
   const [recElapsed,setRecElapsed]=useState(0)
   const [thinking,setThinking]=useState(false)
+  const [provider,setProvider]=useState(loadAsstProvider)
+  const [showProviderMenu,setShowProviderMenu]=useState(false)
   const recRef=useRef(null)
   const recStartRef=useRef(0)
   const streamRef=useRef(null)
@@ -3034,6 +3130,7 @@ function AssistantPage({state,dispatch,toast}){
   const inputRef=useRef(null)
 
   useEffect(()=>{saveAsstMsgs(messages)},[messages])
+  useEffect(()=>{saveAsstProvider(provider)},[provider])
   useEffect(()=>{if(listRef.current)listRef.current.scrollTop=listRef.current.scrollHeight},[messages,preview,thinking])
   useEffect(()=>{if(!recording)return;const iv=setInterval(()=>setRecElapsed(Math.round((Date.now()-recStartRef.current)/1000)),250);return()=>clearInterval(iv)},[recording])
   useEffect(()=>()=>{if(streamRef.current)streamRef.current.getTracks().forEach(t=>t.stop())},[])
@@ -3063,21 +3160,26 @@ function AssistantPage({state,dispatch,toast}){
   function cancelRec(){if(recRef.current&&recRef.current.state==='recording'){recRef.current.ondataavailable=null;recRef.current.stop()}if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null}setRecording(false);setRecElapsed(0)}
   function onFilePick(e){const f=e.target.files?.[0];if(!f)return;if(f.size>10*1048576){toast('Arquivo muito grande (máx 10MB)','error');return}setAttachment({type:'file',name:f.name,size:f.size,mime:f.type});e.target.value=''}
   function removeAttachment(){if(attachment?.url)URL.revokeObjectURL(attachment.url);setAttachment(null)}
-  function send(){
+  async function send(){
     const text=input.trim()
     if(!text&&!attachment)return
     const userMsg={id:uid(),role:'user',text,attachment:attachment?{type:attachment.type,name:attachment.name,size:attachment.size,duration:attachment.duration,mime:attachment.mime}:null,ts:Date.now()}
+    const currentHistory=messages
     setMessages(m=>[...m,userMsg])
     setInput('')
     if(attachment?.url)URL.revokeObjectURL(attachment.url)
     setAttachment(null)
     setThinking(true)
-    setTimeout(()=>{
-      const r=mockAsstRespond(userMsg,state,mk)
-      setThinking(false)
-      setMessages(m=>[...m,{id:uid(),role:'assistant',text:r.reply,ts:Date.now()}])
-      if(r.preview)setPreview(r.preview)
-    },450+Math.random()*400)
+    let r
+    try{
+      r=await askAssistantAI({userMsg,state,history:currentHistory,provider,curMk:mk})
+      if(r.error){r=mockAsstRespond(userMsg,state,mk)}
+    }catch(e){
+      r=mockAsstRespond(userMsg,state,mk)
+    }
+    setThinking(false)
+    setMessages(m=>[...m,{id:uid(),role:'assistant',text:r.reply,ts:Date.now()}])
+    if(r.preview)setPreview(r.preview)
   }
   function confirmPreview(){
     if(!preview)return
@@ -3101,7 +3203,7 @@ function AssistantPage({state,dispatch,toast}){
   function onKey(e){if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send()}}
 
   const showEmpty=messages.length===0&&!thinking&&!preview
-  const suggestions=['Recebi R$ 500 do Harlem','Gastei R$ 120 no posto','Qual o saldo?','Quanto o Reddogz paga?']
+  const suggestions=['Recebi R$ 500 do Harlem','Gastei 120 no posto pago com nubank','Como tá o caixa?','Clientes sem telefone cadastrado']
 
   return(
     <div className="flex flex-col" style={{height:'calc(100vh - 180px)',minHeight:420}}>
@@ -3112,10 +3214,36 @@ function AssistantPage({state,dispatch,toast}){
           </div>
           <div>
             <div className="text-sm font-semibold" style={{color:'var(--text)'}}>Assistente Paiol</div>
-            <div className="text-xs" style={{color:'var(--text-3)'}}>Fase 1a · shell com mock · IA plugada em breve</div>
+            <div className="text-xs" style={{color:'var(--text-3)'}}>Fase 1b · IA {provider==='gemini'?'Gemini':'Groq (Llama 3.3)'}{preview?' · aguardando confirmação':''}</div>
           </div>
         </div>
-        {messages.length>0&&<button onClick={clearChat} className="text-xs px-3 py-1.5 rounded-xl transition-colors" style={{color:'var(--text-3)',background:'var(--bg-overlay)'}}>Limpar</button>}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button onClick={()=>setShowProviderMenu(o=>!o)} className="text-xs px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5" style={{color:'var(--text-2)',background:'var(--bg-overlay)',border:'1px solid var(--border)'}}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{background:provider==='gemini'?'#3b82f6':'#f59e0b'}}/>
+              {provider==='gemini'?'Gemini':'Groq'}
+              <ChevronDown size={12}/>
+            </button>
+            {showProviderMenu&&(
+              <>
+                <div className="fixed inset-0 z-10" onClick={()=>setShowProviderMenu(false)}/>
+                <div className="absolute right-0 mt-1 rounded-xl shadow-lg overflow-hidden z-20" style={{background:'var(--bg-modal)',border:'1px solid var(--border)',minWidth:170}}>
+                  {[{id:'groq',name:'Groq',desc:'Llama 3.3 · grátis',dot:'#f59e0b'},{id:'gemini',name:'Gemini',desc:'2.0 Flash',dot:'#3b82f6'}].map(p=>(
+                    <button key={p.id} onClick={()=>{setProvider(p.id);setShowProviderMenu(false);toast(`IA: ${p.name}`)}} className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:bg-white/5" style={{color:'var(--text)',background:provider===p.id?'var(--bg-overlay)':'transparent'}}>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{background:p.dot}}/>
+                      <div className="flex-1">
+                        <div className="font-medium">{p.name}</div>
+                        <div className="text-xs" style={{color:'var(--text-3)'}}>{p.desc}</div>
+                      </div>
+                      {provider===p.id&&<Check size={12} style={{color:'#10b981'}}/>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {messages.length>0&&<button onClick={clearChat} className="text-xs px-3 py-1.5 rounded-xl transition-colors" style={{color:'var(--text-3)',background:'var(--bg-overlay)'}}>Limpar</button>}
+        </div>
       </div>
 
       <div ref={listRef} className="flex-1 overflow-y-auto rounded-2xl p-4 space-y-3" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
@@ -3225,7 +3353,7 @@ function AssistantPage({state,dispatch,toast}){
         </button>
       </div>
       <div className="mt-2 text-xs text-center" style={{color:'var(--text-4)'}}>
-        Fase 1a · O Assistente sempre pede confirmação antes de registrar.
+        Fase 1b · {provider==='gemini'?'Gemini 2.0 Flash':'Groq · Llama 3.3 70B'} · Sempre pede confirmação antes de gravar
       </div>
     </div>
   )
@@ -3317,7 +3445,7 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
         <div className="p-3 border-t flex items-center justify-between" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full" style={{background:'#10b981'}}></div>
-            <span className="text-xs" title="Última build" style={{color:'var(--text-4)'}}>v1.3 ✨ · Paiol Finance</span>
+            <span className="text-xs" title="Última build" style={{color:'var(--text-4)'}}>v1.4 🧠 · Paiol Finance</span>
           </div>
           <a href="https://t.me/paiolfinance_bot" target="_blank" rel="noopener noreferrer"
             title="Abrir bot no Telegram"
