@@ -796,6 +796,18 @@ function Field({label,children}){return <div><label className="block text-xs fon
 const iCls="w-full px-3.5 py-2.5 rounded-2xl text-sm outline-none transition-all glass-input"
 const iSty={background:'var(--bg-input)',border:'1px solid var(--border)',color:'var(--text)'}
 function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
+
+// ─── Componentes de form locais movidos pra escopo global ────────────────────
+// Bug: definir componentes dentro de função-pai faz React desmontar e remontar
+// o input a cada render, perdendo o foco do teclado a cada letra digitada.
+const _styClientsInp={background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
+function CInp({value,onChange,type='text',placeholder,readOnly}){return <input type={type} value={value||''} readOnly={readOnly} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder} style={{..._styClientsInp,opacity:readOnly?0.6:1}}/>}
+function CSel({value,onChange,opts}){return <select value={value||''} onChange={e=>onChange(e.target.value)} style={_styClientsInp}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>}
+function CFld({label,children,half}){return <div className={half?'':''}><label className="block text-xs mb-1" style={{color:'var(--text-3)'}}>{label}</label>{children}</div>}
+
+const _styPermInp={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
+function PInp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={_styPermInp}/>}
+function PFld({label,children}){return <div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>}
 function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
 function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 4px 12px ${color}55`}}>{children}</button>}
 function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)',borderRadius:10}}>{children}</button>}
@@ -1803,10 +1815,7 @@ function ClientsPage({state,dispatch,toast}){
   const [genForm,setGenForm]=useState({fromDate:'',numMonths:'12'})
   const todayD=new Date()
 
-  const inputSt={background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
-  const Inp2=({value,onChange,type='text',placeholder,readOnly})=><input type={type} value={value||''} readOnly={readOnly} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder} style={{...inputSt,opacity:readOnly?0.6:1}}/>
-  const Sel2=({value,onChange,opts})=><select value={value||''} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
-  const Fld=({label,children,half})=><div className={half?'':''}><label className="block text-xs mb-1" style={{color:'var(--text-3)'}}>{label}</label>{children}</div>
+  // Componentes Inp2/Sel2/Fld movidos pra escopo global (CInp/CSel/CFld) — vide bugfix de perda de foco
 
   function getDaysLeft(endDate){
     if(!endDate)return null
@@ -2053,15 +2062,15 @@ function ClientsPage({state,dispatch,toast}){
           <div className="space-y-4">
             {genModal.existingStart&&<p className="text-xs px-3 py-2 rounded-lg" style={{background:'#3b82f618',color:'#3b82f6',border:'1px solid #3b82f630'}}>Contrato iniciou em {genModal.existingStart.split('-').reverse().join('/')}</p>}
             <div className="space-y-3">
-              <Fld label="Gerar a partir de (mês/ano)">
-                <Inp2 type="month" value={genForm.fromDate?genForm.fromDate.slice(0,7):''} onChange={v=>setGenForm(f=>({...f,fromDate:v?v+'-01':''}))}/>
+              <CFld label="Gerar a partir de (mês/ano)">
+                <CInp type="month" value={genForm.fromDate?genForm.fromDate.slice(0,7):''} onChange={v=>setGenForm(f=>({...f,fromDate:v?v+'-01':''}))}/>
                 <p className="text-xs mt-1" style={{color:'var(--text-4)'}}>Ponto de partida para geração. Não altera o contrato.</p>
-              </Fld>
-              <Fld label="Quantos meses gerar?">
+              </CFld>
+              <CFld label="Quantos meses gerar?">
                 <select value={genForm.numMonths} onChange={e=>setGenForm(f=>({...f,numMonths:e.target.value}))} style={{background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}}>
                   {[3,6,12,18,24].map(n=><option key={n} value={n}>{n} meses</option>)}
                 </select>
-              </Fld>
+              </CFld>
             </div>
             <p className="text-xs" style={{color:'var(--text-4)'}}>Apenas cria entradas nos meses que ainda não têm lançamento deste cliente. Não duplica.</p>
             <div className="flex justify-end gap-2 pt-2 border-t" style={{borderColor:'var(--sep)'}}>
@@ -2086,8 +2095,8 @@ function ClientsPage({state,dispatch,toast}){
             {formTab==='dados'&&(
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <Fld label="Nome fantasia *"><Inp2 value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Empresa ABC"/></Fld>
-                  <Fld label="Status">
+                  <CFld label="Nome fantasia *"><CInp value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Empresa ABC"/></CFld>
+                  <CFld label="Status">
                     <div className="flex gap-2 mt-1">
                       {['ativo','inativo'].map(s=>(
                         <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} className="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
@@ -2096,55 +2105,55 @@ function ClientsPage({state,dispatch,toast}){
                         </button>
                       ))}
                     </div>
-                  </Fld>
+                  </CFld>
                 </div>
-                <Fld label="Razão Social"><Inp2 value={form.razaoSocial} onChange={v=>setForm(f=>({...f,razaoSocial:v}))} placeholder="Ex: Empresa ABC Ltda"/></Fld>
+                <CFld label="Razão Social"><CInp value={form.razaoSocial} onChange={v=>setForm(f=>({...f,razaoSocial:v}))} placeholder="Ex: Empresa ABC Ltda"/></CFld>
                 <div className="flex gap-2">
-                  <div className="flex-1"><Fld label="CNPJ"><Inp2 value={form.cnpj} onChange={v=>setForm(f=>({...f,cnpj:v}))} placeholder="00.000.000/0001-00"/></Fld></div>
+                  <div className="flex-1"><CFld label="CNPJ"><CInp value={form.cnpj} onChange={v=>setForm(f=>({...f,cnpj:v}))} placeholder="00.000.000/0001-00"/></CFld></div>
                   <div className="flex items-end pb-0.5"><button onClick={fetchCNPJ} disabled={cnpjLoading} className="px-3 py-2 rounded-xl text-xs font-medium" style={{background:'#3b82f630',color:'#3b82f6',border:'1px solid #3b82f640',opacity:cnpjLoading?0.5:1}}>{cnpjLoading?'..':'Buscar'}</button></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Fld label="Valor mensal (R$) *"><Inp2 type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Fld>
-                  <Fld label="Dia de pagamento"><Inp2 type="number" value={form.dueDay} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Fld>
+                  <CFld label="Valor mensal (R$) *"><CInp type="number" value={form.value} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></CFld>
+                  <CFld label="Dia de pagamento"><CInp type="number" value={form.dueDay} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></CFld>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Fld label="Telefone"><Inp2 value={form.phone} onChange={v=>setForm(f=>({...f,phone:v}))} placeholder="(11) 99999-9999"/></Fld>
-                  <Fld label="E-mail"><Inp2 value={form.email} onChange={v=>setForm(f=>({...f,email:v}))} placeholder="contato@empresa.com"/></Fld>
+                  <CFld label="Telefone"><CInp value={form.phone} onChange={v=>setForm(f=>({...f,phone:v}))} placeholder="(11) 99999-9999"/></CFld>
+                  <CFld label="E-mail"><CInp value={form.email} onChange={v=>setForm(f=>({...f,email:v}))} placeholder="contato@empresa.com"/></CFld>
                 </div>
-                <Fld label="Valor permuta/mês (R$)">
-                  <Inp2 type="number" value={form.permuteValue} onChange={v=>setForm(f=>({...f,permuteValue:v}))} placeholder="0,00"/>
+                <CFld label="Valor permuta/mês (R$)">
+                  <CInp type="number" value={form.permuteValue} onChange={v=>setForm(f=>({...f,permuteValue:v}))} placeholder="0,00"/>
                   <p className="text-xs mt-1" style={{color:'var(--text-4)'}}>Deixe 0 se não houver permuta</p>
-                </Fld>
+                </CFld>
                 {parseFloat(form.permuteValue)>0&&(
-                  <Fld label="Acumula saldo não consumido?">
+                  <CFld label="Acumula saldo não consumido?">
                     <div className="flex gap-2 mt-1">
                       {[{v:true,l:'✅ Sim, acumula pro próximo mês'},{v:false,l:'❌ Não acumula (perde se não usar)'}].map(opt=>(
                         <button key={opt.l} onClick={()=>setForm(f=>({...f,permuteAccumulates:opt.v}))} className="flex-1 px-3 py-2 rounded-xl text-xs font-medium transition-all" style={{background:form.permuteAccumulates===opt.v?'#a78bfa22':'var(--bg-overlay)',border:`1px solid ${form.permuteAccumulates===opt.v?'#a78bfa':'var(--border)'}`,color:form.permuteAccumulates===opt.v?'#a78bfa':'var(--text-3)'}}>{opt.l}</button>
                       ))}
                     </div>
-                  </Fld>
+                  </CFld>
                 )}
               </div>
             )}
             {formTab==='endereco'&&(
               <div className="space-y-3">
                 <div className="flex gap-2">
-                  <div className="flex-1"><Fld label="CEP"><Inp2 value={form.cep} onChange={v=>{setForm(f=>({...f,cep:v}));if((v||'').replace(/\D/g,'').length===8)fetchCEP(v)}} placeholder="00000-000"/></Fld></div>
+                  <div className="flex-1"><CFld label="CEP"><CInp value={form.cep} onChange={v=>{setForm(f=>({...f,cep:v}));if((v||'').replace(/\D/g,'').length===8)fetchCEP(v)}} placeholder="00000-000"/></CFld></div>
                   <div className="flex items-end pb-0.5"><span className="px-3 py-2 text-xs" style={{color:'var(--text-4)'}}>{cepLoading?'Buscando...':'Auto'}</span></div>
                 </div>
-                <Fld label="Logradouro"><Inp2 value={form.street} onChange={v=>setForm(f=>({...f,street:v}))} placeholder="Rua, Av..."/></Fld>
+                <CFld label="Logradouro"><CInp value={form.street} onChange={v=>setForm(f=>({...f,street:v}))} placeholder="Rua, Av..."/></CFld>
                 <div className="grid grid-cols-3 gap-3">
-                  <Fld label="Número"><Inp2 value={form.number} onChange={v=>setForm(f=>({...f,number:v}))} placeholder="123"/></Fld>
-                  <div className="col-span-2"><Fld label="Complemento"><Inp2 value={form.complement} onChange={v=>setForm(f=>({...f,complement:v}))} placeholder="Sala 10"/></Fld></div>
+                  <CFld label="Número"><CInp value={form.number} onChange={v=>setForm(f=>({...f,number:v}))} placeholder="123"/></CFld>
+                  <div className="col-span-2"><CFld label="Complemento"><CInp value={form.complement} onChange={v=>setForm(f=>({...f,complement:v}))} placeholder="Sala 10"/></CFld></div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2"><Fld label="Cidade"><Inp2 value={form.city} onChange={v=>setForm(f=>({...f,city:v}))} placeholder="São Paulo"/></Fld></div>
-                  <Fld label="Estado"><Inp2 value={form.state} onChange={v=>setForm(f=>({...f,state:v}))} placeholder="SP"/></Fld>
+                  <div className="col-span-2"><CFld label="Cidade"><CInp value={form.city} onChange={v=>setForm(f=>({...f,city:v}))} placeholder="São Paulo"/></CFld></div>
+                  <CFld label="Estado"><CInp value={form.state} onChange={v=>setForm(f=>({...f,state:v}))} placeholder="SP"/></CFld>
                 </div>
                 <div className="border-t pt-3" style={{borderColor:'var(--sep)'}}>
                   <p className="text-xs font-semibold mb-2" style={{color:'var(--text-2)'}}>Serviços contratados</p>
                   <div className="flex gap-2 mb-2">
-                    <input value={svcInput} onChange={e=>setSvcInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addSvc()}}} placeholder="Ex: Social Media..." style={{...inputSt,flex:1}}/>
+                    <input value={svcInput} onChange={e=>setSvcInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addSvc()}}} placeholder="Ex: Social Media..." style={{..._styClientsInp,flex:1}}/>
                     <button onClick={addSvc} className="px-3 py-2 rounded-xl text-xs font-medium" style={{background:'#10b98130',color:'#10b981',border:'1px solid #10b98140'}}>+ Add</button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -2160,23 +2169,23 @@ function ClientsPage({state,dispatch,toast}){
             {formTab==='contrato'&&(
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <Fld label="Data de início">
-                    <Inp2 type="date" value={form.startDate} onChange={v=>{const e=computeEnd(v,form.duration);setForm(f=>({...f,startDate:v,endDate:e}))}}/>
-                  </Fld>
-                  <Fld label="Duração">
-                    <Sel2 value={String(form.duration||'12')} onChange={v=>{const e=computeEnd(form.startDate,v);setForm(f=>({...f,duration:v,endDate:e}))}} opts={[{v:'3',l:'3 meses'},{v:'6',l:'6 meses'},{v:'12',l:'12 meses'},{v:'18',l:'18 meses'},{v:'24',l:'24 meses'}]}/>
-                  </Fld>
+                  <CFld label="Data de início">
+                    <CInp type="date" value={form.startDate} onChange={v=>{const e=computeEnd(v,form.duration);setForm(f=>({...f,startDate:v,endDate:e}))}}/>
+                  </CFld>
+                  <CFld label="Duração">
+                    <CSel value={String(form.duration||'12')} onChange={v=>{const e=computeEnd(form.startDate,v);setForm(f=>({...f,duration:v,endDate:e}))}} opts={[{v:'3',l:'3 meses'},{v:'6',l:'6 meses'},{v:'12',l:'12 meses'},{v:'18',l:'18 meses'},{v:'24',l:'24 meses'}]}/>
+                  </CFld>
                 </div>
                 {form.endDate&&<p className="text-xs" style={{color:'var(--text-3)'}}>Término previsto: {form.endDate.split('-').reverse().join('/')}</p>}
-                <Fld label="Link do contrato assinado (Google Drive)">
-                  <Inp2 value={form.contractUrl} onChange={v=>setForm(f=>({...f,contractUrl:v}))} placeholder="https://drive.google.com/..."/>
-                </Fld>
-                <Fld label="Link da proposta aceita (Google Drive)">
-                  <Inp2 value={form.proposalUrl} onChange={v=>setForm(f=>({...f,proposalUrl:v}))} placeholder="https://drive.google.com/..."/>
-                </Fld>
-                <Fld label="Observações">
-                  <Inp2 value={form.contractNote} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Notas adicionais..."/>
-                </Fld>
+                <CFld label="Link do contrato assinado (Google Drive)">
+                  <CInp value={form.contractUrl} onChange={v=>setForm(f=>({...f,contractUrl:v}))} placeholder="https://drive.google.com/..."/>
+                </CFld>
+                <CFld label="Link da proposta aceita (Google Drive)">
+                  <CInp value={form.proposalUrl} onChange={v=>setForm(f=>({...f,proposalUrl:v}))} placeholder="https://drive.google.com/..."/>
+                </CFld>
+                <CFld label="Observações">
+                  <CInp value={form.contractNote} onChange={v=>setForm(f=>({...f,contractNote:v}))} placeholder="Notas adicionais..."/>
+                </CFld>
                 {modal!=='add'&&(
                   <button onClick={()=>{openGenModal({id:modal?.id||form.id,name:form.name,startDate:form.startDate});setModal(null)}} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>
                     <CalendarCheck size={14}/> Gerar entradas para os próximos meses
@@ -2233,10 +2242,7 @@ function PermutaPage({state,dispatch,toast}){
     setModal(null)
   }
 
-  const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
-  const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
-  const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
-
+  // PInp/PFld globais (vide _styPermInp) — bug de perda de foco corrigido
   const totalPermuta=clients.reduce((s,c)=>s+(c.permuteValue||0),0)
   const totalUsed=usages.reduce((s,u)=>s+u.value,0)
   const totalSales=usages.filter(u=>u.type==='sale').reduce((s,u)=>s+u.value,0)
@@ -2347,18 +2353,18 @@ function PermutaPage({state,dispatch,toast}){
       {modal&&(
         <Modal title={form.type==='sale'?`💰 Vender Permuta — ${form.clientName}`:`🛍 Registrar Uso — ${form.clientName}`} onClose={()=>setModal(null)}>
           <div className="space-y-4">
-            <Fld label="Quem usou / quem comprou"><Inp2 value={form.person||''} onChange={v=>setForm(f=>({...f,person:v}))} placeholder="Ex: Mainara, Thays, João..."/></Fld>
-            <Fld label="Descrição"><Inp2 value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder={form.type==='sale'?'Ex: Vendido para evento de empresa':'Ex: 2 hambúrgueres carnaval'}/></Fld>
+            <PFld label="Quem usou / quem comprou"><PInp value={form.person||''} onChange={v=>setForm(f=>({...f,person:v}))} placeholder="Ex: Mainara, Thays, João..."/></PFld>
+            <PFld label="Descrição"><PInp value={form.description||''} onChange={v=>setForm(f=>({...f,description:v}))} placeholder={form.type==='sale'?'Ex: Vendido para evento de empresa':'Ex: 2 hambúrgueres carnaval'}/></PFld>
             <div className="grid grid-cols-2 gap-3">
-              <Fld label="Valor (R$)"><Inp2 type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></Fld>
-              <Fld label="Data"><Inp2 type="date" value={form.date||''} onChange={v=>setForm(f=>({...f,date:v}))}/></Fld>
+              <PFld label="Valor (R$)"><PInp type="number" value={form.value||''} onChange={v=>setForm(f=>({...f,value:v}))} placeholder="0,00"/></PFld>
+              <PFld label="Data"><PInp type="date" value={form.date||''} onChange={v=>setForm(f=>({...f,date:v}))}/></PFld>
             </div>
             {form.type==='sale'&&(
-              <Fld label="Lançar no mês financeiro">
-                <select value={form.monthKey||curMk} onChange={e=>setForm(f=>({...f,monthKey:e.target.value}))} style={inputSt}>
+              <PFld label="Lançar no mês financeiro">
+                <select value={form.monthKey||curMk} onChange={e=>setForm(f=>({...f,monthKey:e.target.value}))} style={_styPermInp}>
                   {monthOpts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                 </select>
-              </Fld>
+              </PFld>
             )}
             {form.type==='sale'&&<p className="text-xs text-slate-500 flex items-start gap-1"><CheckCircle size={11} style={{marginTop:2,color:'#10b981',flexShrink:0}}/> Uma entrada "Venda Permuta — {form.clientName}" será criada automaticamente no mês escolhido.</p>}
             <div className="flex justify-end gap-2 pt-2">
@@ -2414,11 +2420,8 @@ function TasksPage({state,dispatch,toast}){
   }
 
   const todoCount=tasks.filter(t=>t.status!=='done').length
-
+  // inputSt usado pelos raw <input>/<select>/<textarea> abaixo (não causa perda de foco — só componentes inline causariam)
   const inputSt={background:'var(--bg)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontSize:14,width:'100%',outline:'none'}
-  const Inp2=({value,onChange,type='text',placeholder})=><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputSt}/>
-  const Sel2=({value,onChange,opts})=><select value={value} onChange={e=>onChange(e.target.value)} style={inputSt}>{opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}</select>
-  const Fld=({label,children})=><div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>
 
   return(
     <div className="space-y-4">
@@ -3445,7 +3448,7 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
         <div className="p-3 border-t flex items-center justify-between" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full" style={{background:'#10b981'}}></div>
-            <span className="text-xs" title="Última build" style={{color:'var(--text-4)'}}>v1.4 🧠 · Paiol Finance</span>
+            <span className="text-xs" title="Última build" style={{color:'var(--text-4)'}}>v1.4.1 🧠 · Paiol Finance</span>
           </div>
           <a href="https://t.me/paiolfinance_bot" target="_blank" rel="noopener noreferrer"
             title="Abrir bot no Telegram"
