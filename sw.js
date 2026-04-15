@@ -1,4 +1,4 @@
-const CACHE_NAME = 'paiol-finance-v2'
+const CACHE_NAME = 'paiol-finance-v3'
 const STATIC_ASSETS = [
   '/',
   '/index.html',
