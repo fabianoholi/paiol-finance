@@ -81,6 +81,12 @@
     window.Send=ic([p('M22 2L11 13'),p('M22 2L15 22 11 13 2 9l20-7z')])
     window.KeyRound=ic([ci(7.5,15.5,5.5),p('m21 2-9.6 9.6'),p('m15.5 7.5 3 3L22 7l-3-3'),p('m7 22 3-3')])
     window.Activity=ic([pl('22 12 18 12 15 21 9 3 6 12 2 12')])
+    window.Sparkles=ic([p('M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z'),p('M19 3l.8 2.4L22 6l-2.2.6L19 9l-.8-2.4L16 6l2.2-.6z'),p('M5 16l.6 1.8L7 18.5l-1.4.5L5 21l-.6-2L3 18.5l1.4-.7z')])
+    window.Paperclip=ic([p('M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48')])
+    window.Mic=ic([rc(9,2,6,12,3),p('M19 10v2a7 7 0 0 1-14 0v-2'),ln(12,19,12,22)])
+    window.StopCircle=ic([ci(12,12,10),rc(9,9,6,6,1)])
+    window.Bot=ic([rc(3,11,18,10,2),ci(12,5,2),p('M12 7v4'),ln(8,16,8,16),ln(16,16,16,16)])
+    window.User=ic([p('M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'),ci(12,7,4)])
   })()
   </script>
   <style>
@@ -130,6 +136,8 @@
     body.light .bg-slate-700,body.light .bg-slate-800{background:var(--bg-overlay)!important}
     body.light .hover\:bg-slate-600:hover,body.light .hover\:bg-slate-700:hover{background:var(--bg-overlay)!important}
     @keyframes syncbar{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @keyframes asstDot{0%,60%,100%{opacity:0.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+    @keyframes asstRec{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.85)}}
     @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
     @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
     .page-enter{animation:fadeIn 0.25s ease-out}
@@ -2924,8 +2932,308 @@ function ActivityPage({state}){
   )
 }
 
+// ─── ASSISTENTE (Fase 1a: shell com mock) ────────────────────────────────────
+const loadAsstMsgs=()=>{try{const s=localStorage.getItem('paiol_asst_msgs');return s?JSON.parse(s):[]}catch(e){return[]}}
+const saveAsstMsgs=m=>{try{localStorage.setItem('paiol_asst_msgs',JSON.stringify(m.slice(-200)))}catch(e){}}
+const fmtDur=s=>{const m=Math.floor(s/60);const sec=s%60;return `${m}:${String(sec).padStart(2,'0')}`}
+const fmtSize=b=>b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'
+
+function mockAsstRespond(userMsg,state,curMk){
+  const txt=(userMsg.text||'').toLowerCase().trim()
+  const clients=state.settings?.clients||[]
+  const today=new Date().getDate()
+  if(userMsg.attachment){
+    const a=userMsg.attachment
+    const desc=a.type==='audio'?`seu áudio (${fmtDur(a.duration||0)})`:`o arquivo "${a.name}" (${fmtSize(a.size||0)})`
+    return {reply:`Recebi ${desc}. Na Fase 1a ainda não processo anexos — a IA chega na Fase 1b e aí vou extrair os lançamentos pra você confirmar. Por enquanto, me conta em texto o que tá no conteúdo que eu te mostro o fluxo todo?`}
+  }
+  if(!txt)return {reply:'Manda uma mensagem ou anexa algo que eu te respondo 🙂'}
+  // Entrada: "recebi 500 do harlem" | "entrou 1200 da involt"
+  let m=txt.match(/(?:recebi|entrou|ganhei|caiu)\s+r?\$?\s*([\d.,]+)\s+(?:d[oaes]+\s+|da\s+|do\s+|dos\s+|das\s+)?(.+?)$/)
+  if(m){
+    const val=parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0
+    const hint=m[2].trim()
+    const client=clients.find(c=>{const n=c.name.toLowerCase();return n.includes(hint)||hint.includes(n)||n.split(' ')[0]===hint.split(' ')[0]})
+    if(!client){
+      return {reply:`Entendi: entrada de ${fmtBRL(val)}. Mas não achei cliente parecido com "${hint}". Clientes cadastrados: ${clients.map(c=>c.name).join(', ')}. Qual é?`}
+    }
+    return {
+      reply:`Boa — entrada de ${fmtBRL(val)} do ${client.name}. Confere?`,
+      preview:{
+        title:'Nova entrada',
+        icon:'💰',
+        color:'#10b981',
+        fields:[['Cliente',client.name],['Valor',fmtBRL(val)],['Status','Recebido'],['Mês',curMk]],
+        action:{type:'ADD_ENTRY',payload:{monthKey:curMk,entry:{client:client.name,clientId:client.id,expectedValue:val,realValue:val,status:'Recebido',dueDay:client.dueDay||today,note:'via Assistente'}}},
+        okLabel:`Entrada ${fmtBRL(val)} — ${client.name}`,
+      }
+    }
+  }
+  // Saída: "gastei 120 no posto" | "paguei 50 com Uber"
+  m=txt.match(/(?:gastei|paguei|saiu|comprei|torrei)\s+r?\$?\s*([\d.,]+)\s+(?:n[oaes]+\s+|com\s+|em\s+|para\s+|de\s+|d[oa]\s+)?(.+?)$/)
+  if(m){
+    const val=parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0
+    const desc=m[2].trim().replace(/^./,c=>c.toUpperCase())
+    const inferredCat=/uber|99|combust|posto|gasolin|álcool|alcool|táxi|taxi|ônibus|onibus|metro|metrô/i.test(desc)?'Transporte'
+      :/mercado|padari|almoço|almoco|janta|comida|lanche|restaurante|ifood|burger|pizza/i.test(desc)?'Alimentação'
+      :/anúncio|anuncio|ads|facebook|google|meta|impulsion|marketing/i.test(desc)?'Marketing'
+      :/aluguel|luz|água|agua|internet|wifi/i.test(desc)?'Outros':'Outros'
+    return {
+      reply:`Saída de ${fmtBRL(val)} em "${desc}" — categorizei como *${inferredCat}*. Tá certo?`,
+      preview:{
+        title:'Nova saída',
+        icon:'💸',
+        color:'#ef4444',
+        fields:[['Descrição',desc],['Valor',fmtBRL(val)],['Categoria',inferredCat],['Status','Pago'],['Mês',curMk]],
+        action:{type:'ADD_EXIT',payload:{monthKey:curMk,exit:{name:desc,description:desc,category:inferredCat,expectedValue:val,realValue:val,status:'Pago',day:today,note:'via Assistente'}}},
+        okLabel:`Saída ${fmtBRL(val)} — ${desc}`,
+      }
+    }
+  }
+  // Q&A caixa/saldo
+  if(/\b(saldo|caixa|quanto\s+(?:tem|tenho|sobrou)|como\s+t[aá]|situa[çc][aã]o)\b/i.test(txt)){
+    const month=state.months?.[curMk]||{}
+    const ent=(month.entries||[]).filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
+    const sai=(month.exits||[]).filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
+    const pend=(month.entries||[]).filter(e=>e.status!=='Recebido').reduce((s,e)=>s+(e.expectedValue||0),0)
+    return {reply:`📊 ${curMk}:\n• Saldo em caixa: ${fmtBRL(month.cashBalance||0)}\n• Entradas recebidas: ${fmtBRL(ent)}\n• Saídas pagas: ${fmtBRL(sai)}\n• A receber: ${fmtBRL(pend)}`}
+  }
+  // Q&A cliente específico
+  const cMatch=clients.find(c=>txt.includes(c.name.toLowerCase())||txt.includes(c.name.toLowerCase().split(' ')[0]))
+  if(cMatch&&/\b(quanto|deve|cobran|pag|recebe|mensal|valor)\b/i.test(txt)){
+    return {reply:`📇 ${cMatch.name}\n• Mensalidade: ${fmtBRL(cMatch.value)}\n• Permuta: ${cMatch.permuteValue>0?fmtBRL(cMatch.permuteValue):'—'}\n• Vence dia ${cMatch.dueDay}\n• Telefone: ${cMatch.phone||'❌ não cadastrado'}${cMatch.endDate?`\n• Encerra: ${cMatch.endDate}`:''}${cMatch.contractNote?`\n• Nota: ${cMatch.contractNote}`:''}`}
+  }
+  // Saudação (sem \b pra funcionar com acentos tipo "olá")
+  const greets=['oi','olá','ola','opa','eai','e aí','e ai','bom dia','boa tarde','boa noite','hey','hello','tudo bem','tudo bom','alo','alô']
+  const firstWord=txt.split(/[\s!?.,]+/)[0]
+  if(greets.includes(firstWord)||greets.some(g=>txt.startsWith(g+' ')||txt.startsWith(g+'!')||txt.startsWith(g+','))){
+    return {reply:`Oi! 👋 Sou o Assistente do Paiol Finance — ainda em modo shell (Fase 1a). Já reconheço:\n\n• *"Recebi R$ 500 do Harlem"* → registra entrada\n• *"Gastei R$ 120 no posto"* → registra saída\n• *"Qual o saldo?"* → resumo do mês\n• *"Quanto o Harlem paga?"* → info do cliente\n\nNa Fase 1b a IA Claude pluga e eu entendo qualquer coisa — inclusive *"gastei 2 real no mercado com o nubank"* já com cartão e categoria certos 😅`}
+  }
+  // Ajuda
+  if(/\b(ajuda|help|comandos|o que|como funciona)\b/i.test(txt)){
+    return {reply:`No modo shell (Fase 1a), reconheço padrões simples:\n\n💰 **Entradas**: "recebi 500 do Harlem"\n💸 **Saídas**: "gastei 120 no posto", "paguei 50 com Uber"\n📊 **Consultas**: "qual o saldo?", "quanto o Reddogz paga?"\n📎 **Anexos**: foto, PDF e áudio serão processados quando a IA estiver plugada (Fase 1b)\n\nTestando o fluxo de confirmação end-to-end agora!`}
+  }
+  return {reply:`Não entendi bem. No modo shell (Fase 1a) reconheço padrões como "recebi R$X do Y", "gastei R$X no Y" ou "qual o saldo?". Escreve *ajuda* pra ver a lista. A IA que entende qualquer coisa chega na Fase 1b.`}
+}
+
+function AssistantPage({state,dispatch,toast}){
+  // Assistente sempre opera no mês real atual (não no mês selecionado no header)
+  const mk=monthKey(new Date().getFullYear(),new Date().getMonth()+1)
+  const [messages,setMessages]=useState(loadAsstMsgs)
+  const [input,setInput]=useState('')
+  const [preview,setPreview]=useState(null)
+  const [attachment,setAttachment]=useState(null)
+  const [recording,setRecording]=useState(false)
+  const [recElapsed,setRecElapsed]=useState(0)
+  const [thinking,setThinking]=useState(false)
+  const recRef=useRef(null)
+  const recStartRef=useRef(0)
+  const streamRef=useRef(null)
+  const fileRef=useRef(null)
+  const listRef=useRef(null)
+  const inputRef=useRef(null)
+
+  useEffect(()=>{saveAsstMsgs(messages)},[messages])
+  useEffect(()=>{if(listRef.current)listRef.current.scrollTop=listRef.current.scrollHeight},[messages,preview,thinking])
+  useEffect(()=>{if(!recording)return;const iv=setInterval(()=>setRecElapsed(Math.round((Date.now()-recStartRef.current)/1000)),250);return()=>clearInterval(iv)},[recording])
+  useEffect(()=>()=>{if(streamRef.current)streamRef.current.getTracks().forEach(t=>t.stop())},[])
+
+  async function startRec(){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true})
+      streamRef.current=stream
+      const rec=new MediaRecorder(stream)
+      const chunks=[]
+      rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data)}
+      rec.onstop=()=>{
+        const blob=new Blob(chunks,{type:'audio/webm'})
+        const dur=Math.round((Date.now()-recStartRef.current)/1000)
+        setAttachment({type:'audio',name:`Áudio ${fmtDur(dur)}`,size:blob.size,duration:dur,url:URL.createObjectURL(blob)})
+        stream.getTracks().forEach(t=>t.stop())
+        streamRef.current=null
+      }
+      recRef.current=rec
+      recStartRef.current=Date.now()
+      setRecElapsed(0)
+      rec.start()
+      setRecording(true)
+    }catch(e){toast('Não consegui acessar o microfone','error')}
+  }
+  function stopRec(){if(recRef.current&&recRef.current.state==='recording')recRef.current.stop();setRecording(false)}
+  function cancelRec(){if(recRef.current&&recRef.current.state==='recording'){recRef.current.ondataavailable=null;recRef.current.stop()}if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null}setRecording(false);setRecElapsed(0)}
+  function onFilePick(e){const f=e.target.files?.[0];if(!f)return;if(f.size>10*1048576){toast('Arquivo muito grande (máx 10MB)','error');return}setAttachment({type:'file',name:f.name,size:f.size,mime:f.type});e.target.value=''}
+  function removeAttachment(){if(attachment?.url)URL.revokeObjectURL(attachment.url);setAttachment(null)}
+  function send(){
+    const text=input.trim()
+    if(!text&&!attachment)return
+    const userMsg={id:uid(),role:'user',text,attachment:attachment?{type:attachment.type,name:attachment.name,size:attachment.size,duration:attachment.duration,mime:attachment.mime}:null,ts:Date.now()}
+    setMessages(m=>[...m,userMsg])
+    setInput('')
+    if(attachment?.url)URL.revokeObjectURL(attachment.url)
+    setAttachment(null)
+    setThinking(true)
+    setTimeout(()=>{
+      const r=mockAsstRespond(userMsg,state,mk)
+      setThinking(false)
+      setMessages(m=>[...m,{id:uid(),role:'assistant',text:r.reply,ts:Date.now()}])
+      if(r.preview)setPreview(r.preview)
+    },450+Math.random()*400)
+  }
+  function confirmPreview(){
+    if(!preview)return
+    dispatch(preview.action)
+    toast('Registrado ✓')
+    setMessages(m=>[...m,{id:uid(),role:'assistant',text:`✅ Registrado: ${preview.okLabel}`,ts:Date.now()}])
+    setPreview(null)
+    inputRef.current?.focus()
+  }
+  function cancelPreview(){
+    setMessages(m=>[...m,{id:uid(),role:'assistant',text:'Ok, descartei. Me conta de novo com mais detalhes?',ts:Date.now()}])
+    setPreview(null)
+    inputRef.current?.focus()
+  }
+  function clearChat(){
+    if(!window.confirm('Limpar todo o histórico do Assistente?'))return
+    setMessages([])
+    setPreview(null)
+    toast('Histórico limpo','warn')
+  }
+  function onKey(e){if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send()}}
+
+  const showEmpty=messages.length===0&&!thinking&&!preview
+  const suggestions=['Recebi R$ 500 do Harlem','Gastei R$ 120 no posto','Qual o saldo?','Quanto o Reddogz paga?']
+
+  return(
+    <div className="flex flex-col" style={{height:'calc(100vh - 180px)',minHeight:420}}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{background:'linear-gradient(135deg,#8b5cf6,#10b981)',boxShadow:'0 4px 16px rgba(139,92,246,0.35)'}}>
+            <Sparkles size={18} style={{color:'#fff'}}/>
+          </div>
+          <div>
+            <div className="text-sm font-semibold" style={{color:'var(--text)'}}>Assistente Paiol</div>
+            <div className="text-xs" style={{color:'var(--text-3)'}}>Fase 1a · shell com mock · IA plugada em breve</div>
+          </div>
+        </div>
+        {messages.length>0&&<button onClick={clearChat} className="text-xs px-3 py-1.5 rounded-xl transition-colors" style={{color:'var(--text-3)',background:'var(--bg-overlay)'}}>Limpar</button>}
+      </div>
+
+      <div ref={listRef} className="flex-1 overflow-y-auto rounded-2xl p-4 space-y-3" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
+        {showEmpty&&(
+          <div className="flex flex-col items-center justify-center h-full text-center py-8">
+            <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style={{background:'linear-gradient(135deg,#8b5cf620,#10b98120)',border:'1px solid var(--border)'}}>
+              <Sparkles size={28} style={{color:'#8b5cf6'}}/>
+            </div>
+            <div className="text-base font-semibold mb-2" style={{color:'var(--text)'}}>Como posso ajudar?</div>
+            <div className="text-xs mb-5 max-w-md" style={{color:'var(--text-3)'}}>Registre entradas, saídas, edite clientes, consulte o caixa. Texto, foto, PDF ou áudio — o Assistente sempre pede confirmação antes de gravar.</div>
+            <div className="flex flex-wrap gap-2 justify-center max-w-md">
+              {suggestions.map(s=>(
+                <button key={s} onClick={()=>{setInput(s);setTimeout(()=>inputRef.current?.focus(),50)}} className="text-xs px-3 py-2 rounded-xl transition-all" style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)'}}>{s}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.map(msg=>(
+          <div key={msg.id} className={`flex gap-2 ${msg.role==='user'?'justify-end':'justify-start'}`}>
+            {msg.role==='assistant'&&<div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{background:'linear-gradient(135deg,#8b5cf6,#10b981)',color:'#fff'}}><Sparkles size={14}/></div>}
+            <div className="max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm" style={{background:msg.role==='user'?'#10b981':'var(--bg-overlay)',color:msg.role==='user'?'#fff':'var(--text)',whiteSpace:'pre-wrap',wordBreak:'break-word',border:msg.role==='user'?'none':'1px solid var(--border-s)'}}>
+              {msg.text&&<div>{msg.text}</div>}
+              {msg.attachment&&(
+                <div className={`flex items-center gap-2 ${msg.text?'mt-2 pt-2':''}`} style={{borderTop:msg.text?'1px solid rgba(255,255,255,0.15)':'none'}}>
+                  {msg.attachment.type==='audio'?<Mic size={14}/>:<Paperclip size={14}/>}
+                  <span className="text-xs opacity-90">{msg.attachment.name}{msg.attachment.size?` · ${fmtSize(msg.attachment.size)}`:''}</span>
+                </div>
+              )}
+            </div>
+            {msg.role==='user'&&<div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)'}}><User size={14}/></div>}
+          </div>
+        ))}
+        {thinking&&(
+          <div className="flex gap-2 justify-start">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{background:'linear-gradient(135deg,#8b5cf6,#10b981)',color:'#fff'}}><Sparkles size={14}/></div>
+            <div className="rounded-2xl px-3.5 py-2.5" style={{background:'var(--bg-overlay)',border:'1px solid var(--border-s)'}}>
+              <div className="flex gap-1 items-center" style={{height:18}}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{background:'var(--text-3)',animation:'asstDot 1.2s infinite 0s'}}/>
+                <span className="w-1.5 h-1.5 rounded-full" style={{background:'var(--text-3)',animation:'asstDot 1.2s infinite 0.2s'}}/>
+                <span className="w-1.5 h-1.5 rounded-full" style={{background:'var(--text-3)',animation:'asstDot 1.2s infinite 0.4s'}}/>
+              </div>
+            </div>
+          </div>
+        )}
+        {preview&&(
+          <div className="rounded-2xl p-4 mt-2" style={{background:'var(--bg-overlay)',border:`1px solid ${preview.color}55`,boxShadow:`0 0 0 1px ${preview.color}25, 0 8px 24px rgba(0,0,0,0.3)`}}>
+            <div className="flex items-center gap-2 mb-3">
+              <span style={{fontSize:18}}>{preview.icon}</span>
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{color:preview.color}}>{preview.title}</span>
+            </div>
+            <div className="space-y-1.5 mb-4">
+              {preview.fields.map(([k,v])=>(
+                <div key={k} className="flex items-center justify-between text-sm">
+                  <span style={{color:'var(--text-3)'}}>{k}</span>
+                  <span className="font-medium" style={{color:'var(--text)'}}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={confirmPreview} className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95" style={{background:preview.color,color:'#fff'}}>
+                <CheckCircle size={14} style={{display:'inline',marginRight:6,marginTop:-2}}/>Confirmar
+              </button>
+              <button onClick={cancelPreview} className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all" style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)'}}>Cancelar</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {attachment&&!recording&&(
+        <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl" style={{background:'var(--bg-overlay)',border:'1px solid var(--border)'}}>
+          {attachment.type==='audio'?<Mic size={14} style={{color:'#8b5cf6'}}/>:<Paperclip size={14} style={{color:'#3b82f6'}}/>}
+          <span className="text-xs flex-1 truncate" style={{color:'var(--text-2)'}}>{attachment.name} · {fmtSize(attachment.size||0)}</span>
+          <button onClick={removeAttachment} className="p-1 rounded-lg" style={{color:'var(--text-3)'}}><X size={14}/></button>
+        </div>
+      )}
+      {recording&&(
+        <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl" style={{background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)'}}>
+          <span className="w-2 h-2 rounded-full" style={{background:'#ef4444',animation:'asstRec 1s infinite'}}/>
+          <span className="text-xs font-medium" style={{color:'#ef4444'}}>Gravando · {fmtDur(recElapsed)}</span>
+          <div className="flex-1"/>
+          <button onClick={cancelRec} className="text-xs px-2 py-1 rounded-lg" style={{color:'var(--text-3)'}}>Cancelar</button>
+          <button onClick={stopRec} className="text-xs px-2.5 py-1 rounded-lg font-semibold" style={{background:'#ef4444',color:'#fff'}}>Parar</button>
+        </div>
+      )}
+
+      <div className="mt-2 flex items-end gap-2 p-2 rounded-2xl" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
+        <input ref={fileRef} type="file" accept="image/*,application/pdf,.csv,.txt,text/plain" onChange={onFilePick} style={{display:'none'}}/>
+        <button onClick={()=>fileRef.current?.click()} disabled={recording} title="Anexar arquivo (imagem, PDF, CSV)" className="p-2 rounded-xl transition-colors" style={{color:'var(--text-3)',opacity:recording?0.4:1}}>
+          <Paperclip size={18}/>
+        </button>
+        <button onClick={recording?stopRec:startRec} title={recording?'Parar gravação':'Gravar áudio'} className="p-2 rounded-xl transition-colors" style={{color:recording?'#ef4444':'var(--text-3)'}}>
+          {recording?<StopCircle size={18}/>:<Mic size={18}/>}
+        </button>
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={e=>setInput(e.target.value)}
+          onKeyDown={onKey}
+          placeholder={recording?'Gravando áudio...':'Mensagem para o Assistente...'}
+          disabled={recording}
+          rows={1}
+          className="flex-1 bg-transparent outline-none resize-none text-sm py-2 px-1"
+          style={{color:'var(--text)',maxHeight:120,lineHeight:'1.4'}}
+        />
+        <button onClick={send} disabled={(!input.trim()&&!attachment)||recording} title="Enviar (Enter)" className="p-2 rounded-xl transition-all active:scale-95" style={{background:(!input.trim()&&!attachment)||recording?'var(--bg-overlay)':'#10b981',color:(!input.trim()&&!attachment)||recording?'var(--text-3)':'#fff'}}>
+          <Send size={18}/>
+        </button>
+      </div>
+      <div className="mt-2 text-xs text-center" style={{color:'var(--text-4)'}}>
+        Fase 1a · O Assistente sempre pede confirmação antes de registrar.
+      </div>
+    </div>
+  )
+}
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 const NAV=[
+  {id:'assistant',icon:Sparkles,label:'Assistente'},
   {id:'dashboard',icon:LayoutDashboard,label:'Dashboard'},
   {id:'cashflow',icon:CalendarDays,label:'Fluxo de Caixa'},
   {id:'entries',icon:TrendingUp,label:'Entradas'},
@@ -3009,7 +3317,7 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
         <div className="p-3 border-t flex items-center justify-between" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full" style={{background:'#10b981'}}></div>
-            <span className="text-xs" style={{color:'var(--text-4)'}}>v1.2 · Paiol Finance</span>
+            <span className="text-xs" title="Última build" style={{color:'var(--text-4)'}}>v1.3 ✨ · Paiol Finance</span>
           </div>
           <a href="https://t.me/paiolfinance_bot" target="_blank" rel="noopener noreferrer"
             title="Abrir bot no Telegram"
@@ -3242,6 +3550,7 @@ function PaiolFinanceApp({currentUser,onLogout}){
 
   const pp={state,dispatch:trackedDispatch,monthKey:mk,toast}
   const pages={
+    assistant:<AssistantPage {...pp}/>,
     dashboard:<DashboardPage {...pp} setActivePage={setActivePage}/>,cashflow:<CashFlowPage {...pp}/>,entries:<EntriesPage {...pp}/>,
     exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,collaborators:<CollaboratorsPage {...pp}/>,
     clients:<ClientsPage state={state} dispatch={trackedDispatch} toast={toast}/>,
@@ -3270,9 +3579,9 @@ function PaiolFinanceApp({currentUser,onLogout}){
                   <span className="text-sm font-semibold min-w-[80px] text-center tracking-tight" style={{color:'var(--text)'}}>{selYear}</span>
                   <button onClick={nextYear} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronRight size={16}/></button>
                 </div>
-              ):['settings','clients','cards','collaborators','activity'].includes(activePage)?(
+              ):['settings','clients','cards','collaborators','activity','assistant'].includes(activePage)?(
                 <span className="text-sm font-semibold tracking-tight" style={{color:'var(--text)'}}>
-                  {activePage==='clients'?'Clientes':activePage==='cards'?'Cartões':activePage==='collaborators'?'Colaboradores':activePage==='activity'?'Atividade':'Dados & Backup'}
+                  {activePage==='clients'?'Clientes':activePage==='cards'?'Cartões':activePage==='collaborators'?'Colaboradores':activePage==='activity'?'Atividade':activePage==='assistant'?'Assistente':'Dados & Backup'}
                 </span>
               ):(
                 <div className="flex items-center gap-1.5">
