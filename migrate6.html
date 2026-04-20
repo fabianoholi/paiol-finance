@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Paiol Finance — Migrate 6</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#111;border:1px solid #222;border-radius:20px;padding:32px;max-width:560px;width:100%}
+  h1{font-size:18px;font-weight:700;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:20px}
+  .log{background:#0a0a0a;border-radius:12px;padding:16px;font-size:12px;font-family:monospace;line-height:1.9;max-height:480px;overflow-y:auto;margin-bottom:16px}
+  .ok{color:#10b981}.warn{color:#f59e0b}.err{color:#ef4444}.info{color:#60a5fa}
+  .btn{display:block;width:100%;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+  .btn-run{background:#10b981;color:#fff}
+  .btn-go{background:#1a1a1a;border:1px solid #333;color:#aaa}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🗂 Migrate 6 — Entradas e saídas recorrentes</h1>
+  <p class="sub">IANESKO, RHEDE, BBB + histórico Harlem/Reddogz + saídas recorrentes mai/26 em diante.</p>
+  <div class="log" id="log"><span class="info">Pronto. Clique em Executar.</span></div>
+  <button class="btn btn-run" id="btnRun" onclick="run()">Executar</button>
+  <button class="btn btn-go" id="btnGo" style="display:none" onclick="location.href='/'">→ Abrir o app</button>
+</div>
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
+const GAS_TOKEN='paiol2026secret'
+const el=document.getElementById('log')
+function log(msg,cls=''){el.innerHTML+=`<div class="${cls}">${msg}</div>`;el.scrollTop=el.scrollHeight}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function ensureMonth(data,mk){
+  if(!data.months[mk])data.months[mk]={cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{},cardPayments:{}}
+}
+function addEntry(entries,entry){
+  if(entries.find(e=>e.clientId&&e.clientId===entry.clientId))return false
+  entries.push(entry);return true
+}
+
+function run(){
+  document.getElementById('btnRun').disabled=true
+  el.innerHTML=''
+
+  const raw=localStorage.getItem('paiolfinance_v3')
+  if(!raw){log('❌ Dados não encontrados.','err');document.getElementById('btnRun').disabled=false;return}
+  const data=JSON.parse(raw)
+
+  // ── 1. IANESKO — cadastro ──
+  const ianesko=data.settings.clients.find(c=>c.id==='4pzwuj2')
+  if(ianesko){
+    ianesko.startDate='2025-10-01'
+    ianesko.endDate='2026-09-30'
+    ianesko.duration=12
+    log('✅ IANESKO — startDate out/2025, fim set/2026','ok')
+  }else log('⚠️ IANESKO não encontrado no cadastro','warn')
+
+  // ── 2. IANESKO — entradas out/25→set/26 ──
+  ;[
+    {mk:'2025-10',st:'Recebido',p:'1/12'},
+    {mk:'2025-11',st:'Recebido',p:'2/12'},
+    {mk:'2025-12',st:'Recebido',p:'3/12'},
+    {mk:'2026-01',st:'Recebido',p:'4/12'},
+    {mk:'2026-02',st:'Recebido',p:'5/12'},
+    {mk:'2026-03',st:'Recebido',p:'6/12'},
+    {mk:'2026-04',st:'Recebido',p:'7/12'},
+    {mk:'2026-05',st:'Previsto', p:'8/12'},
+    {mk:'2026-06',st:'Previsto', p:'9/12'},
+    {mk:'2026-07',st:'Previsto', p:'10/12'},
+    {mk:'2026-08',st:'Previsto', p:'11/12'},
+    {mk:'2026-09',st:'Previsto', p:'12/12'},
+  ].forEach(({mk,st,p})=>{
+    ensureMonth(data,mk)
+    if(addEntry(data.months[mk].entries,{id:uid(),client:'IANESKO',clientId:'4pzwuj2',dueDay:10,expectedValue:2500,status:st,realValue:st==='Recebido'?2500:0,note:`Parcela ${p}`}))
+      log(`✅ IANESKO ${mk} R$2.500 ${st}`,'ok')
+    else log(`ℹ️ IANESKO ${mk} já existe`,'info')
+  })
+
+  // ── 3. RHEDE — cadastro ──
+  const rhede=data.settings.clients.find(c=>c.id==='jgs98y7')
+  if(rhede){
+    rhede.startDate='2026-02-10'
+    rhede.endDate='2027-01-09'
+    rhede.duration=12
+    log('✅ RHEDE — startDate fev/2026, fim jan/2027','ok')
+  }else log('⚠️ RHEDE não encontrado no cadastro','warn')
+
+  // ── 4. RHEDE — entradas fev/26→jan/27 ──
+  ;[
+    {mk:'2026-02',st:'Recebido',p:'1/12'},
+    {mk:'2026-03',st:'Recebido',p:'2/12'},
+    {mk:'2026-04',st:'Recebido',p:'3/12'},
+    {mk:'2026-05',st:'Previsto', p:'4/12'},
+    {mk:'2026-06',st:'Previsto', p:'5/12'},
+    {mk:'2026-07',st:'Previsto', p:'6/12'},
+    {mk:'2026-08',st:'Previsto', p:'7/12'},
+    {mk:'2026-09',st:'Previsto', p:'8/12'},
+    {mk:'2026-10',st:'Previsto', p:'9/12'},
+    {mk:'2026-11',st:'Previsto', p:'10/12'},
+    {mk:'2026-12',st:'Previsto', p:'11/12'},
+    {mk:'2027-01',st:'Previsto', p:'12/12'},
+  ].forEach(({mk,st,p})=>{
+    ensureMonth(data,mk)
+    if(addEntry(data.months[mk].entries,{id:uid(),client:'RHEDE',clientId:'jgs98y7',dueDay:15,expectedValue:750,status:st,realValue:st==='Recebido'?750:0,note:`Parcela ${p}`}))
+      log(`✅ RHEDE ${mk} R$750 ${st}`,'ok')
+    else log(`ℹ️ RHEDE ${mk} já existe`,'info')
+  })
+
+  // ── 5. BBB — cadastro ──
+  const bbb=data.settings.clients.find(c=>c.id==='n8au355')
+  if(bbb){
+    bbb.startDate='2026-03-01'
+    bbb.endDate='2027-02-28'
+    bbb.duration=12
+    log('✅ BBB — startDate mar/2026, fim fev/2027','ok')
+  }else log('⚠️ BBB não encontrado no cadastro','warn')
+
+  // ── 6. BBB — entradas mar/26→fev/27 ──
+  ;[
+    {mk:'2026-03',p:'1/12'},{mk:'2026-04',p:'2/12'},{mk:'2026-05',p:'3/12'},
+    {mk:'2026-06',p:'4/12'},{mk:'2026-07',p:'5/12'},{mk:'2026-08',p:'6/12'},
+    {mk:'2026-09',p:'7/12'},{mk:'2026-10',p:'8/12'},{mk:'2026-11',p:'9/12'},
+    {mk:'2026-12',p:'10/12'},{mk:'2027-01',p:'11/12'},{mk:'2027-02',p:'12/12'},
+  ].forEach(({mk,p})=>{
+    ensureMonth(data,mk)
+    if(addEntry(data.months[mk].entries,{id:uid(),client:'BBB',clientId:'n8au355',dueDay:10,expectedValue:0,status:'Previsto',realValue:0,note:`Parcela ${p}`}))
+      log(`✅ BBB ${mk} adicionado`,'ok')
+    else log(`ℹ️ BBB ${mk} já existe`,'info')
+  })
+
+  // ── 7. Harlem Hamburgueria — histórico dez/25, jan/26, fev/26 ──
+  ;[
+    {mk:'2025-12'},{mk:'2026-01'},{mk:'2026-02'},
+  ].forEach(({mk})=>{
+    ensureMonth(data,mk)
+    if(addEntry(data.months[mk].entries,{id:uid(),client:'Harlem Hamburgueria',clientId:'c5',dueDay:26,expectedValue:500,status:'Recebido',realValue:500,note:''}))
+      log(`✅ Harlem Hamburgueria ${mk} R$500 Recebido`,'ok')
+    else log(`ℹ️ Harlem Hamburgueria ${mk} já existe`,'info')
+  })
+
+  // ── 8. Reddogz — histórico fev/26 ──
+  ensureMonth(data,'2026-02')
+  if(addEntry(data.months['2026-02'].entries,{id:uid(),client:'Reddogz',clientId:'c3',dueDay:26,expectedValue:500,status:'Recebido',realValue:500,note:''}))
+    log('✅ Reddogz fev/26 R$500 Recebido','ok')
+  else log('ℹ️ Reddogz fev/26 já existe','info')
+
+  // ── 9. Saídas recorrentes mai/26 em diante ──
+  log('','')
+  log('─── Saídas recorrentes ───','info')
+
+  // Gera chaves de 2026-05 até 2030-12 (cobre até o fim do Título Cap)
+  const exitMonths=[]
+  for(let y=2026;y<=2030;y++)
+    for(let m=1;m<=12;m++){
+      const mk=`${y}-${String(m).padStart(2,'0')}`
+      if(mk>='2026-05')exitMonths.push(mk)
+    }
+
+  const exitStats={}
+
+  exitMonths.forEach(mk=>{
+    const [y,mo]=mk.split('-').map(Number)
+    const base=y*12+mo
+    ensureMonth(data,mk)
+    const exits=data.months[mk].exits
+
+    function addEx(name,cat,day,val,note){
+      if(exits.find(e=>e.name===name))return
+      exits.push({id:uid(),name,category:cat,day,cardId:null,expectedValue:val,status:'Pendente',realValue:0,note})
+      exitStats[name]=(exitStats[name]||0)+1
+    }
+
+    // Emp. Mãe — 2/12 mai/26 → 12/12 mar/27
+    if(mk<='2027-03'){
+      const p=base-(2026*12+4)+1
+      addEx('Emp. Mãe','Empréstimos',10,731.20,`Parcela ${p}/12`)
+    }
+
+    // Fomento Fabiano — 15/36 mai/26 → 36/36 fev/28
+    if(mk<='2028-02'){
+      const p=base-(2026*12+4)+14
+      addEx('Fomento Fabiano','Empréstimos',10,826.08,`Parcela ${p}/36`)
+    }
+
+    // Fomento Carnaval — 7/36 mai/26 → 36/36 out/28
+    if(mk<='2028-10'){
+      const p=base-(2026*12+4)+6
+      addEx('Fomento Carnaval','Empréstimos',10,722.55,`Parcela ${p}/36`)
+    }
+
+    // Título Capitalização — 5/60 mai/26 → 60/60 dez/30
+    {
+      const p=base-(2026*12+4)+4
+      addEx('Título Capitalização','Empréstimos',20,300,`Parcela ${p}/60`)
+    }
+
+    // Emp. Vó passada cartão — 1/12 mai/26 → 12/12 abr/27
+    if(mk<='2027-04'){
+      const p=base-(2026*12+5)+1
+      addEx('Emp. Vó passada cartão','Empréstimos',20,951.29,`Parcela ${p}/12`)
+    }
+
+    // Emp. Vó 1ª parte — 1/12 jun/26 → 12/12 mai/27
+    if(mk>='2026-06'&&mk<='2027-05'){
+      const p=base-(2026*12+6)+1
+      addEx('Emp. Vó 1ª parte','Empréstimos',30,1179,`Parcela ${p}/12`)
+    }
+
+    // Salários — mai/26 → dez/27
+    if(mk<='2027-12'){
+      addEx('Mainara','Salários',5,6000,'')
+      addEx('Fabiano','Salários',5,6000,'')
+      addEx('Leandro','Salários',25,4000,'')
+    }
+  })
+
+  if(Object.keys(exitStats).length===0){
+    log('ℹ️ Todas as saídas já existiam','info')
+  }else{
+    Object.entries(exitStats).forEach(([name,count])=>{
+      log(`✅ ${name} — ${count} mês(es) adicionado(s)`,'ok')
+    })
+  }
+
+  log('','')
+  log('💾 Salvando...','info')
+  localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  log('✅ Salvo!','ok')
+
+  log('☁️ Sincronizando com Sheets...','info')
+  fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})
+    .then(()=>log('✅ Sincronizado!','ok'))
+    .catch(()=>log('⚠️ Sync falhou — sincroniza ao abrir o app.','warn'))
+    .finally(()=>{
+      document.getElementById('btnGo').style.display='block'
+      document.getElementById('btnRun').style.display='none'
+    })
+}
+</script>
+</body>
+</html>
