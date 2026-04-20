@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Paiol Finance — Migração 3 (Abril/2026)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#111;border:1px solid #222;border-radius:20px;padding:32px;max-width:560px;width:100%}
+  h1{font-size:18px;font-weight:700;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:20px}
+  .log{background:#0a0a0a;border-radius:12px;padding:16px;font-size:12px;font-family:monospace;line-height:1.9;max-height:420px;overflow-y:auto;margin-bottom:16px}
+  .ok{color:#10b981}.warn{color:#f59e0b}.err{color:#ef4444}.info{color:#60a5fa}.dim{color:#555}
+  .btn{display:block;width:100%;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+  .btn-run{background:#10b981;color:#fff}
+  .btn-go{background:#1a1a1a;border:1px solid #333;color:#aaa}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📅 Migração 3 — Abril/2026</h1>
+  <p class="sub">Corrige entradas, adiciona saídas, ajusta clientes e lança março/iPhone Vini.</p>
+  <div class="log" id="log"><span class="info">Pronto. Clique em Executar.</span></div>
+  <button class="btn btn-run" id="btnRun" onclick="run()">Executar</button>
+  <button class="btn btn-go" id="btnGo" style="display:none" onclick="location.href='/'">→ Abrir o app</button>
+</div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
+const GAS_TOKEN='paiol2026secret'
+const el=document.getElementById('log')
+function log(msg,cls=''){el.innerHTML+=`<div class="${cls}">${msg}</div>`;el.scrollTop=el.scrollHeight}
+function uid(){return Math.random().toString(36).slice(2,9)}
+
+function run(){
+  document.getElementById('btnRun').disabled=true
+  el.innerHTML=''
+
+  const raw=localStorage.getItem('paiolfinance_v3')
+  if(!raw){log('❌ Dados não encontrados. Abra o app primeiro.','err');document.getElementById('btnRun').disabled=false;return}
+
+  const data=JSON.parse(raw)
+
+  // ── MARÇO/2026 — Adiciona iPhone Vini R$1.000 recebido em 31/mar ──────────
+  log('── Março/2026 ──────────────────────','dim')
+  const mar=data.months['2026-03']
+  if(mar){
+    const jaTemVini=(mar.entries||[]).find(e=>e.client&&e.client.toLowerCase().includes('iphone vini'))
+    if(jaTemVini){
+      log('⚠️ iPhone Vini já existe em mar/26 — pulando','warn')
+    } else {
+      mar.entries.push({id:uid(),client:'iPhone Vini',dueDay:31,expectedValue:1000,status:'Recebido',realValue:1000,note:'Venda iPhone — 1ª parte recebida em 31/mar/2026'})
+      log('✅ iPhone Vini R$1.000 adicionado em mar/2026','ok')
+    }
+  }
+
+  // ── ABRIL/2026 ────────────────────────────────────────────────────────────
+  log('','')
+  log('── Abril/2026 — Entradas ───────────','dim')
+
+  if(!data.months['2026-04'])
+    data.months['2026-04']={cashBalance:3500,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{},cardPayments:{}}
+
+  const apr=data.months['2026-04']
+
+  // Remove duplicata errada (Involt com espaço, R$2500)
+  const antes=apr.entries.length
+  apr.entries=apr.entries.filter(e=>e.id!=='m6wgbwc')
+  if(apr.entries.length<antes) log('🗑️ Removida duplicata "Involt " R$2.500 (criada pelo assistente)','ok')
+  else log('⚠️ Duplicata Involt não encontrada pelo id — verificar','warn')
+
+  // Atualiza Involt correto → Recebido
+  const involt=apr.entries.find(e=>e.id==='ur5ji3s')
+  if(involt){involt.status='Recebido';involt.realValue=2000;log('✅ Involt → Recebido R$2.000','ok')}
+  else log('⚠️ Involt (ur5ji3s) não encontrado','warn')
+
+  // Atualiza SA Hair → Recebido
+  const sahair=apr.entries.find(e=>e.id==='xgtwc7q')
+  if(sahair){sahair.status='Recebido';sahair.realValue=1300;log('✅ SA Hair → Recebido R$1.300','ok')}
+  else log('⚠️ SA Hair (xgtwc7q) não encontrado','warn')
+
+  // Entradas a adicionar (evita duplicar se já existir pelo client+expectedValue)
+  function addEntry(entry){
+    const existe=apr.entries.find(e=>e.client===entry.client&&e.expectedValue===entry.expectedValue&&(!entry.clientId||e.clientId===entry.clientId))
+    if(existe){log(`⚠️ Entrada "${entry.client}" já existe — pulando`,'warn');return}
+    apr.entries.push({...entry,id:uid()})
+    log(`✅ + Entrada: ${entry.client} R$${entry.expectedValue.toLocaleString('pt-BR')} (${entry.status})`,'ok')
+  }
+
+  addEntry({client:'OPEN GD',clientId:'27i4gly',dueDay:10,expectedValue:2350,status:'Recebido',realValue:2350,note:''})
+  addEntry({client:'MBX',clientId:'xw4bjr8',dueDay:10,expectedValue:750,status:'Cobrado',realValue:0,note:'Devendo desde dia 10/abr'})
+  addEntry({client:'Empréstimo Vó (1ª parte)',dueDay:20,expectedValue:10000,status:'Recebido',realValue:10000,note:'Emp. R$10k — 12x R$1.179 a partir de 30/jun/2026'})
+  addEntry({client:'Passada Cartão Vó',dueDay:22,expectedValue:10000,status:'Previsto',realValue:0,note:'Passada no cartão da vó — 12x R$951,29 todo dia 20 a partir de mai/2026'})
+  addEntry({client:'BigBear',clientId:'c4',dueDay:26,expectedValue:1000,status:'Previsto',realValue:0,note:'Último mês — contrato encerra abr/2026'})
+  addEntry({client:'BigBear (dívida mar/26)',clientId:'c4',dueDay:26,expectedValue:500,status:'Cobrado',realValue:0,note:'Dívida de março/2026 — cobrado dia 26/mar'})
+  addEntry({client:'Harlem Hamburgueria',clientId:'c5',dueDay:26,expectedValue:500,status:'Previsto',realValue:0,note:''})
+  addEntry({client:'Harlem Pizzaria (dívida fev/26)',clientId:'c6',dueDay:26,expectedValue:500,status:'Cobrado',realValue:0,note:'Dívida de fevereiro/2026'})
+  addEntry({client:'Reddogz',clientId:'c3',dueDay:26,expectedValue:500,status:'Previsto',realValue:0,note:''})
+  addEntry({client:'GABARITEI',clientId:'dhku2g4',dueDay:27,expectedValue:8000,status:'Previsto',realValue:0,note:'Novo cliente — a partir de jun/26 paga R$6.000/mês'})
+  addEntry({client:'ESTIMARE',clientId:'znzboin',dueDay:28,expectedValue:1850,status:'Previsto',realValue:0,note:'Último mês — contrato encerra abr/2026'})
+  addEntry({client:'iPhone Vini (restante)',dueDay:28,expectedValue:500,status:'Previsto',realValue:0,note:'Venda iPhone — R$1.000 recebido em 31/mar, restante até 28/abr'})
+
+  // ── ABRIL/2026 — Saídas ───────────────────────────────────────────────────
+  log('','')
+  log('── Abril/2026 — Saídas ─────────────','dim')
+
+  function addExit(exit){
+    const existe=apr.exits.find(e=>e.name===exit.name&&e.expectedValue===exit.expectedValue)
+    if(existe){log(`⚠️ Saída "${exit.name}" já existe — pulando`,'warn');return}
+    apr.exits.push({...exit,id:uid()})
+    log(`✅ + Saída: ${exit.name} R$${exit.expectedValue.toLocaleString('pt-BR')} (${exit.status})`,'ok')
+  }
+
+  // Já pagas (antes do dia 20)
+  addExit({name:'Emp. Mãe (Lourdes)',category:'Outros',day:10,cardId:null,expectedValue:731.20,status:'Pago',realValue:731.20,note:'Parcela 1/12'})
+  addExit({name:'Fomento Fabiano',category:'Outros',day:10,cardId:null,expectedValue:826.08,status:'Pago',realValue:826.08,note:'Parcela 14/36'})
+  addExit({name:'Fomento Carnaval',category:'Outros',day:10,cardId:null,expectedValue:722.55,status:'Pago',realValue:722.55,note:'Parcela 6/36'})
+  addExit({name:'Cartão Brasil Card',category:'Cartão',day:10,cardId:null,expectedValue:244.00,status:'Pago',realValue:244.00,note:''})
+  addExit({name:'Cartão Santander PF',category:'Cartão',day:10,cardId:null,expectedValue:345.00,status:'Pago',realValue:345.00,note:''})
+  // Pagas hoje (dia 20)
+  addExit({name:'Agatha',category:'Salários',day:20,cardId:null,expectedValue:2310.00,status:'Pago',realValue:2310.00,note:'Último salário em dinheiro'})
+  addExit({name:'Carnaval',category:'Salários',day:20,cardId:null,expectedValue:2153.47,status:'Pago',realValue:2153.47,note:'Último salário em dinheiro — total R$2.500, desconto R$346,53'})
+  // Pendentes
+  addExit({name:'Título Capitalização',category:'Outros',day:20,cardId:null,expectedValue:300.00,status:'Pendente',realValue:0,note:'Parcela 4/60'})
+  addExit({name:'Santander PJ 2',category:'Cartão',day:20,cardId:'k2',expectedValue:166.07,status:'Pendente',realValue:0,note:''})
+  addExit({name:'Santander PJ 3',category:'Cartão',day:20,cardId:null,expectedValue:1724.71,status:'Pendente',realValue:0,note:''})
+  addExit({name:'Cartão Neon',category:'Cartão',day:20,cardId:'k4',expectedValue:995.57,status:'Pendente',realValue:0,note:''})
+  addExit({name:'Cartão Nubank PJ',category:'Cartão',day:18,cardId:'k3',expectedValue:1763.55,status:'Pendente',realValue:0,note:''})
+  addExit({name:'Emp. Nubank (última 3/3)',category:'Outros',day:18,cardId:null,expectedValue:737.58,status:'Pendente',realValue:0,note:'Última parcela'})
+  addExit({name:'Juros Banco',category:'Outros',day:18,cardId:null,expectedValue:200.00,status:'Pendente',realValue:0,note:''})
+  addExit({name:'Inter',category:'Cartão',day:22,cardId:null,expectedValue:1229.60,status:'Pendente',realValue:0,note:''})
+  addExit({name:'MacBook Vó (parcela)',category:'Outros',day:22,cardId:null,expectedValue:2500.00,status:'Pendente',realValue:0,note:''})
+  addExit({name:'Multas',category:'Outros',day:22,cardId:null,expectedValue:1109.00,status:'Pendente',realValue:0,note:'Multas de trânsito'})
+  addExit({name:'Leandro',category:'Salários',day:25,cardId:null,expectedValue:3495.00,status:'Pendente',realValue:0,note:'Abr especial: R$4.000 - R$505 (Claude Max no cartão). A partir de mai: R$4.000'})
+  addExit({name:'Conta Limite Santander',category:'Outros',day:30,cardId:null,expectedValue:5000.00,status:'Pendente',realValue:0,note:'Reposição do limite da conta'})
+
+  // ── CLIENTES ──────────────────────────────────────────────────────────────
+  log('','')
+  log('── Clientes ────────────────────────','dim')
+
+  // Berti → inativo
+  const berti=(data.settings.clients||[]).find(c=>c.name==='BERTI')
+  if(berti){berti.status='inativo';log('✅ BERTI → inativo (cancelou contrato)','ok')}
+  else log('⚠️ BERTI não encontrado nos clientes','warn')
+
+  // ESTIMARE → encerrado
+  const estimare=(data.settings.clients||[]).find(c=>c.name==='ESTIMARE')
+  if(estimare){estimare.contractNote='Contrato encerrado em abr/2026.';log('✅ ESTIMARE → nota de encerramento adicionada','ok')}
+
+  // ── TAREFA ────────────────────────────────────────────────────────────────
+  log('','')
+  log('── Tarefas ─────────────────────────','dim')
+  if(!data.tasks)data.tasks=[]
+  const jaTemTarefa=data.tasks.find(t=>t.title&&t.title.toLowerCase().includes('telas e cadeiras'))
+  if(jaTemTarefa){log('⚠️ Tarefa "telas e cadeiras" já existe — pulando','warn')}
+  else{
+    data.tasks.push({id:uid(),title:'Anunciar telas e cadeiras (Agatha e Carnaval)',description:'Vender 2 telas e 2 cadeiras. Estimativa: R$1.500.',assignee:'Fabiano',priority:'medium',status:'todo',dueDate:'',relatedClientId:'',createdAt:new Date().toISOString()})
+    log('✅ Tarefa criada: Anunciar telas e cadeiras','ok')
+  }
+
+  // ── SALVAR ────────────────────────────────────────────────────────────────
+  log('','')
+  log('💾 Salvando no localStorage...','info')
+  localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  log('✅ Salvo!','ok')
+
+  log('','')
+  log('☁️ Sincronizando com Google Sheets...','info')
+  fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})
+    .then(()=>log('✅ Sincronizado com Google Sheets!','ok'))
+    .catch(()=>log('⚠️ Sync falhou — app vai sincronizar ao abrir.','warn'))
+    .finally(()=>{
+      document.getElementById('btnGo').style.display='block'
+      document.getElementById('btnRun').style.display='none'
+    })
+}
+</script>
+</body>
+</html>
