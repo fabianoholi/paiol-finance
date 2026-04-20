@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Paiol Finance — Migrate 5</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#111;border:1px solid #222;border-radius:20px;padding:32px;max-width:520px;width:100%}
+  h1{font-size:18px;font-weight:700;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:20px}
+  .log{background:#0a0a0a;border-radius:12px;padding:16px;font-size:12px;font-family:monospace;line-height:1.9;max-height:420px;overflow-y:auto;margin-bottom:16px}
+  .ok{color:#10b981}.warn{color:#f59e0b}.err{color:#ef4444}.info{color:#60a5fa}
+  .btn{display:block;width:100%;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+  .btn-run{background:#10b981;color:#fff}
+  .btn-go{background:#1a1a1a;border:1px solid #333;color:#aaa}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🗂 Migrate 5 — Lacunas de clientes</h1>
+  <p class="sub">Preenche entradas faltantes, remove PITOCO pós-contrato, inativa BigBear e ESTIMARE.</p>
+  <div class="log" id="log"><span class="info">Pronto. Clique em Executar.</span></div>
+  <button class="btn btn-run" id="btnRun" onclick="run()">Executar</button>
+  <button class="btn btn-go" id="btnGo" style="display:none" onclick="location.href='/'">→ Abrir o app</button>
+</div>
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
+const GAS_TOKEN='paiol2026secret'
+const el=document.getElementById('log')
+function log(msg,cls=''){el.innerHTML+=`<div class="${cls}">${msg}</div>`;el.scrollTop=el.scrollHeight}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function ensureMonth(data,mk){
+  if(!data.months[mk])data.months[mk]={cashBalance:0,closed:false,snapshot:null,entries:[],exits:[],cardExpenses:{},collaboratorExtras:{},dailyNotes:{},dailyCash:{},cardPayments:{}}
+}
+function addEntry(entries,entry){
+  if(entries.find(e=>e.clientId&&e.clientId===entry.clientId))return false
+  entries.push(entry);return true
+}
+
+function run(){
+  document.getElementById('btnRun').disabled=true
+  el.innerHTML=''
+
+  const raw=localStorage.getItem('paiolfinance_v3')
+  if(!raw){log('❌ Dados não encontrados.','err');document.getElementById('btnRun').disabled=false;return}
+  const data=JSON.parse(raw)
+
+  // ── 1. PITOCO: corrigir startDate/endDate no cadastro ──
+  const pitoco=data.settings.clients.find(c=>c.id==='d7yxc68')
+  if(pitoco){
+    pitoco.startDate='2025-06-01'
+    pitoco.endDate='2026-05-31'
+    pitoco.duration=12
+    log('✅ PITOCO cadastro — startDate jun/2025, fim mai/2026','ok')
+  }
+
+  // ── 2. PITOCO abr/26 (11º mês) ──
+  const apr=data.months['2026-04']
+  if(apr){
+    if(addEntry(apr.entries,{id:uid(),client:'PITOCO',clientId:'d7yxc68',dueDay:10,expectedValue:1500,status:'Previsto',realValue:0,note:'Parcela 11/12'}))
+      log('✅ PITOCO abr/26 R$1.500 adicionado','ok')
+    else log('ℹ️ PITOCO abr/26 já existe','info')
+  }
+
+  // ── 3. PITOCO mai/26 (12º e último mês) ──
+  ensureMonth(data,'2026-05')
+  const may=data.months['2026-05']
+  if(addEntry(may.entries,{id:uid(),client:'PITOCO',clientId:'d7yxc68',dueDay:10,expectedValue:1500,status:'Previsto',realValue:0,note:'Parcela 12/12 — último mês'}))
+    log('✅ PITOCO mai/26 R$1.500 adicionado (último)','ok')
+  else log('ℹ️ PITOCO mai/26 já existe','info')
+
+  // ── 4. Remover PITOCO de jun/26 em diante (contrato encerrado) ──
+  const pitocoExtra=['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12',
+                     '2027-01','2027-02','2027-03','2027-04','2027-05']
+  let removidos=0
+  pitocoExtra.forEach(mk=>{
+    if(!data.months[mk])return
+    const antes=data.months[mk].entries.length
+    data.months[mk].entries=data.months[mk].entries.filter(e=>e.clientId!=='d7yxc68')
+    removidos+=antes-data.months[mk].entries.length
+  })
+  if(removidos>0)log(`✅ PITOCO removido de ${removidos} meses após mai/26 (contrato encerrado)`,'ok')
+
+  // ── 5. Reddogz mai/26 ──
+  if(addEntry(may.entries,{id:uid(),client:'Reddogz',clientId:'c3',dueDay:26,expectedValue:500,status:'Previsto',realValue:0,note:''}))
+    log('✅ Reddogz mai/26 R$500 adicionado','ok')
+  else log('ℹ️ Reddogz mai/26 já existe','info')
+
+  // ── 6. Harlem Hamburgueria mai/26 ──
+  if(addEntry(may.entries,{id:uid(),client:'Harlem Hamburgueria',clientId:'c5',dueDay:26,expectedValue:500,status:'Previsto',realValue:0,note:''}))
+    log('✅ Harlem Hamburgueria mai/26 R$500 adicionado','ok')
+  else log('ℹ️ Harlem Hamburgueria mai/26 já existe','info')
+
+  // ── 7. Planeta Pizza mai/26 ──
+  if(addEntry(may.entries,{id:uid(),client:'Planeta Pizza',clientId:'c7',dueDay:26,expectedValue:0,status:'Previsto',realValue:0,note:'Gerado pelo contrato'}))
+    log('✅ Planeta Pizza mai/26 adicionado','ok')
+  else log('ℹ️ Planeta Pizza mai/26 já existe','info')
+
+  // ── 8. GABARITEI mai/26 (R$8.000) ──
+  if(addEntry(may.entries,{id:uid(),client:'GABARITEI',clientId:'dhku2g4',dueDay:27,expectedValue:8000,status:'Previsto',realValue:0,note:'Último mês R$8.000 — a partir de jun/26 paga R$6.000'}))
+    log('✅ GABARITEI mai/26 R$8.000 adicionado','ok')
+  else log('ℹ️ GABARITEI mai/26 já existe','info')
+
+  // ── 9. GABARITEI jun/26 a mar/27 (R$6.000) ──
+  const gabMeses=['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12',
+                  '2027-01','2027-02','2027-03']
+  gabMeses.forEach(mk=>{
+    ensureMonth(data,mk)
+    const m=data.months[mk]
+    const existe=m.entries.find(e=>e.clientId==='dhku2g4')
+    if(!existe){
+      m.entries.push({id:uid(),client:'GABARITEI',clientId:'dhku2g4',dueDay:27,expectedValue:6000,status:'Previsto',realValue:0,note:''})
+      log(`✅ GABARITEI ${mk} R$6.000 adicionado`,'ok')
+    }else if(existe.expectedValue!==6000){
+      existe.expectedValue=6000
+      log(`✅ GABARITEI ${mk} valor atualizado → R$6.000`,'ok')
+    }else{
+      log(`ℹ️ GABARITEI ${mk} já existe`,'info')
+    }
+  })
+
+  // ── 10. MBX fev/26 e mar/26 (histórico — Recebido) ──
+  ;['2026-02','2026-03'].forEach((mk,i)=>{
+    ensureMonth(data,mk)
+    if(addEntry(data.months[mk].entries,{id:uid(),client:'MBX',clientId:'xw4bjr8',dueDay:10,expectedValue:750,status:'Recebido',realValue:750,note:`Parcela ${i+1}/12`}))
+      log(`✅ MBX ${mk} R$750 adicionado (histórico Recebido)`,'ok')
+    else log(`ℹ️ MBX ${mk} já existe`,'info')
+  })
+
+  // ── 11. MBX mai/26 a jan/27 (Previsto) ──
+  const mbxMeses=['2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12','2027-01']
+  mbxMeses.forEach((mk,i)=>{
+    ensureMonth(data,mk)
+    if(addEntry(data.months[mk].entries,{id:uid(),client:'MBX',clientId:'xw4bjr8',dueDay:10,expectedValue:750,status:'Previsto',realValue:0,note:`Parcela ${i+4}/12`}))
+      log(`✅ MBX ${mk} R$750 adicionado`,'ok')
+    else log(`ℹ️ MBX ${mk} já existe`,'info')
+  })
+
+  // ── 12. Inativar BigBear ──
+  const bigbear=data.settings.clients.find(c=>c.id==='c4')
+  if(bigbear&&bigbear.status!=='inativo'){bigbear.status='inativo';log('✅ BigBear → inativo','ok')}
+  else log('ℹ️ BigBear já inativo','info')
+
+  // ── 13. Inativar ESTIMARE ──
+  const estimare=data.settings.clients.find(c=>c.id==='znzboin')
+  if(estimare&&estimare.status!=='inativo'){estimare.status='inativo';log('✅ ESTIMARE → inativo','ok')}
+  else log('ℹ️ ESTIMARE já inativo','info')
+
+  log('','')
+  log('⚠️ Ainda sem data de início: IANESKO, RHEDE, BBB — configure quando quiser.','warn')
+  log('','')
+  log('💾 Salvando...','info')
+  localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  log('✅ Salvo!','ok')
+
+  log('☁️ Sincronizando com Sheets...','info')
+  fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})
+    .then(()=>log('✅ Sincronizado!','ok'))
+    .catch(()=>log('⚠️ Sync falhou — sincroniza ao abrir o app.','warn'))
+    .finally(()=>{
+      document.getElementById('btnGo').style.display='block'
+      document.getElementById('btnRun').style.display='none'
+    })
+}
+</script>
+</body>
+</html>
