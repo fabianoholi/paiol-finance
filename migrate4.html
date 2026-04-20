@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Paiol Finance — Patch 4</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#111;border:1px solid #222;border-radius:20px;padding:32px;max-width:480px;width:100%}
+  h1{font-size:18px;font-weight:700;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:20px}
+  .log{background:#0a0a0a;border-radius:12px;padding:16px;font-size:12px;font-family:monospace;line-height:1.9;max-height:360px;overflow-y:auto;margin-bottom:16px}
+  .ok{color:#10b981}.warn{color:#f59e0b}.err{color:#ef4444}.info{color:#60a5fa}
+  .btn{display:block;width:100%;padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+  .btn-run{background:#10b981;color:#fff}
+  .btn-go{background:#1a1a1a;border:1px solid #333;color:#aaa}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🩹 Patch 4 — Abril/2026</h1>
+  <p class="sub">Corrige status de 3 saídas + adiciona Fabiano R$2.075,49 + permuta Carnaval R$346,53.</p>
+  <div class="log" id="log"><span class="info">Pronto. Clique em Executar.</span></div>
+  <button class="btn btn-run" id="btnRun" onclick="run()">Executar</button>
+  <button class="btn btn-go" id="btnGo" style="display:none" onclick="location.href='/'">→ Abrir o app</button>
+</div>
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
+const GAS_TOKEN='paiol2026secret'
+const el=document.getElementById('log')
+function log(msg,cls=''){el.innerHTML+=`<div class="${cls}">${msg}</div>`;el.scrollTop=el.scrollHeight}
+function uid(){return Math.random().toString(36).slice(2,9)}
+
+function run(){
+  document.getElementById('btnRun').disabled=true
+  el.innerHTML=''
+
+  const raw=localStorage.getItem('paiolfinance_v3')
+  if(!raw){log('❌ Dados não encontrados.','err');document.getElementById('btnRun').disabled=false;return}
+
+  const data=JSON.parse(raw)
+  const apr=data.months['2026-04']
+  if(!apr){log('❌ Abril/2026 não encontrado.','err');document.getElementById('btnRun').disabled=false;return}
+
+  // 1. Corrige status de 3 saídas por ID (idempotente)
+  const fixes=[
+    {id:'646rq9x', name:'Título Capitalização', realValue:300},
+    {id:'h6zfdd4', name:'Emp. Nubank (última 3/3)', realValue:737.58},
+    {id:'bmimqnq', name:'Juros Banco', realValue:200},
+  ]
+  fixes.forEach(f=>{
+    const e=apr.exits.find(x=>x.id===f.id)
+    if(!e){log(`⚠️ ${f.name} não encontrado (id ${f.id})','warn')`,'warn');return}
+    if(e.status==='Pago'&&e.realValue===f.realValue){log(`ℹ️ ${f.name} já está Pago — pulando`,'info');return}
+    e.status='Pago';e.realValue=f.realValue
+    log(`✅ ${f.name} → Pago R$${f.realValue.toLocaleString('pt-BR',{minimumFractionDigits:2})}`,'ok')
+  })
+
+  // 2. Adiciona Fabiano R$2.075,49 (idempotente)
+  const jaTemFabiano=apr.exits.find(e=>e.name==='Fabiano'&&Math.abs(e.expectedValue-2075.49)<0.01)
+  if(jaTemFabiano){
+    log('ℹ️ Fabiano R$2.075,49 já existe — pulando','info')
+  } else {
+    apr.exits.push({id:uid(),name:'Fabiano',category:'Salários',day:20,cardId:null,expectedValue:2075.49,status:'Pago',realValue:2075.49,note:''})
+    log('✅ Fabiano R$2.075,49 → Pago adicionado','ok')
+  }
+
+  // 3. Permuta Carnaval abr/2026 — R$346,53
+  const carnavalClient=(data.settings.clients||[]).find(c=>c.name.toLowerCase().includes('carnaval'))
+  if(!carnavalClient){
+    log('⚠️ Cliente Carnaval não encontrado — permuta não registrada','warn')
+  } else {
+    if(!data.settings.permuteUsages)data.settings.permuteUsages=[]
+    const jaTemPermuta=data.settings.permuteUsages.find(u=>u.clientId===carnavalClient.id&&u.month==='2026-04'&&Math.abs(u.value-346.53)<0.01)
+    if(jaTemPermuta){
+      log('ℹ️ Permuta Carnaval abr/26 já existe — pulando','info')
+    } else {
+      data.settings.permuteUsages.push({id:uid(),clientId:carnavalClient.id,month:'2026-04',value:346.53,note:'Desconto no salário — total R$2.500 − R$2.153,47 pago em dinheiro'})
+      log('✅ Permuta Carnaval abr/26 R$346,53 registrada','ok')
+    }
+  }
+
+  log('','')
+  log('💾 Salvando...','info')
+  localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  log('✅ Salvo!','ok')
+
+  log('☁️ Sincronizando com Sheets...','info')
+  fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})
+    .then(()=>log('✅ Sincronizado!','ok'))
+    .catch(()=>log('⚠️ Sync falhou — sincroniza ao abrir o app.','warn'))
+    .finally(()=>{
+      document.getElementById('btnGo').style.display='block'
+      document.getElementById('btnRun').style.display='none'
+    })
+}
+</script>
+</body>
+</html>
