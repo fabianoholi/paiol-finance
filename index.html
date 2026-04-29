@@ -3043,6 +3043,7 @@ const loadAsstMsgs=()=>{try{const s=localStorage.getItem('paiol_asst_msgs');retu
 const saveAsstMsgs=m=>{try{localStorage.setItem('paiol_asst_msgs',JSON.stringify(m.slice(-200)))}catch(e){}}
 const loadAsstProvider=()=>{try{return localStorage.getItem('paiol_asst_provider')||'groq'}catch(e){return 'groq'}}
 const saveAsstProvider=p=>{try{localStorage.setItem('paiol_asst_provider',p)}catch(e){}}
+const ASST_DEBUG=(()=>{try{return new URLSearchParams(window.location.search).get('debug')==='1'}catch(e){return false}})()
 const fmtDur=s=>{const m=Math.floor(s/60);const sec=s%60;return `${m}:${String(sec).padStart(2,'0')}`}
 const fmtSize=b=>b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'
 
@@ -3143,18 +3144,20 @@ async function askAssistantAI({userMsg,state,history,provider,curMk}){
     else if(h.role==='assistant')messages.push({role:'assistant',content:h.text||''})
   }
   messages.push({role:'user',content:userText})
+  const reqBody={token:AI_TOKEN,action:'chat',provider,messages,jsonMode:true,temperature:0.2}
   try{
-    const res=await fetch(AI_GAS_URL,{method:'POST',body:JSON.stringify({token:AI_TOKEN,action:'chat',provider,messages,jsonMode:true,temperature:0.2})})
+    const res=await fetch(AI_GAS_URL,{method:'POST',body:JSON.stringify(reqBody)})
     if(!res.ok)throw new Error('HTTP '+res.status)
     const data=await res.json()
     if(!data.ok)throw new Error(data.error||'ia retornou erro')
-    let parsed
-    try{parsed=JSON.parse(data.content)}catch(err){
-      return {reply:data.content||'(resposta vazia)',preview:null}
+    let parsed,parseErr=null
+    try{parsed=JSON.parse(data.content)}catch(err){parseErr=err.message}
+    if(parseErr){
+      return {reply:data.content||'(resposta vazia)',preview:null,_debug:{provider,messages,raw:data.content,parsed:null,parseErr,error:null}}
     }
-    return {reply:parsed.reply||'(sem reply)',preview:parsed.preview||null}
+    return {reply:parsed.reply||'(sem reply)',preview:parsed.preview||null,_debug:{provider,messages,raw:data.content,parsed,parseErr:null,error:null}}
   }catch(e){
-    return {reply:`⚠️ Não consegui falar com a IA (${e.message}). Usando modo básico — tenta de novo ou reformula?`,preview:null,error:e.message}
+    return {reply:`⚠️ Não consegui falar com a IA (${e.message}). Usando modo básico — tenta de novo ou reformula?`,preview:null,error:e.message,_debug:{provider,messages,raw:null,parsed:null,parseErr:null,error:e.message}}
   }
 }
 
@@ -3248,6 +3251,9 @@ function AssistantPage({state,dispatch,toast}){
   const [thinking,setThinking]=useState(false)
   const [provider,setProvider]=useState(loadAsstProvider)
   const [showProviderMenu,setShowProviderMenu]=useState(false)
+  const [debugLog,setDebugLog]=useState([])
+  const [debugOpen,setDebugOpen]=useState({})
+  const pushDebug=ASST_DEBUG?(entry=>setDebugLog(l=>[{...entry,id:uid(),ts:Date.now()},...l].slice(0,5))):null
   const recRef=useRef(null)
   const recStartRef=useRef(0)
   const streamRef=useRef(null)
@@ -3319,11 +3325,16 @@ function AssistantPage({state,dispatch,toast}){
       r=mockAsstRespond(augMsg,state,mk)
     }
     setThinking(false)
+    if(pushDebug)pushDebug({type:'send',userText:finalText,reply:r.reply,preview:r.preview,debug:r._debug||null})
     setMessages(m=>[...m,{id:uid(),role:'assistant',text:r.reply,ts:Date.now()}])
-    if(r.preview)setPreview(r.preview)
+    if(r.preview){
+      if(preview&&pushDebug)pushDebug({type:'preview-overwritten',oldOkLabel:preview.okLabel,newOkLabel:r.preview.okLabel})
+      setPreview(r.preview)
+    }
   }
   function confirmPreview(){
     if(!preview)return
+    if(pushDebug)pushDebug({type:'confirm',okLabel:preview.okLabel,actionType:preview.action?.type,payload:preview.action?.payload})
     dispatch(preview.action)
     toast('Registrado ✓')
     setMessages(m=>[...m,{id:uid(),role:'assistant',text:`✅ Registrado: ${preview.okLabel}`,ts:Date.now()}])
@@ -3331,6 +3342,7 @@ function AssistantPage({state,dispatch,toast}){
     inputRef.current?.focus()
   }
   function cancelPreview(){
+    if(pushDebug)pushDebug({type:'cancel',okLabel:preview?.okLabel})
     setMessages(m=>[...m,{id:uid(),role:'assistant',text:'Ok, descartei. Me conta de novo com mais detalhes?',ts:Date.now()}])
     setPreview(null)
     inputRef.current?.focus()
@@ -3507,6 +3519,43 @@ function AssistantPage({state,dispatch,toast}){
       <div className="mt-2 text-xs text-center" style={{color:'var(--text-4)'}}>
         Fase 1c · {provider==='gemini'?'Gemini 2.0 Flash':'Groq · Llama 3.3 70B'} + Whisper áudio · Sempre pede confirmação
       </div>
+      {ASST_DEBUG&&(
+        <div className="mt-3 rounded-2xl p-3" style={{background:'#0a0a0a',border:'1px solid #f59e0b55',color:'#f5f5f5'}}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold tracking-wider" style={{color:'#f59e0b'}}>🐛 DEBUG IA · últimos {debugLog.length}/5</div>
+            {debugLog.length>0&&<button onClick={()=>{setDebugLog([]);setDebugOpen({})}} className="text-xs px-2 py-1 rounded" style={{color:'#f59e0b',background:'#f59e0b15'}}>Limpar</button>}
+          </div>
+          {debugLog.length===0&&<div className="text-xs italic" style={{color:'#888'}}>Sem eventos ainda. Mande uma mensagem.</div>}
+          <div className="space-y-1.5">
+            {debugLog.map(d=>{
+              const isOpen=!!debugOpen[d.id]
+              const time=new Date(d.ts).toLocaleTimeString('pt-BR',{hour12:false})
+              const tag={send:'📤 send',confirm:'✅ confirm',cancel:'✖ cancel','preview-overwritten':'⚠ overwrite'}[d.type]||d.type
+              const tagColor={send:'#3b82f6',confirm:'#10b981',cancel:'#888','preview-overwritten':'#ef4444'}[d.type]||'#f59e0b'
+              return(
+                <div key={d.id} className="rounded-lg" style={{background:'#161616',border:'1px solid #2a2a2a'}}>
+                  <button onClick={()=>setDebugOpen(o=>({...o,[d.id]:!o[d.id]}))} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-xs">
+                    <span style={{color:tagColor,fontWeight:600,minWidth:90}}>{tag}</span>
+                    <span style={{color:'#888'}}>{time}</span>
+                    <span className="flex-1 truncate" style={{color:'#bbb'}}>
+                      {d.type==='send'&&(d.userText||'(vazio)')+(d.preview?` → preview: ${d.preview.okLabel}`:'')}
+                      {d.type==='confirm'&&`${d.actionType} · ${d.okLabel}`}
+                      {d.type==='cancel'&&(d.okLabel||'(sem preview)')}
+                      {d.type==='preview-overwritten'&&`"${d.oldOkLabel}" → "${d.newOkLabel}"`}
+                    </span>
+                    <span style={{color:'#666'}}>{isOpen?'▾':'▸'}</span>
+                  </button>
+                  {isOpen&&(
+                    <pre className="px-2.5 pb-2 text-xs overflow-x-auto" style={{color:'#d4d4d4',fontFamily:'ui-monospace,monospace',fontSize:11,lineHeight:1.4,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>
+{JSON.stringify(d,(k,v)=>k==='id'||k==='ts'||k==='type'?undefined:v,2)}
+                    </pre>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
