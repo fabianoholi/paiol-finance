@@ -3059,6 +3059,7 @@ function buildAsstSystemPrompt(state,curMk){
   const s=state.settings||{}
   const m=state.months?.[curMk]||{}
   const today=new Date().toISOString().slice(0,10)
+  const todayDay=new Date().getDate()
   const cli=(s.clients||[]).map(c=>`  - ${c.name} (id:${c.id}) · R$${c.value}/mês${c.permuteValue>0?` + R$${c.permuteValue} permuta`:''} · vence dia ${c.dueDay}${c.phone?` · tel ${c.phone}`:''}${c.endDate?` · encerra ${c.endDate}`:''}${c.contractNote?` · "${c.contractNote}"`:''}`).join('\n')
   const crd=(s.cards||[]).map(c=>`  - ${c.name} (id:${c.id}) · ${c.type} · limite R$${c.limit} · fecha ${c.closeDay}, vence ${c.dueDay}${c.description?` · ${c.description}`:''}`).join('\n')
   const col=(s.collaborators||[]).map(c=>`  - ${c.name} (id:${c.id}) · ${c.role} · R$${c.baseSalary}/mês`).join('\n')
@@ -3066,6 +3067,14 @@ function buildAsstSystemPrompt(state,curMk){
   const ent=(m.entries||[]).filter(e=>e.status==='Recebido').reduce((a,e)=>a+(e.realValue||0),0)
   const sai=(m.exits||[]).filter(e=>e.status==='Pago').reduce((a,e)=>a+(e.realValue||0),0)
   const pend=(m.entries||[]).filter(e=>e.status!=='Recebido').reduce((a,e)=>a+(e.expectedValue||0),0)
+  const entAll=m.entries||[]
+  const entVis=entAll.slice(-30)
+  const entList=entVis.map(e=>`  - [${e.id}] ${e.client} · vence dia ${e.dueDay||'?'} · R$${e.expectedValue||0} previsto · R$${e.realValue||0} real · ${e.status}${e.note?` · "${e.note}"`:''}`).join('\n')
+  const entOmitted=entAll.length>30?`\n  (+ ${entAll.length-30} entradas mais antigas omitidas)`:''
+  const exAll=m.exits||[]
+  const exVis=exAll.slice(-30)
+  const exList=exVis.map(e=>`  - [${e.id}] ${e.name||e.description||'(sem nome)'} · ${e.category||'?'} · dia ${e.day||'?'} · R$${e.expectedValue||0} previsto · R$${e.realValue||0} real · ${e.status}${e.cardId?` · cartão ${e.cardId}`:''}${e.note?` · "${e.note}"`:''}`).join('\n')
+  const exOmitted=exAll.length>30?`\n  (+ ${exAll.length-30} saídas mais antigas omitidas)`:''
   return `Você é o Assistente Paiol, copiloto financeiro da Paiol Mídias (agência de mídias no interior do Brasil).
 
 MISSÃO: ajudar Fabiano e Mainara a registrar entradas/saídas, editar clientes/colaboradores/cartões, e responder sobre o negócio. pt-BR coloquial, direto, emojis moderados.
@@ -3077,8 +3086,11 @@ REGRAS:
 4. Categorias válidas pra saídas: ${CATEGORIES.join(', ')}.
 5. Status válidos entrada: Previsto, Cobrado, Recebido. Saída: Pendente, Pago.
 6. dueDay/day: inteiro 1-31. Valores em reais como número (não string).
+7. **NÃO DUPLIQUE**. Quando o usuário registrar pagamento RECEBIDO/PAGO de cliente/conta que JÁ TEM entrada/saída pendente no mês (status Previsto, Cobrado ou Pendente), USE UPDATE_ENTRY/UPDATE_EXIT no id existente (veja listas abaixo). NÃO crie linha nova. Atualize status pra Recebido/Pago e ajuste realValue.
+8. Para registros REALIZADOS HOJE (status Recebido/Pago), use dueDay/day = ${todayDay} (dia de hoje), NÃO o vencimento do contrato.
+9. Só use ADD_ENTRY/ADD_EXIT se for lançamento NOVO que não existe no mês (ex: pagamento adicional, parcela extra, despesa avulsa).
 
-HOJE: ${today} · MÊS ATUAL: ${curMk}
+HOJE: ${today} (dia ${todayDay}) · MÊS ATUAL: ${curMk}
 SALDO CAIXA: R$ ${(m.cashBalance||0).toFixed(2)} · ENTRADAS RECEBIDAS: R$ ${ent.toFixed(2)} · SAÍDAS PAGAS: R$ ${sai.toFixed(2)} · A RECEBER: R$ ${pend.toFixed(2)}
 
 CLIENTES:
@@ -3093,28 +3105,39 @@ ${col||'  (nenhum)'}
 DESPESAS FIXAS MENSAIS:
 ${fix||'  (nenhuma)'}
 
+ENTRADAS DO MÊS ${curMk} (id entre [colchetes] — copie EXATO pra UPDATE/DELETE):
+${entList||'  (nenhuma)'}${entOmitted}
+
+SAÍDAS DO MÊS ${curMk} (id entre [colchetes] — copie EXATO pra UPDATE/DELETE):
+${exList||'  (nenhuma)'}${exOmitted}
+
 FORMATO DE RESPOSTA (JSON):
 {
   "reply": "texto pro usuário (pergunta, resposta ou confirmação)",
   "preview": null OR {
-    "title": "Nova entrada" | "Nova saída" | "Atualizar cliente" | "Novo cliente" | etc,
+    "title": "Nova entrada" | "Nova saída" | "Atualizar entrada" | "Atualizar saída" | "Novo cliente" | etc,
     "icon": emoji apropriado,
     "color": "#10b981" entrada | "#ef4444" saída | "#8b5cf6" cliente | "#3b82f6" outro,
     "fields": [["Rótulo","Valor"], ...],
     "action": {"type": TIPO, "payload": OBJETO},
-    "okLabel": "string curta tipo 'Entrada R$500 — Harlem'"
+    "okLabel": "string curta tipo 'Entrada R$500 — Harlem' ou 'Atualiza Harlem → Recebido'"
   }
 }
 
 TIPOS DE ACTION:
 - ADD_ENTRY: payload={monthKey:"${curMk}", entry:{client, clientId, expectedValue, realValue, status, dueDay, note}}
-- ADD_EXIT: payload={monthKey:"${curMk}", exit:{name, description, category, expectedValue, realValue, status, day, note, cardId (opcional, id do cartão se mencionado)}}
+- UPDATE_ENTRY: payload={monthKey:"${curMk}", entry:{id:"<id-EXATO-da-lista>", client, clientId, expectedValue, realValue, status, dueDay, note}}
+- DELETE_ENTRY: payload={monthKey:"${curMk}", id:"<id-EXATO>"}
+- ADD_EXIT: payload={monthKey:"${curMk}", exit:{name, description, category, expectedValue, realValue, status, day, note, cardId (opcional)}}
+- UPDATE_EXIT: payload={monthKey:"${curMk}", exit:{id:"<id-EXATO>", name, description, category, expectedValue, realValue, status, day, note, cardId}}
+- DELETE_EXIT: payload={monthKey:"${curMk}", id:"<id-EXATO>"}
 - ADD_SETTING: payload={key:"clients"|"cards"|"collaborators", item:{...campos}}
 - UPDATE_SETTING: payload={key:"clients"|"cards"|"collaborators", item:{id, ...campos atualizados}}
 
 Se for só consulta ("qual o saldo?", "quanto Harlem paga?"), responda em "reply" e deixe "preview": null.
 Se o usuário mencionar cartão pelo nome, use o id exato da lista acima no campo "cardId".
-Se o usuário citar um cliente, tente casar pelo nome e use o "clientId" exato.`
+Se o usuário citar um cliente, tente casar pelo nome e use o "clientId" exato.
+Em UPDATE_ENTRY/UPDATE_EXIT, copie o id EXATAMENTE como aparece entre [colchetes] na lista — sem inventar.`
 }
 
 async function blobToBase64(blob){
@@ -3557,7 +3580,7 @@ function AssistantPage({state,dispatch,toast}){
                   </button>
                   {isOpen&&(
                     <pre className="px-2.5 pb-2 text-xs overflow-x-auto" style={{color:'#d4d4d4',fontFamily:'ui-monospace,monospace',fontSize:11,lineHeight:1.4,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>
-{JSON.stringify(d,(k,v)=>k==='id'||k==='ts'||k==='type'?undefined:v,2)}
+{JSON.stringify(d,(k,v)=>k==='id'||k==='ts'?undefined:v,2)}
                     </pre>
                   )}
                 </div>
