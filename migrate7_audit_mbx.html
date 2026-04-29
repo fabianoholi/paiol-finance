@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paiol Finance — Auditoria MBX</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;padding:24px}
+  .wrap{max-width:760px;margin:0 auto}
+  .card{background:#111;border:1px solid #222;border-radius:20px;padding:24px;margin-bottom:16px}
+  h1{font-size:20px;font-weight:700;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:16px;line-height:1.5}
+  .summary{background:#1a1a1a;border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.7;margin-bottom:16px;border:1px solid #2a2a2a}
+  .summary b{color:#10b981}
+  .entry{background:#161616;border:1px solid #252525;border-radius:12px;padding:14px;margin-bottom:10px}
+  .entry.deleted{opacity:0.4;background:#2a0a0a;border-color:#5a1a1a}
+  .entry.edited{border-color:#f59e0b66;background:#1a1505}
+  .entry-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .entry-title{font-size:14px;font-weight:600}
+  .entry-id{font-family:monospace;font-size:10px;color:#666;background:#0a0a0a;padding:2px 6px;border-radius:4px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;text-transform:uppercase}
+  .badge.recebido{background:#06522020;color:#10b981;border:1px solid #10b98130}
+  .badge.cobrado{background:#78350f20;color:#f59e0b;border:1px solid #f59e0b30}
+  .badge.previsto{background:#1e40af20;color:#60a5fa;border:1px solid #3b82f630}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:#aaa;margin-bottom:10px}
+  .grid div{background:#0d0d0d;padding:6px 10px;border-radius:6px}
+  .grid b{color:#fff;font-weight:600}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .btn{padding:6px 12px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-edit{background:#1e40af30;color:#60a5fa;border:1px solid #3b82f640}
+  .btn-del{background:#7f1d1d30;color:#f87171;border:1px solid #ef444440}
+  .btn-undo{background:#1a1a1a;color:#aaa;border:1px solid #333}
+  .edit-form{margin-top:10px;padding:12px;background:#0d0d0d;border-radius:8px}
+  .edit-form label{display:block;font-size:11px;color:#888;margin:8px 0 4px}
+  .edit-form input,.edit-form select{width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;padding:8px 10px;border-radius:6px;font-size:13px;font-family:inherit}
+  .edit-form .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .save-bar{position:sticky;bottom:0;background:#0a0a0a;padding:16px 0;border-top:1px solid #222;margin-top:24px}
+  .save-bar button{width:100%;padding:14px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+  .save-bar button:disabled{opacity:0.5;cursor:not-allowed;background:#444}
+  .log{background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;line-height:1.7;max-height:120px;overflow-y:auto;margin-top:12px}
+  .log .ok{color:#10b981}.log .err{color:#ef4444}.log .info{color:#60a5fa}
+  .empty{text-align:center;padding:40px 20px;color:#666;font-size:13px}
+  .month-head{font-size:13px;font-weight:700;color:#888;margin:16px 0 8px;text-transform:uppercase;letter-spacing:0.5px}
+  .filter{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .filter input{flex:1;background:#1a1a1a;border:1px solid #333;color:#fff;padding:8px 12px;border-radius:8px;font-size:13px;font-family:inherit;min-width:120px}
+  .filter button{padding:8px 14px;background:#1a1a1a;border:1px solid #333;color:#aaa;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit}
+  .filter button.active{background:#10b98120;border-color:#10b981;color:#10b981}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+  <h1>🔍 Auditoria de Entradas</h1>
+  <p class="sub">Inspecione e limpe entries duplicadas. Use o filtro pra buscar por cliente. Edições e deleções ficam pendentes — clique em "Salvar tudo" no final pra persistir.</p>
+
+  <div class="filter">
+    <input type="text" id="search" placeholder="Cliente (ex: MBX, Harlem) — vazio = todos" oninput="render()">
+    <button onclick="setFilter('all')" id="fAll" class="active">Todos meses</button>
+    <button onclick="setFilter('current')" id="fCur">Mês atual</button>
+  </div>
+
+  <div id="summary" class="summary"></div>
+  <div id="list"></div>
+
+  <div class="save-bar">
+    <button id="btnSave" onclick="saveAll()" disabled>Salvar e sincronizar</button>
+    <div id="log" class="log" style="display:none"></div>
+  </div>
+</div>
+</div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbzM2oEsSerSxuXhV4ib1hiN0t4h13967-7y2FPnt2tGYKw72e6UMSag23LEs13Fyl2fLQ/exec'
+const GAS_TOKEN='paiol2026secret'
+const raw=localStorage.getItem('paiolfinance_v3')
+if(!raw){document.body.innerHTML='<div style="padding:40px;text-align:center;color:#ef4444">❌ Dados não encontrados no localStorage. Abra o app primeiro.</div>';throw new Error('no data')}
+const data=JSON.parse(raw)
+let filter='all'
+const curMk=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`})()
+let pending={}  // {entryId: {action:'delete'|'edit', monthKey, changes?}}
+
+function setFilter(f){filter=f;document.getElementById('fAll').className=f==='all'?'active':'';document.getElementById('fCur').className=f==='current'?'active':'';render()}
+
+function getAllEntries(){
+  const search=(document.getElementById('search')?.value||'').toLowerCase().trim()
+  const months=Object.keys(data.months||{}).sort().reverse()
+  const result=[]
+  months.forEach(mk=>{
+    if(filter==='current'&&mk!==curMk)return
+    const entries=data.months[mk].entries||[]
+    entries.forEach(e=>{
+      if(search&&!(e.client||'').toLowerCase().includes(search))return
+      result.push({...e,monthKey:mk})
+    })
+  })
+  return result
+}
+
+function render(){
+  const all=getAllEntries()
+  const list=document.getElementById('list')
+  const sum=document.getElementById('summary')
+  const search=(document.getElementById('search')?.value||'').toLowerCase().trim()
+  const totalReal=all.filter(e=>!pending[e.id+'@'+e.monthKey]||pending[e.id+'@'+e.monthKey].action!=='delete').filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
+  const totalExp=all.filter(e=>!pending[e.id+'@'+e.monthKey]||pending[e.id+'@'+e.monthKey].action!=='delete').reduce((s,e)=>s+(e.expectedValue||0),0)
+  const pendingCount=Object.keys(pending).length
+  sum.innerHTML=`<div><b>${all.length}</b> entries encontradas${search?` para "${search}"`:''}${filter==='current'?` no mês ${curMk}`:''}</div>
+    <div>Soma previsto: <b>R$ ${totalExp.toFixed(2)}</b> · soma recebido: <b>R$ ${totalReal.toFixed(2)}</b></div>
+    ${pendingCount>0?`<div style="color:#f59e0b;margin-top:6px">⏳ <b>${pendingCount}</b> alteração(ões) pendente(s) — clique "Salvar" pra aplicar</div>`:''}`
+
+  if(all.length===0){list.innerHTML='<div class="empty">Nenhuma entry encontrada.</div>';return}
+
+  let html=''
+  let lastMk=null
+  all.forEach(e=>{
+    if(e.monthKey!==lastMk){
+      html+=`<div class="month-head">📅 ${e.monthKey}</div>`
+      lastMk=e.monthKey
+    }
+    const key=e.id+'@'+e.monthKey
+    const p=pending[key]
+    const cls=p?.action==='delete'?'deleted':p?.action==='edit'?'edited':''
+    const cur=p?.action==='edit'?{...e,...p.changes}:e
+    html+=`<div class="entry ${cls}" id="entry-${key}">
+      <div class="entry-head">
+        <div>
+          <span class="entry-title">${cur.client||'(sem cliente)'}</span>
+          <span class="entry-id">${e.id}</span>
+        </div>
+        <span class="badge ${(cur.status||'').toLowerCase()}">${cur.status||'?'}</span>
+      </div>
+      <div class="grid">
+        <div>Vence dia: <b>${cur.dueDay||'—'}</b></div>
+        <div>Status: <b>${cur.status}</b></div>
+        <div>Previsto: <b>R$ ${(cur.expectedValue||0).toFixed(2)}</b></div>
+        <div>Recebido: <b>R$ ${(cur.realValue||0).toFixed(2)}</b></div>
+        ${cur.note?`<div style="grid-column:1/-1">Nota: "${cur.note}"</div>`:''}
+        ${p?.action==='edit'?'<div style="grid-column:1/-1;color:#f59e0b">⚠️ EDITADO — não salvo ainda</div>':''}
+        ${p?.action==='delete'?'<div style="grid-column:1/-1;color:#ef4444">🗑 MARCADO PARA DELETAR — não salvo ainda</div>':''}
+      </div>
+      <div class="actions">
+        ${p?`<button class="btn btn-undo" onclick="undo('${key}')">Desfazer</button>`:`
+          <button class="btn btn-edit" onclick="startEdit('${key}','${e.monthKey}','${e.id}')">✏️ Editar</button>
+          <button class="btn btn-del" onclick="markDelete('${key}','${e.monthKey}','${e.id}')">🗑 Deletar</button>
+        `}
+      </div>
+      <div id="form-${key}"></div>
+    </div>`
+  })
+  list.innerHTML=html
+  document.getElementById('btnSave').disabled=pendingCount===0
+}
+
+function startEdit(key,mk,id){
+  const e=data.months[mk].entries.find(x=>x.id===id)
+  if(!e)return
+  const f=document.getElementById('form-'+key)
+  f.innerHTML=`<div class="edit-form">
+    <div class="row">
+      <div><label>Status</label>
+        <select id="ed-status-${key}">
+          <option value="Previsto" ${e.status==='Previsto'?'selected':''}>Previsto</option>
+          <option value="Cobrado" ${e.status==='Cobrado'?'selected':''}>Cobrado</option>
+          <option value="Recebido" ${e.status==='Recebido'?'selected':''}>Recebido</option>
+        </select>
+      </div>
+      <div><label>Dia vencimento</label><input type="number" id="ed-dueDay-${key}" value="${e.dueDay||''}" min="1" max="31"></div>
+    </div>
+    <div class="row">
+      <div><label>Previsto (R$)</label><input type="number" step="0.01" id="ed-exp-${key}" value="${e.expectedValue||0}"></div>
+      <div><label>Recebido (R$)</label><input type="number" step="0.01" id="ed-real-${key}" value="${e.realValue||0}"></div>
+    </div>
+    <label>Nota</label><input type="text" id="ed-note-${key}" value="${(e.note||'').replace(/"/g,'&quot;')}">
+    <div style="margin-top:12px;display:flex;gap:6px">
+      <button class="btn btn-edit" style="flex:1" onclick="confirmEdit('${key}','${mk}','${id}')">Salvar edição</button>
+      <button class="btn btn-undo" onclick="document.getElementById('form-${key}').innerHTML=''">Cancelar</button>
+    </div>
+  </div>`
+}
+
+function confirmEdit(key,mk,id){
+  const changes={
+    status:document.getElementById('ed-status-'+key).value,
+    dueDay:parseInt(document.getElementById('ed-dueDay-'+key).value)||0,
+    expectedValue:parseFloat(document.getElementById('ed-exp-'+key).value)||0,
+    realValue:parseFloat(document.getElementById('ed-real-'+key).value)||0,
+    note:document.getElementById('ed-note-'+key).value.trim()
+  }
+  pending[key]={action:'edit',monthKey:mk,id,changes}
+  render()
+}
+
+function markDelete(key,mk,id){
+  if(!confirm('Marcar essa entry pra deletar? (não salva ainda — só no botão "Salvar tudo")'))return
+  pending[key]={action:'delete',monthKey:mk,id}
+  render()
+}
+
+function undo(key){delete pending[key];render()}
+
+function saveAll(){
+  const btn=document.getElementById('btnSave')
+  const log=document.getElementById('log')
+  log.style.display='block';log.innerHTML=''
+  const add=(m,c='info')=>{log.innerHTML+=`<div class="${c}">${m}</div>`;log.scrollTop=log.scrollHeight}
+  btn.disabled=true;btn.textContent='Salvando...'
+
+  let nDel=0,nEdit=0
+  Object.values(pending).forEach(p=>{
+    const month=data.months[p.monthKey]
+    if(!month)return
+    if(p.action==='delete'){
+      month.entries=(month.entries||[]).filter(e=>e.id!==p.id)
+      nDel++
+      add(`🗑 Deletada entry ${p.id} de ${p.monthKey}`,'ok')
+    }else if(p.action==='edit'){
+      const e=(month.entries||[]).find(x=>x.id===p.id)
+      if(e){Object.assign(e,p.changes);nEdit++;add(`✏️ Editada entry ${p.id} de ${p.monthKey}`,'ok')}
+    }
+  })
+
+  add(`💾 ${nDel} deletada(s), ${nEdit} editada(s). Salvando localStorage...`,'info')
+  data.lastModified=Date.now()
+  localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
+  add('✅ Salvo no localStorage','ok')
+
+  add('☁️ Sincronizando com Google Sheets...','info')
+  fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:GAS_TOKEN,data})})
+    .then(r=>r.text()).then(t=>add('✅ Sincronizado: '+t.slice(0,100),'ok'))
+    .catch(e=>add('⚠️ Sync falhou: '+e.message+' — vai sincronizar quando abrir o app','err'))
+    .finally(()=>{
+      pending={}
+      btn.textContent='✅ Salvo! Pode fechar ou voltar'
+      setTimeout(()=>{btn.disabled=false;btn.textContent='← Voltar para o app';btn.onclick=()=>location.href='/'},1500)
+    })
+}
+
+render()
+</script>
+</body>
+</html>
