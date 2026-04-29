@@ -3044,6 +3044,14 @@ const saveAsstMsgs=m=>{try{localStorage.setItem('paiol_asst_msgs',JSON.stringify
 const loadAsstProvider=()=>{try{return localStorage.getItem('paiol_asst_provider')||'groq'}catch(e){return 'groq'}}
 const saveAsstProvider=p=>{try{localStorage.setItem('paiol_asst_provider',p)}catch(e){}}
 const ASST_DEBUG=(()=>{try{return new URLSearchParams(window.location.search).get('debug')==='1'}catch(e){return false}})()
+let __asstDebugLog=[]
+const __asstDebugSubs=new Set()
+function pushAsstDebug(entry){
+  if(!ASST_DEBUG)return
+  __asstDebugLog=[{...entry,id:Math.random().toString(36).slice(2),ts:Date.now()},...__asstDebugLog].slice(0,10)
+  __asstDebugSubs.forEach(fn=>{try{fn()}catch(e){}})
+}
+function clearAsstDebug(){__asstDebugLog=[];__asstDebugSubs.forEach(fn=>{try{fn()}catch(e){}})}
 const fmtDur=s=>{const m=Math.floor(s/60);const sec=s%60;return `${m}:${String(sec).padStart(2,'0')}`}
 const fmtSize=b=>b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'
 
@@ -3251,9 +3259,11 @@ function AssistantPage({state,dispatch,toast}){
   const [thinking,setThinking]=useState(false)
   const [provider,setProvider]=useState(loadAsstProvider)
   const [showProviderMenu,setShowProviderMenu]=useState(false)
-  const [debugLog,setDebugLog]=useState([])
+  const [,forceTick]=useReducer(x=>x+1,0)
   const [debugOpen,setDebugOpen]=useState({})
-  const pushDebug=ASST_DEBUG?(entry=>setDebugLog(l=>[{...entry,id:uid(),ts:Date.now()},...l].slice(0,5))):null
+  useEffect(()=>{if(!ASST_DEBUG)return;__asstDebugSubs.add(forceTick);return()=>{__asstDebugSubs.delete(forceTick)}},[])
+  const debugLog=__asstDebugLog
+  const pushDebug=ASST_DEBUG?pushAsstDebug:null
   const recRef=useRef(null)
   const recStartRef=useRef(0)
   const streamRef=useRef(null)
@@ -3522,8 +3532,8 @@ function AssistantPage({state,dispatch,toast}){
       {ASST_DEBUG&&(
         <div className="mt-3 rounded-2xl p-3" style={{background:'#0a0a0a',border:'1px solid #f59e0b55',color:'#f5f5f5'}}>
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold tracking-wider" style={{color:'#f59e0b'}}>🐛 DEBUG IA · últimos {debugLog.length}/5</div>
-            {debugLog.length>0&&<button onClick={()=>{setDebugLog([]);setDebugOpen({})}} className="text-xs px-2 py-1 rounded" style={{color:'#f59e0b',background:'#f59e0b15'}}>Limpar</button>}
+            <div className="text-xs font-semibold tracking-wider" style={{color:'#f59e0b'}}>🐛 DEBUG IA · últimos {debugLog.length}/10 · persiste entre telas</div>
+            {debugLog.length>0&&<button onClick={()=>{clearAsstDebug();setDebugOpen({})}} className="text-xs px-2 py-1 rounded" style={{color:'#f59e0b',background:'#f59e0b15'}}>Limpar</button>}
           </div>
           {debugLog.length===0&&<div className="text-xs italic" style={{color:'#888'}}>Sem eventos ainda. Mande uma mensagem.</div>}
           <div className="space-y-1.5">
