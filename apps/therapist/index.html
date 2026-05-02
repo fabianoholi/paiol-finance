@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Terapia Finance — Sessões e Finanças</title>
+  <meta name="description" content="Controle de sessões e finanças para massoterapeutas e quiropraxistas."/>
+  <meta name="theme-color" content="#0b0f1a" media="(prefers-color-scheme: dark)"/>
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Terapia"/>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314b8a6'/%3E%3Cpath d='M8 19c2-3 5-6 8-6s6 3 8 6' stroke='white' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='16' cy='12' r='2.8' fill='white'/%3E%3C/svg%3E"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+  // Ícones inline (subset usado pelo app)
+  (function(){
+    function ic(els){return function Icon(p){var s=p.size||16;return React.createElement('svg',{xmlns:'http://www.w3.org/2000/svg',width:s,height:s,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',className:p.className,style:p.style},...els)}}
+    function p(d){return React.createElement('path',{d:d})}
+    function ci(cx,cy,r){return React.createElement('circle',{cx:cx,cy:cy,r:r})}
+    function rc(x,y,w,h,rx){return React.createElement('rect',{x:x,y:y,width:w,height:h,rx:rx||0})}
+    function ln(x1,y1,x2,y2){return React.createElement('line',{x1:x1,y1:y1,x2:x2,y2:y2})}
+    function pl(pts){return React.createElement('polyline',{points:pts})}
+    window.IcHome=ic([p('M3 12l9-9 9 9M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10')])
+    window.IcCalendar=ic([rc(3,4,18,18,2),p('M16 2v4M8 2v4M3 10h18')])
+    window.IcWallet=ic([p('M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4'),p('M4 6v12c0 1.1.9 2 2 2h14v-4'),p('M18 12a2 2 0 0 0 0 4h4v-4z')])
+    window.IcUsers=ic([p('M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'),ci(9,7,4),p('M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75')])
+    window.IcSettings=ic([ci(12,12,3),p('M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z')])
+    window.IcPlus=ic([ln(12,5,12,19),ln(5,12,19,12)])
+    window.IcX=ic([ln(18,6,6,18),ln(6,6,18,18)])
+    window.IcCheck=ic([pl('20 6 9 17 4 12')])
+    window.IcEdit=ic([p('M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'),p('M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z')])
+    window.IcTrash=ic([p('M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'),ln(10,11,10,17),ln(14,11,14,17)])
+    window.IcChevL=ic([p('m15 18-6-6 6-6')])
+    window.IcChevR=ic([p('m9 18 6-6-6-6')])
+    window.IcClock=ic([ci(12,12,10),p('M12 6v6l4 2')])
+    window.IcPhone=ic([p('M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z')])
+    window.IcMail=ic([rc(2,4,20,16,2),p('m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7')])
+    window.IcUp=ic([pl('3 17 9 11 13 15 21 7'),p('M14 7h7v7')])
+    window.IcDown=ic([pl('3 7 9 13 13 9 21 17'),p('M14 17h7v-7')])
+    window.IcDownload=ic([p('M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'),pl('7 10 12 15 17 10'),ln(12,15,12,3)])
+    window.IcUpload=ic([p('M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'),pl('17 8 12 3 7 8'),ln(12,3,12,15)])
+    window.IcAlert=ic([ci(12,12,10),ln(12,8,12,12),ln(12,16,12.01,16)])
+    window.IcLogOut=ic([p('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'),pl('16 17 21 12 16 7'),ln(21,12,9,12)])
+    window.IcKey=ic([ci(7.5,15.5,5.5),p('m21 2-9.6 9.6'),p('m15.5 7.5 3 3L22 7l-3-3'),p('m7 22 3-3')])
+    window.IcMoon=ic([p('M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z')])
+    window.IcSun=ic([ci(12,12,5),ln(12,1,12,3),ln(12,21,12,23),ln(4.22,4.22,5.64,5.64),ln(18.36,18.36,19.78,19.78),ln(1,12,3,12),ln(21,12,23,12),ln(4.22,19.78,5.64,18.36),ln(18.36,5.64,19.78,4.22)])
+  })()
+  </script>
+  <style>
+    *{box-sizing:border-box}
+    :root{
+      color-scheme:dark;
+      --brand:#14b8a6;--brand-d:#0d9488;
+      --bg:#0b0f1a;--bg-2:#0f1422;--bg-card:rgba(255,255,255,0.04);
+      --bg-input:rgba(255,255,255,0.06);--bg-overlay:rgba(255,255,255,0.08);
+      --text:#ffffff;--text-2:rgba(235,235,245,0.65);--text-3:rgba(235,235,245,0.4);
+      --border:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.06);
+      --modal-bg:rgba(0,0,0,0.72);--inner:rgba(255,255,255,0.12);
+      --danger:#ef4444;--warn:#f59e0b;--ok:#10b981;
+    }
+    body.light{
+      color-scheme:light;
+      --bg:#f2f2f7;--bg-2:#ffffff;--bg-card:rgba(255,255,255,0.85);
+      --bg-input:rgba(0,0,0,0.04);--bg-overlay:rgba(0,0,0,0.06);
+      --text:#1c1c1e;--text-2:rgba(60,60,67,0.65);--text-3:rgba(60,60,67,0.4);
+      --border:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.06);
+      --modal-bg:rgba(0,0,0,0.45);--inner:rgba(255,255,255,0.7);
+    }
+    body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:'cv02','cv03';font-variant-numeric:tabular-nums;padding-bottom:env(safe-area-inset-bottom)}
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+    select option{background:var(--bg-2);color:var(--text)}
+    input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:0.3}
+    .glass{background:var(--bg-card);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.18),inset 0 0.5px 0 var(--inner)}
+    .glass-input{background:var(--bg-input);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;width:100%;font-size:14px;font-family:inherit}
+    .glass-input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(20,184,166,0.18)}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid var(--border);background:var(--bg-overlay);color:var(--text);transition:all .15s;font-family:inherit}
+    .btn:hover{background:var(--border)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .btn-primary{background:var(--brand);border-color:var(--brand);color:#fff}
+    .btn-primary:hover{background:var(--brand-d);border-color:var(--brand-d)}
+    .btn-primary:disabled:hover{background:var(--brand);border-color:var(--brand)}
+    .btn-danger{background:transparent;border-color:rgba(239,68,68,0.35);color:#fca5a5}
+    .btn-danger:hover{background:rgba(239,68,68,0.12)}
+    .chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--bg-overlay)}
+    .chip-ok{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.35);color:#6ee7b7}
+    .chip-warn{background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.35);color:#fcd34d}
+    .chip-err{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.35);color:#fca5a5}
+    .chip-info{background:rgba(20,184,166,0.18);border-color:rgba(20,184,166,0.4);color:#5eead4}
+    .modal-backdrop{background:var(--modal-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+    .modal-content{background:var(--bg-2);border:1px solid var(--border);border-radius:16px;box-shadow:0 32px 80px rgba(0,0,0,0.55),inset 0 0.5px 0 var(--inner)}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;color:var(--text-3);font-size:11px;font-weight:500;cursor:pointer;border:none;background:none;font-family:inherit;transition:color .15s}
+    .nav-item.active{color:var(--brand)}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .page-enter{animation:fadeIn 0.22s ease-out}
+    .label{font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:0.04em}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+;(function(){
+  // Limpa versões antigas
+  ['terapia_v0'].forEach(function(k){localStorage.removeItem(k)})
+})()
+</script>
+<script type="text/babel">
+const {useState,useReducer,useEffect,useMemo,useRef,useCallback} = React
+const {BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,CartesianGrid} = Recharts
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2,10)
+const fmtBRL = v => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+const todayISO = () => {
+  const d = new Date(); const p = n => String(n).padStart(2,'0')
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`
+}
+const nowHHMM = () => {
+  const d = new Date(); const p = n => String(n).padStart(2,'0')
+  return `${p(d.getHours())}:${p(d.getMinutes())}`
+}
+const isoToBR = s => {
+  if(!s) return ''
+  const [y,m,d] = s.split('-')
+  return `${d}/${m}/${y}`
+}
+const monthKey = s => s ? s.slice(0,7) : ''
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const fmtMonthLabel = mk => {
+  if(!mk) return ''
+  const [y,m] = mk.split('-')
+  return `${MONTHS[+m-1]} ${y}`
+}
+const sanitize = s => typeof s==='string' ? s.replace(/<[^>]*>/g,'').slice(0,500) : s
+const STATUS_LABEL = {scheduled:'Agendada',done:'Realizada',noshow:'Faltou',cancelled:'Cancelada'}
+const STATUS_CHIP  = {scheduled:'chip-info',done:'chip-ok',noshow:'chip-warn',cancelled:'chip-err'}
+
+// ─── SEED ─────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'terapia_v1'
+const SCHEMA_VERSION = 1
+const seedState = () => ({
+  schemaVersion: SCHEMA_VERSION,
+  settings: {
+    therapist: {name:'',profession:'Massoterapeuta',phone:'',pix:''},
+    services: [
+      {id:'s1',name:'Sessão Massoterapia 60min',price:120,duration:60},
+      {id:'s2',name:'Quick Massage 30min',price:70,duration:30},
+      {id:'s3',name:'Quiropraxia',price:180,duration:50},
+    ],
+    expenseCategories: ['Aluguel','Material','Marketing','Impostos','Transporte','Alimentação','Cursos','Outros'],
+    paymentMethods: ['PIX','Dinheiro','Cartão Débito','Cartão Crédito','Permuta'],
+    theme: 'dark',
+    pin: '',
+  },
+  clients: [],
+  appointments: [],
+  expenses: [],
+})
+
+function migrate(d){
+  if(!d || typeof d!=='object') return seedState()
+  const v = d.schemaVersion || 0
+  if(v < 1){
+    const seed = seedState()
+    d.settings = Object.assign({}, seed.settings, d.settings||{})
+    d.settings.therapist = Object.assign({}, seed.settings.therapist, d.settings.therapist||{})
+    if(!Array.isArray(d.settings.services)) d.settings.services = seed.settings.services
+    if(!Array.isArray(d.settings.expenseCategories)) d.settings.expenseCategories = seed.settings.expenseCategories
+    if(!Array.isArray(d.settings.paymentMethods)) d.settings.paymentMethods = seed.settings.paymentMethods
+    if(!Array.isArray(d.clients)) d.clients = []
+    if(!Array.isArray(d.appointments)) d.appointments = []
+    if(!Array.isArray(d.expenses)) d.expenses = []
+  }
+  d.schemaVersion = SCHEMA_VERSION
+  return d
+}
+
+// ─── REDUCER ──────────────────────────────────────────────────────────────────
+function reducer(s, a){
+  switch(a.type){
+    case 'LOAD': return migrate(a.data || seedState())
+    case 'RESET': return seedState()
+    case 'SETTINGS_PATCH': return {...s, settings:{...s.settings, ...a.patch}}
+    case 'THERAPIST_PATCH': return {...s, settings:{...s.settings, therapist:{...s.settings.therapist, ...a.patch}}}
+    case 'CLIENT_ADD': return {...s, clients:[...s.clients, {id:uid(), createdAt:Date.now(), ...a.data}]}
+    case 'CLIENT_UPDATE': return {...s, clients:s.clients.map(c => c.id===a.id ? {...c, ...a.data} : c)}
+    case 'CLIENT_REMOVE': return {...s, clients:s.clients.filter(c => c.id!==a.id)}
+    case 'APPT_ADD': return {...s, appointments:[...s.appointments, {id:uid(), ...a.data}]}
+    case 'APPT_UPDATE': return {...s, appointments:s.appointments.map(x => x.id===a.id ? {...x, ...a.data} : x)}
+    case 'APPT_REMOVE': return {...s, appointments:s.appointments.filter(x => x.id!==a.id)}
+    case 'EXPENSE_ADD': return {...s, expenses:[...s.expenses, {id:uid(), ...a.data}]}
+    case 'EXPENSE_UPDATE': return {...s, expenses:s.expenses.map(x => x.id===a.id ? {...x, ...a.data} : x)}
+    case 'EXPENSE_REMOVE': return {...s, expenses:s.expenses.filter(x => x.id!==a.id)}
+    case 'SERVICE_ADD': return {...s, settings:{...s.settings, services:[...s.settings.services, {id:uid(), ...a.data}]}}
+    case 'SERVICE_UPDATE': return {...s, settings:{...s.settings, services:s.settings.services.map(x => x.id===a.id ? {...x, ...a.data} : x)}}
+    case 'SERVICE_REMOVE': return {...s, settings:{...s.settings, services:s.settings.services.filter(x => x.id!==a.id)}}
+    default: return s
+  }
+}
+
+// ─── PERSISTENCE HOOK ─────────────────────────────────────────────────────────
+function useStore(){
+  const [state, dispatch] = useReducer(reducer, null, () => {
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if(raw) return migrate(JSON.parse(raw))
+    }catch(e){ console.warn('load failed', e) }
+    return seedState()
+  })
+  useEffect(() => {
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
+    catch(e){ console.warn('persist failed', e) }
+  }, [state])
+  useEffect(() => {
+    document.body.classList.toggle('light', state.settings.theme === 'light')
+  }, [state.settings.theme])
+  return [state, dispatch]
+}
+
+// ─── PRIMITIVES ───────────────────────────────────────────────────────────────
+function Modal({open, onClose, title, children, footer, wide}){
+  useEffect(() => {
+    if(!open) return
+    const onKey = e => { if(e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
+  }, [open, onClose])
+  if(!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center modal-backdrop" onClick={onClose}>
+      <div className={`modal-content w-full ${wide?'max-w-2xl':'max-w-md'} max-h-[92vh] overflow-y-auto sm:rounded-2xl rounded-t-2xl`} onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{borderColor:'var(--border-s)'}}>
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <button className="p-1 rounded-lg hover:bg-white/10" onClick={onClose} aria-label="Fechar">
+            <IcX size={20}/>
+          </button>
+        </div>
+        <div className="p-5">{children}</div>
+        {footer && <div className="px-5 py-4 border-t flex justify-end gap-2" style={{borderColor:'var(--border-s)'}}>{footer}</div>}
+      </div>
+    </div>
+  )
+}
+
+function Field({label, children}){
+  return <div className="mb-4"><label className="label">{label}</label>{children}</div>
+}
+
+function Empty({icon:Icon, title, hint, action}){
+  return (
+    <div className="text-center py-12 px-6">
+      {Icon && <div className="inline-flex p-3 rounded-full mb-3" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><Icon size={28}/></div>}
+      <p className="font-medium" style={{color:'var(--text-2)'}}>{title}</p>
+      {hint && <p className="text-sm mt-1" style={{color:'var(--text-3)'}}>{hint}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  )
+}
+
+// ─── HOJE ─────────────────────────────────────────────────────────────────────
+function Hoje({state, dispatch, onNewSession, onNewExpense, onOpenAppt}){
+  const today = todayISO()
+  const mk = today.slice(0,7)
+  const apptsToday = useMemo(() =>
+    state.appointments.filter(a => a.date === today)
+      .sort((a,b) => (a.time||'').localeCompare(b.time||'')),
+    [state.appointments, today]
+  )
+  const monthRev = useMemo(() => state.appointments
+    .filter(a => a.date && a.date.startsWith(mk) && a.status==='done' && a.paid)
+    .reduce((s,a) => s + Number(a.price||0), 0), [state.appointments, mk])
+  const monthExp = useMemo(() => state.expenses
+    .filter(e => e.date && e.date.startsWith(mk))
+    .reduce((s,e) => s + Number(e.amount||0), 0), [state.expenses, mk])
+  const todayRev = apptsToday.filter(a => a.status==='done' && a.paid).reduce((s,a) => s + Number(a.price||0), 0)
+
+  const lastMonths = useMemo(() => {
+    const d = new Date()
+    const out = []
+    for(let i = 5; i >= 0; i--){
+      const dd = new Date(d.getFullYear(), d.getMonth() - i, 1)
+      const k = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}`
+      const rev = state.appointments.filter(a => a.date?.startsWith(k) && a.status==='done' && a.paid).reduce((s,a) => s + Number(a.price||0), 0)
+      const exp = state.expenses.filter(e => e.date?.startsWith(k)).reduce((s,e) => s + Number(e.amount||0), 0)
+      out.push({mes: MONTHS[dd.getMonth()].slice(0,3), receita: rev, despesa: exp})
+    }
+    return out
+  }, [state.appointments, state.expenses])
+
+  return (
+    <div className="page-enter px-4 pt-4 pb-32 max-w-3xl mx-auto">
+      <div className="mb-5">
+        <p className="text-sm" style={{color:'var(--text-3)'}}>Olá{state.settings.therapist.name?`, ${state.settings.therapist.name}`:''}</p>
+        <h1 className="text-2xl font-bold">{fmtMonthLabel(mk)}</h1>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="glass rounded-2xl p-4">
+          <p className="text-xs font-medium" style={{color:'var(--text-3)'}}>Receita do mês</p>
+          <p className="text-xl font-bold mt-1" style={{color:'var(--ok)'}}>{fmtBRL(monthRev)}</p>
+        </div>
+        <div className="glass rounded-2xl p-4">
+          <p className="text-xs font-medium" style={{color:'var(--text-3)'}}>Despesas do mês</p>
+          <p className="text-xl font-bold mt-1" style={{color:'var(--danger)'}}>{fmtBRL(monthExp)}</p>
+        </div>
+        <div className="glass rounded-2xl p-4 col-span-2">
+          <p className="text-xs font-medium" style={{color:'var(--text-3)'}}>Saldo</p>
+          <p className="text-2xl font-bold mt-1" style={{color: monthRev-monthExp >= 0 ? 'var(--ok)' : 'var(--danger)'}}>{fmtBRL(monthRev - monthExp)}</p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-5">
+        <button className="btn btn-primary flex-1 justify-center" onClick={onNewSession}><IcPlus size={16}/>Nova sessão</button>
+        <button className="btn flex-1 justify-center" onClick={onNewExpense}><IcDown size={16}/>Despesa</button>
+      </div>
+
+      <div className="glass rounded-2xl p-4 mb-5">
+        <h3 className="font-semibold mb-3 flex items-center gap-2"><IcCalendar size={16}/>Hoje</h3>
+        {apptsToday.length === 0 ? (
+          <p className="text-sm py-4 text-center" style={{color:'var(--text-3)'}}>Nenhuma sessão agendada para hoje.</p>
+        ) : (
+          <div className="space-y-2">
+            {apptsToday.map(a => <ApptRow key={a.id} appt={a} state={state} onClick={() => onOpenAppt(a)}/>)}
+            {todayRev > 0 && (
+              <div className="pt-3 mt-2 border-t flex justify-between text-sm" style={{borderColor:'var(--border-s)'}}>
+                <span style={{color:'var(--text-2)'}}>Recebido hoje</span>
+                <span className="font-semibold" style={{color:'var(--ok)'}}>{fmtBRL(todayRev)}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="glass rounded-2xl p-4">
+        <h3 className="font-semibold mb-3">Últimos 6 meses</h3>
+        <div style={{height:200}}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={lastMonths} margin={{top:5,right:5,left:0,bottom:5}}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-s)"/>
+              <XAxis dataKey="mes" tick={{fill:'var(--text-3)',fontSize:11}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:'var(--text-3)',fontSize:11}} axisLine={false} tickLine={false} tickFormatter={v => v>=1000?`${(v/1000).toFixed(1)}k`:v}/>
+              <Tooltip contentStyle={{background:'var(--bg-2)',border:'1px solid var(--border)',borderRadius:8,fontSize:12}} formatter={v => fmtBRL(v)}/>
+              <Bar dataKey="receita" fill="var(--brand)" radius={[6,6,0,0]} name="Receita"/>
+              <Bar dataKey="despesa" fill="var(--danger)" radius={[6,6,0,0]} name="Despesa"/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ApptRow({appt, state, onClick}){
+  const client = state.clients.find(c => c.id === appt.clientId)
+  const service = state.settings.services.find(s => s.id === appt.serviceId)
+  return (
+    <button onClick={onClick} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-left transition" style={{background:'var(--bg-overlay)'}}>
+      <div className="flex flex-col items-center justify-center w-14 shrink-0">
+        <div className="text-lg font-bold tabular-nums">{appt.time||'--:--'}</div>
+        <div className="text-[10px]" style={{color:'var(--text-3)'}}>{appt.durationMin||60}min</div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{client?.name || 'Cliente removido'}</div>
+        <div className="text-xs truncate" style={{color:'var(--text-3)'}}>{service?.name || 'Sessão'} · {fmtBRL(appt.price)}</div>
+      </div>
+      <span className={`chip ${STATUS_CHIP[appt.status]||''}`}>{STATUS_LABEL[appt.status]||appt.status}</span>
+    </button>
+  )
+}
+
+// ─── AGENDA ───────────────────────────────────────────────────────────────────
+function Agenda({state, onNewSession, onOpenAppt}){
+  const [filter, setFilter] = useState('upcoming')
+  const today = todayISO()
+  const filtered = useMemo(() => {
+    let arr = [...state.appointments]
+    if(filter === 'upcoming') arr = arr.filter(a => a.date >= today && a.status === 'scheduled')
+    else if(filter === 'today') arr = arr.filter(a => a.date === today)
+    else if(filter === 'past') arr = arr.filter(a => a.date < today || a.status !== 'scheduled')
+    arr.sort((a,b) => {
+      const cmp = (a.date||'').localeCompare(b.date||'')
+      return cmp !== 0 ? (filter==='past'?-cmp:cmp) : (a.time||'').localeCompare(b.time||'')
+    })
+    return arr
+  }, [state.appointments, filter, today])
+
+  const grouped = useMemo(() => {
+    const out = {}
+    filtered.forEach(a => { (out[a.date] = out[a.date] || []).push(a) })
+    return out
+  }, [filtered])
+
+  return (
+    <div className="page-enter px-4 pt-4 pb-32 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Agenda</h1>
+        <button className="btn btn-primary" onClick={onNewSession}><IcPlus size={16}/>Nova</button>
+      </div>
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        {[['today','Hoje'],['upcoming','Próximas'],['past','Histórico']].map(([k,l]) => (
+          <button key={k} className={`chip ${filter===k?'chip-info':''}`} onClick={() => setFilter(k)}>{l}</button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <Empty icon={IcCalendar} title="Nenhuma sessão" hint="Toque em Nova para agendar." action={<button className="btn btn-primary" onClick={onNewSession}><IcPlus size={16}/>Nova sessão</button>}/>
+      ) : (
+        Object.keys(grouped).map(date => (
+          <div key={date} className="mb-5">
+            <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{color:'var(--text-3)'}}>{isoToBR(date)}</p>
+            <div className="space-y-2">
+              {grouped[date].map(a => <ApptRow key={a.id} appt={a} state={state} onClick={() => onOpenAppt(a)}/>)}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
+
+// ─── FINANCEIRO ───────────────────────────────────────────────────────────────
+function Financeiro({state, dispatch, onNewExpense, onEditExpense, onOpenAppt}){
+  const [mk, setMk] = useState(() => todayISO().slice(0,7))
+  const [tab, setTab] = useState('entradas')
+  const shiftMonth = useCallback(delta => {
+    const [y,m] = mk.split('-').map(Number)
+    const d = new Date(y, m-1+delta, 1)
+    setMk(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
+  }, [mk])
+
+  const entries = useMemo(() => state.appointments
+    .filter(a => a.date?.startsWith(mk) && a.status==='done')
+    .sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time))
+  , [state.appointments, mk])
+  const exps = useMemo(() => state.expenses
+    .filter(e => e.date?.startsWith(mk))
+    .sort((a,b) => b.date.localeCompare(a.date))
+  , [state.expenses, mk])
+  const totalIn = entries.filter(a => a.paid).reduce((s,a) => s + Number(a.price||0), 0)
+  const totalPending = entries.filter(a => !a.paid).reduce((s,a) => s + Number(a.price||0), 0)
+  const totalOut = exps.reduce((s,e) => s + Number(e.amount||0), 0)
+
+  return (
+    <div className="page-enter px-4 pt-4 pb-32 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Financeiro</h1>
+      <div className="flex items-center justify-between mb-4 glass rounded-xl p-2">
+        <button className="p-2 rounded-lg hover:bg-white/10" onClick={() => shiftMonth(-1)}><IcChevL size={18}/></button>
+        <div className="font-semibold">{fmtMonthLabel(mk)}</div>
+        <button className="p-2 rounded-lg hover:bg-white/10" onClick={() => shiftMonth(1)}><IcChevR size={18}/></button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="glass rounded-xl p-3 text-center">
+          <p className="text-[10px]" style={{color:'var(--text-3)'}}>RECEITA</p>
+          <p className="font-bold text-sm mt-1" style={{color:'var(--ok)'}}>{fmtBRL(totalIn)}</p>
+        </div>
+        <div className="glass rounded-xl p-3 text-center">
+          <p className="text-[10px]" style={{color:'var(--text-3)'}}>A RECEBER</p>
+          <p className="font-bold text-sm mt-1" style={{color:'var(--warn)'}}>{fmtBRL(totalPending)}</p>
+        </div>
+        <div className="glass rounded-xl p-3 text-center">
+          <p className="text-[10px]" style={{color:'var(--text-3)'}}>DESPESAS</p>
+          <p className="font-bold text-sm mt-1" style={{color:'var(--danger)'}}>{fmtBRL(totalOut)}</p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <button className={`chip ${tab==='entradas'?'chip-info':''}`} onClick={() => setTab('entradas')}>Entradas ({entries.length})</button>
+        <button className={`chip ${tab==='saidas'?'chip-info':''}`} onClick={() => setTab('saidas')}>Saídas ({exps.length})</button>
+      </div>
+
+      {tab==='entradas' && (
+        entries.length === 0 ? (
+          <Empty icon={IcUp} title="Nenhuma entrada" hint="Sessões realizadas aparecem aqui."/>
+        ) : (
+          <div className="space-y-2">
+            {entries.map(a => {
+              const client = state.clients.find(c => c.id===a.clientId)
+              return (
+                <button key={a.id} onClick={() => onOpenAppt(a)} className="w-full glass rounded-xl p-3 flex items-center gap-3 hover:bg-white/5 text-left">
+                  <div className="text-xs tabular-nums shrink-0" style={{color:'var(--text-3)'}}>{a.date.slice(8,10)}/{a.date.slice(5,7)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{client?.name || '—'}</p>
+                    <p className="text-xs" style={{color:'var(--text-3)'}}>{a.paymentMethod || (a.paid?'Pago':'Pendente')}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-semibold" style={{color: a.paid?'var(--ok)':'var(--warn)'}}>{fmtBRL(a.price)}</p>
+                    {!a.paid && <p className="text-[10px]" style={{color:'var(--warn)'}}>a receber</p>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )
+      )}
+
+      {tab==='saidas' && (
+        <>
+          <button className="btn btn-primary w-full justify-center mb-3" onClick={onNewExpense}><IcPlus size={16}/>Nova despesa</button>
+          {exps.length === 0 ? (
+            <Empty icon={IcDown} title="Nenhuma despesa" hint="Toque em Nova despesa para registrar."/>
+          ) : (
+            <div className="space-y-2">
+              {exps.map(e => (
+                <button key={e.id} onClick={() => onEditExpense(e)} className="w-full glass rounded-xl p-3 flex items-center gap-3 hover:bg-white/5 text-left">
+                  <div className="text-xs tabular-nums shrink-0" style={{color:'var(--text-3)'}}>{e.date.slice(8,10)}/{e.date.slice(5,7)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{e.description||'—'}</p>
+                    <p className="text-xs" style={{color:'var(--text-3)'}}>{e.category} · {e.paymentMethod||'—'}</p>
+                  </div>
+                  <p className="font-semibold shrink-0" style={{color:'var(--danger)'}}>−{fmtBRL(e.amount)}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── CLIENTES ─────────────────────────────────────────────────────────────────
+function Clientes({state, dispatch, onEdit, onAdd}){
+  const [q, setQ] = useState('')
+  const filtered = useMemo(() => {
+    const term = q.toLowerCase().trim()
+    const arr = term ? state.clients.filter(c =>
+      (c.name||'').toLowerCase().includes(term) ||
+      (c.phone||'').includes(term) ||
+      (c.email||'').toLowerCase().includes(term)
+    ) : state.clients
+    return [...arr].sort((a,b) => (a.name||'').localeCompare(b.name||''))
+  }, [state.clients, q])
+
+  const counts = useMemo(() => {
+    const m = {}
+    state.appointments.forEach(a => { m[a.clientId] = (m[a.clientId]||0) + 1 })
+    return m
+  }, [state.appointments])
+
+  return (
+    <div className="page-enter px-4 pt-4 pb-32 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Clientes</h1>
+        <button className="btn btn-primary" onClick={onAdd}><IcPlus size={16}/>Novo</button>
+      </div>
+      <input className="glass-input mb-4" placeholder="Buscar por nome, telefone ou email..." value={q} onChange={e => setQ(e.target.value)}/>
+      {filtered.length === 0 ? (
+        <Empty icon={IcUsers} title={q?'Nenhum resultado':'Nenhum cliente'} hint={q?'Tente outro termo':'Toque em Novo para cadastrar.'}/>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(c => (
+            <button key={c.id} onClick={() => onEdit(c)} className="w-full glass rounded-xl p-4 flex items-center gap-3 hover:bg-white/5 text-left">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm shrink-0" style={{background:'var(--brand)',color:'#fff'}}>
+                {(c.name||'?').slice(0,2).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{c.name}</p>
+                <p className="text-xs truncate" style={{color:'var(--text-3)'}}>{c.phone || c.email || 'Sem contato'}</p>
+              </div>
+              <span className="chip text-xs">{counts[c.id]||0} ses.</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── AJUSTES ──────────────────────────────────────────────────────────────────
+function Ajustes({state, dispatch}){
+  const [editingService, setEditingService] = useState(null)
+  const [showThera, setShowThera] = useState(false)
+  const exportData = useCallback(() => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `terapia-finance-${todayISO()}.json`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }, [state])
+  const importData = useCallback(e => {
+    const file = e.target.files?.[0]
+    if(!file) return
+    const r = new FileReader()
+    r.onload = ev => {
+      try{
+        const d = JSON.parse(ev.target.result)
+        if(!d || typeof d !== 'object') throw new Error('json inválido')
+        if(!confirm('Substituir todos os dados atuais pelos do arquivo?')) return
+        dispatch({type:'LOAD', data:d})
+        alert('Importado com sucesso.')
+      }catch(err){ alert('Erro ao importar: ' + err.message) }
+    }
+    r.readAsText(file)
+    e.target.value = ''
+  }, [dispatch])
+  const reset = useCallback(() => {
+    if(!confirm('Apagar todos os dados? Essa ação não pode ser desfeita.')) return
+    if(!confirm('Tem certeza absoluta?')) return
+    dispatch({type:'RESET'})
+  }, [dispatch])
+  const toggleTheme = () => dispatch({type:'SETTINGS_PATCH', patch:{theme: state.settings.theme==='dark'?'light':'dark'}})
+
+  return (
+    <div className="page-enter px-4 pt-4 pb-32 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Ajustes</h1>
+
+      <button className="w-full glass rounded-xl p-4 flex items-center justify-between hover:bg-white/5 mb-2 text-left" onClick={() => setShowThera(true)}>
+        <div>
+          <p className="font-medium">Perfil profissional</p>
+          <p className="text-xs" style={{color:'var(--text-3)'}}>{state.settings.therapist.name || 'Não preenchido'}</p>
+        </div>
+        <IcChevR size={18} style={{color:'var(--text-3)'}}/>
+      </button>
+
+      <div className="glass rounded-xl p-4 mb-2">
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-medium">Serviços</p>
+          <button className="btn" onClick={() => setEditingService({})}><IcPlus size={14}/>Adicionar</button>
+        </div>
+        {state.settings.services.length === 0 ? (
+          <p className="text-sm py-2" style={{color:'var(--text-3)'}}>Nenhum serviço.</p>
+        ) : (
+          <div className="space-y-2">
+            {state.settings.services.map(s => (
+              <div key={s.id} className="flex items-center gap-2 p-2 rounded-lg" style={{background:'var(--bg-overlay)'}}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{s.name}</p>
+                  <p className="text-xs" style={{color:'var(--text-3)'}}>{fmtBRL(s.price)} · {s.duration}min</p>
+                </div>
+                <button className="p-2 rounded-lg hover:bg-white/10" onClick={() => setEditingService(s)} aria-label="Editar"><IcEdit size={14}/></button>
+                <button className="p-2 rounded-lg hover:bg-white/10" onClick={() => { if(confirm(`Excluir "${s.name}"?`)) dispatch({type:'SERVICE_REMOVE',id:s.id}) }} aria-label="Excluir"><IcTrash size={14}/></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button className="w-full glass rounded-xl p-4 flex items-center justify-between hover:bg-white/5 mb-2" onClick={toggleTheme}>
+        <div className="flex items-center gap-3">
+          {state.settings.theme==='dark' ? <IcMoon size={18}/> : <IcSun size={18}/>}
+          <p className="font-medium">Tema {state.settings.theme==='dark'?'Escuro':'Claro'}</p>
+        </div>
+        <span className="chip text-xs">Trocar</span>
+      </button>
+
+      <button className="w-full glass rounded-xl p-4 flex items-center gap-3 hover:bg-white/5 mb-2" onClick={exportData}>
+        <IcDownload size={18}/>
+        <p className="font-medium">Exportar dados (JSON)</p>
+      </button>
+
+      <label className="w-full glass rounded-xl p-4 flex items-center gap-3 hover:bg-white/5 mb-2 cursor-pointer">
+        <IcUpload size={18}/>
+        <p className="font-medium">Importar dados (JSON)</p>
+        <input type="file" accept="application/json" className="hidden" onChange={importData}/>
+      </label>
+
+      <button className="w-full glass rounded-xl p-4 flex items-center gap-3 hover:bg-white/5 mb-2" style={{color:'var(--danger)'}} onClick={reset}>
+        <IcTrash size={18}/>
+        <p className="font-medium">Apagar todos os dados</p>
+      </button>
+
+      <p className="text-xs text-center mt-6" style={{color:'var(--text-3)'}}>Terapia Finance · v1.0 · Dados locais</p>
+
+      {editingService && <ServiceModal service={editingService} dispatch={dispatch} onClose={() => setEditingService(null)}/>}
+      {showThera && <TherapistModal therapist={state.settings.therapist} dispatch={dispatch} onClose={() => setShowThera(false)}/>}
+    </div>
+  )
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function SessionModal({appt, state, dispatch, onClose}){
+  const isEdit = !!appt?.id
+  const [form, setForm] = useState(() => ({
+    clientId: appt?.clientId || state.clients[0]?.id || '',
+    serviceId: appt?.serviceId || state.settings.services[0]?.id || '',
+    date: appt?.date || todayISO(),
+    time: appt?.time || nowHHMM(),
+    durationMin: appt?.durationMin ?? state.settings.services[0]?.duration ?? 60,
+    price: appt?.price ?? state.settings.services[0]?.price ?? 0,
+    status: appt?.status || 'scheduled',
+    paid: appt?.paid ?? false,
+    paymentMethod: appt?.paymentMethod || '',
+    notes: appt?.notes || '',
+  }))
+  const set = (k,v) => setForm(f => ({...f, [k]:v}))
+  const onServiceChange = id => {
+    const svc = state.settings.services.find(s => s.id === id)
+    setForm(f => ({...f, serviceId:id, price: svc?.price ?? f.price, durationMin: svc?.duration ?? f.durationMin}))
+  }
+  const save = () => {
+    if(!form.clientId){ alert('Selecione um cliente'); return }
+    const data = {
+      clientId: form.clientId,
+      serviceId: form.serviceId,
+      date: form.date,
+      time: form.time,
+      durationMin: Number(form.durationMin)||60,
+      price: Number(form.price)||0,
+      status: form.status,
+      paid: !!form.paid,
+      paymentMethod: form.paymentMethod,
+      notes: sanitize(form.notes),
+    }
+    if(isEdit) dispatch({type:'APPT_UPDATE', id:appt.id, data})
+    else dispatch({type:'APPT_ADD', data})
+    onClose()
+  }
+  const remove = () => {
+    if(!confirm('Excluir esta sessão?')) return
+    dispatch({type:'APPT_REMOVE', id:appt.id})
+    onClose()
+  }
+  const noClients = state.clients.length === 0
+  return (
+    <Modal open={true} onClose={onClose} title={isEdit?'Editar sessão':'Nova sessão'}
+      footer={<>
+        {isEdit && <button className="btn btn-danger" onClick={remove}><IcTrash size={14}/>Excluir</button>}
+        <button className="btn" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={save} disabled={noClients}><IcCheck size={14}/>Salvar</button>
+      </>}>
+      {noClients && <div className="mb-4 p-3 rounded-lg flex items-start gap-2" style={{background:'rgba(245,158,11,0.12)',color:'#fcd34d'}}><IcAlert size={16}/><span className="text-sm">Cadastre um cliente antes de criar sessões.</span></div>}
+      <Field label="Cliente">
+        <select className="glass-input" value={form.clientId} onChange={e => set('clientId', e.target.value)}>
+          <option value="">— selecione —</option>
+          {state.clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </Field>
+      <Field label="Serviço">
+        <select className="glass-input" value={form.serviceId} onChange={e => onServiceChange(e.target.value)}>
+          {state.settings.services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Data"><input type="date" className="glass-input" value={form.date} onChange={e => set('date', e.target.value)}/></Field>
+        <Field label="Hora"><input type="time" className="glass-input" value={form.time} onChange={e => set('time', e.target.value)}/></Field>
+        <Field label="Duração (min)"><input type="number" min="0" className="glass-input" value={form.durationMin} onChange={e => set('durationMin', e.target.value)}/></Field>
+        <Field label="Valor (R$)"><input type="number" min="0" step="0.01" className="glass-input" value={form.price} onChange={e => set('price', e.target.value)}/></Field>
+      </div>
+      <Field label="Status">
+        <select className="glass-input" value={form.status} onChange={e => set('status', e.target.value)}>
+          <option value="scheduled">Agendada</option>
+          <option value="done">Realizada</option>
+          <option value="noshow">Faltou</option>
+          <option value="cancelled">Cancelada</option>
+        </select>
+      </Field>
+      <div className="flex items-center gap-2 mb-4">
+        <input type="checkbox" id="paid" checked={form.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4"/>
+        <label htmlFor="paid" className="text-sm font-medium cursor-pointer">Pago</label>
+      </div>
+      {form.paid && (
+        <Field label="Forma de pagamento">
+          <select className="glass-input" value={form.paymentMethod} onChange={e => set('paymentMethod', e.target.value)}>
+            <option value="">— selecione —</option>
+            {state.settings.paymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </Field>
+      )}
+      <Field label="Anotações"><textarea rows="3" className="glass-input" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Observações da sessão..."/></Field>
+    </Modal>
+  )
+}
+
+function ExpenseModal({expense, state, dispatch, onClose}){
+  const isEdit = !!expense?.id
+  const [form, setForm] = useState(() => ({
+    date: expense?.date || todayISO(),
+    category: expense?.category || state.settings.expenseCategories[0] || '',
+    description: expense?.description || '',
+    amount: expense?.amount ?? '',
+    paid: expense?.paid ?? true,
+    paymentMethod: expense?.paymentMethod || '',
+  }))
+  const set = (k,v) => setForm(f => ({...f, [k]:v}))
+  const save = () => {
+    if(!form.amount || Number(form.amount) <= 0){ alert('Informe um valor.'); return }
+    const data = {
+      date: form.date,
+      category: form.category,
+      description: sanitize(form.description),
+      amount: Number(form.amount)||0,
+      paid: !!form.paid,
+      paymentMethod: form.paymentMethod,
+    }
+    if(isEdit) dispatch({type:'EXPENSE_UPDATE', id:expense.id, data})
+    else dispatch({type:'EXPENSE_ADD', data})
+    onClose()
+  }
+  const remove = () => {
+    if(!confirm('Excluir despesa?')) return
+    dispatch({type:'EXPENSE_REMOVE', id:expense.id})
+    onClose()
+  }
+  return (
+    <Modal open={true} onClose={onClose} title={isEdit?'Editar despesa':'Nova despesa'}
+      footer={<>
+        {isEdit && <button className="btn btn-danger" onClick={remove}><IcTrash size={14}/>Excluir</button>}
+        <button className="btn" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={save}><IcCheck size={14}/>Salvar</button>
+      </>}>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Data"><input type="date" className="glass-input" value={form.date} onChange={e => set('date', e.target.value)}/></Field>
+        <Field label="Valor (R$)"><input type="number" min="0" step="0.01" className="glass-input" value={form.amount} onChange={e => set('amount', e.target.value)}/></Field>
+      </div>
+      <Field label="Categoria">
+        <select className="glass-input" value={form.category} onChange={e => set('category', e.target.value)}>
+          {state.settings.expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Field>
+      <Field label="Descrição"><input className="glass-input" value={form.description} onChange={e => set('description', e.target.value)} placeholder="Ex: Aluguel sala / Óleo de massagem..."/></Field>
+      <div className="flex items-center gap-2 mb-4">
+        <input type="checkbox" id="exp-paid" checked={form.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4"/>
+        <label htmlFor="exp-paid" className="text-sm font-medium cursor-pointer">Pago</label>
+      </div>
+      {form.paid && (
+        <Field label="Forma de pagamento">
+          <select className="glass-input" value={form.paymentMethod} onChange={e => set('paymentMethod', e.target.value)}>
+            <option value="">— selecione —</option>
+            {state.settings.paymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </Field>
+      )}
+    </Modal>
+  )
+}
+
+function ClientModal({client, state, dispatch, onClose, onNewSessionFor}){
+  const isEdit = !!client?.id
+  const [form, setForm] = useState(() => ({
+    name: client?.name || '',
+    phone: client?.phone || '',
+    email: client?.email || '',
+    notes: client?.notes || '',
+  }))
+  const set = (k,v) => setForm(f => ({...f, [k]:v}))
+  const save = () => {
+    if(!form.name.trim()){ alert('Informe o nome.'); return }
+    const data = {
+      name: sanitize(form.name).trim(),
+      phone: sanitize(form.phone).trim(),
+      email: sanitize(form.email).trim(),
+      notes: sanitize(form.notes),
+    }
+    if(isEdit) dispatch({type:'CLIENT_UPDATE', id:client.id, data})
+    else dispatch({type:'CLIENT_ADD', data})
+    onClose()
+  }
+  const remove = () => {
+    if(!confirm(`Excluir "${client.name}"? O histórico de sessões será mantido mas sem nome de cliente.`)) return
+    dispatch({type:'CLIENT_REMOVE', id:client.id})
+    onClose()
+  }
+  const history = useMemo(() =>
+    isEdit ? state.appointments.filter(a => a.clientId === client.id).sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time)) : []
+  , [state.appointments, client?.id, isEdit])
+  return (
+    <Modal open={true} onClose={onClose} title={isEdit?'Editar cliente':'Novo cliente'} wide
+      footer={<>
+        {isEdit && <button className="btn btn-danger" onClick={remove}><IcTrash size={14}/>Excluir</button>}
+        <button className="btn" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={save}><IcCheck size={14}/>Salvar</button>
+      </>}>
+      <Field label="Nome"><input className="glass-input" value={form.name} onChange={e => set('name', e.target.value)} autoFocus/></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Telefone"><input className="glass-input" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(11) 99999-9999"/></Field>
+        <Field label="Email"><input type="email" className="glass-input" value={form.email} onChange={e => set('email', e.target.value)}/></Field>
+      </div>
+      <Field label="Anotações"><textarea rows="3" className="glass-input" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Histórico clínico, queixas, observações..."/></Field>
+      {isEdit && (
+        <div>
+          <div className="flex items-center justify-between mb-2 mt-2">
+            <p className="label !mb-0">Histórico ({history.length})</p>
+            {onNewSessionFor && <button className="btn" onClick={() => onNewSessionFor(client.id)}><IcPlus size={14}/>Sessão</button>}
+          </div>
+          {history.length === 0 ? (
+            <p className="text-sm py-3 text-center" style={{color:'var(--text-3)'}}>Sem sessões.</p>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {history.map(a => (
+                <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg text-sm" style={{background:'var(--bg-overlay)'}}>
+                  <div className="text-xs tabular-nums shrink-0" style={{color:'var(--text-3)'}}>{isoToBR(a.date)} {a.time}</div>
+                  <div className="flex-1 truncate text-xs">{state.settings.services.find(s => s.id===a.serviceId)?.name||'—'}</div>
+                  <span className={`chip text-[10px] ${STATUS_CHIP[a.status]||''}`}>{STATUS_LABEL[a.status]}</span>
+                  <span className="font-medium text-xs">{fmtBRL(a.price)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+function ServiceModal({service, dispatch, onClose}){
+  const isEdit = !!service?.id
+  const [form, setForm] = useState(() => ({
+    name: service?.name || '',
+    price: service?.price ?? '',
+    duration: service?.duration ?? 60,
+  }))
+  const set = (k,v) => setForm(f => ({...f, [k]:v}))
+  const save = () => {
+    if(!form.name.trim()){ alert('Informe o nome.'); return }
+    const data = {
+      name: sanitize(form.name).trim(),
+      price: Number(form.price)||0,
+      duration: Number(form.duration)||60,
+    }
+    if(isEdit) dispatch({type:'SERVICE_UPDATE', id:service.id, data})
+    else dispatch({type:'SERVICE_ADD', data})
+    onClose()
+  }
+  return (
+    <Modal open={true} onClose={onClose} title={isEdit?'Editar serviço':'Novo serviço'}
+      footer={<>
+        <button className="btn" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={save}><IcCheck size={14}/>Salvar</button>
+      </>}>
+      <Field label="Nome"><input className="glass-input" value={form.name} onChange={e => set('name', e.target.value)} autoFocus placeholder="Ex: Massagem Relaxante 60min"/></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Preço (R$)"><input type="number" min="0" step="0.01" className="glass-input" value={form.price} onChange={e => set('price', e.target.value)}/></Field>
+        <Field label="Duração (min)"><input type="number" min="1" className="glass-input" value={form.duration} onChange={e => set('duration', e.target.value)}/></Field>
+      </div>
+    </Modal>
+  )
+}
+
+function TherapistModal({therapist, dispatch, onClose}){
+  const [form, setForm] = useState(therapist)
+  const set = (k,v) => setForm(f => ({...f, [k]:v}))
+  const save = () => {
+    dispatch({type:'THERAPIST_PATCH', patch:{
+      name: sanitize(form.name).trim(),
+      profession: sanitize(form.profession).trim(),
+      phone: sanitize(form.phone).trim(),
+      pix: sanitize(form.pix).trim(),
+    }})
+    onClose()
+  }
+  return (
+    <Modal open={true} onClose={onClose} title="Perfil profissional"
+      footer={<>
+        <button className="btn" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={save}><IcCheck size={14}/>Salvar</button>
+      </>}>
+      <Field label="Nome"><input className="glass-input" value={form.name} onChange={e => set('name', e.target.value)}/></Field>
+      <Field label="Profissão">
+        <select className="glass-input" value={form.profession} onChange={e => set('profession', e.target.value)}>
+          <option>Massoterapeuta</option>
+          <option>Quiropraxista</option>
+          <option>Fisioterapeuta</option>
+          <option>Esteticista</option>
+          <option>Outro</option>
+        </select>
+      </Field>
+      <Field label="Telefone"><input className="glass-input" value={form.phone} onChange={e => set('phone', e.target.value)}/></Field>
+      <Field label="Chave PIX"><input className="glass-input" value={form.pix} onChange={e => set('pix', e.target.value)} placeholder="CPF, telefone, email ou aleatória"/></Field>
+    </Modal>
+  )
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function App(){
+  const [state, dispatch] = useStore()
+  const [tab, setTab] = useState('hoje')
+  const [sessionModal, setSessionModal] = useState(null) // null | {} | apptObj | {clientId}
+  const [expenseModal, setExpenseModal] = useState(null)
+  const [clientModal, setClientModal] = useState(null)
+
+  const openNewSession = useCallback((presetClientId) => {
+    setSessionModal({clientId: presetClientId || ''})
+  }, [])
+  const openSession = useCallback(a => setSessionModal(a), [])
+  const closeSession = useCallback(() => setSessionModal(null), [])
+  const openNewExpense = useCallback(() => setExpenseModal({}), [])
+  const openExpense = useCallback(e => setExpenseModal(e), [])
+  const closeExpense = useCallback(() => setExpenseModal(null), [])
+  const openNewClient = useCallback(() => setClientModal({}), [])
+  const openClient = useCallback(c => setClientModal(c), [])
+  const closeClient = useCallback(() => setClientModal(null), [])
+
+  const tabs = [
+    {id:'hoje', label:'Hoje', Icon: IcHome},
+    {id:'agenda', label:'Agenda', Icon: IcCalendar},
+    {id:'fin', label:'Financeiro', Icon: IcWallet},
+    {id:'clientes', label:'Clientes', Icon: IcUsers},
+    {id:'ajustes', label:'Ajustes', Icon: IcSettings},
+  ]
+
+  return (
+    <>
+      <main>
+        {tab==='hoje' && <Hoje state={state} dispatch={dispatch} onNewSession={() => openNewSession()} onNewExpense={openNewExpense} onOpenAppt={openSession}/>}
+        {tab==='agenda' && <Agenda state={state} onNewSession={() => openNewSession()} onOpenAppt={openSession}/>}
+        {tab==='fin' && <Financeiro state={state} dispatch={dispatch} onNewExpense={openNewExpense} onEditExpense={openExpense} onOpenAppt={openSession}/>}
+        {tab==='clientes' && <Clientes state={state} dispatch={dispatch} onAdd={openNewClient} onEdit={openClient}/>}
+        {tab==='ajustes' && <Ajustes state={state} dispatch={dispatch}/>}
+      </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-30 glass border-t flex" style={{borderColor:'var(--border)',paddingBottom:'env(safe-area-inset-bottom)'}}>
+        {tabs.map(({id,label,Icon}) => (
+          <button key={id} className={`nav-item ${tab===id?'active':''}`} onClick={() => setTab(id)} aria-label={label}>
+            <Icon size={22}/>
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {sessionModal && (
+        <SessionModal
+          appt={sessionModal.id ? sessionModal : {clientId: sessionModal.clientId || ''}}
+          state={state} dispatch={dispatch} onClose={closeSession}
+        />
+      )}
+      {expenseModal && <ExpenseModal expense={expenseModal} state={state} dispatch={dispatch} onClose={closeExpense}/>}
+      {clientModal && <ClientModal client={clientModal} state={state} dispatch={dispatch} onClose={closeClient} onNewSessionFor={(cid) => { closeClient(); openNewSession(cid) }}/>}
+    </>
+  )
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'))
+root.render(<App/>)
+</script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('SW:',e))</script>
+</body>
+</html>
