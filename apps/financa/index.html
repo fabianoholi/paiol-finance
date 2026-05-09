@@ -20,6 +20,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
   <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     html, body { background: #0a0a0a; color: #fafafa; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
@@ -48,57 +49,69 @@ const {
 } = Recharts
 
 // =====================================================================
-// Constantes
+// Constantes & Supabase client
 // =====================================================================
-const STORAGE_PREFIX = 'financa'
+const SUPABASE_URL = 'https://zffcleurthevujpypsrs.supabase.co'
+const SUPABASE_ANON_KEY = 'sb_publishable_Q9qkaLJMJY824qFVFFYYjQ__nsHPW2m'
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+})
+
 const GEMINI_MODEL = 'gemini-1.5-flash-latest'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
-const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
-
-const SEED_CATEGORIES = [
-  // despesas pessoais
-  { id:'cat-alim',  name:'Alimentação',     type:'expense', scope:'personal', color:'#f97316', emoji:'🍽️' },
-  { id:'cat-mor',   name:'Moradia',         type:'expense', scope:'personal', color:'#a78bfa', emoji:'🏠' },
-  { id:'cat-tran',  name:'Transporte',      type:'expense', scope:'personal', color:'#60a5fa', emoji:'🚗' },
-  { id:'cat-sau',   name:'Saúde',           type:'expense', scope:'personal', color:'#f43f5e', emoji:'❤️' },
-  { id:'cat-laz',   name:'Lazer',           type:'expense', scope:'personal', color:'#22d3ee', emoji:'🎉' },
-  { id:'cat-edu',   name:'Educação',        type:'expense', scope:'personal', color:'#facc15', emoji:'📚' },
-  { id:'cat-tel',   name:'Telefone/Internet', type:'expense', scope:'personal', color:'#94a3b8', emoji:'📱' },
-  { id:'cat-luz',   name:'Luz/Água/Gás',    type:'expense', scope:'personal', color:'#fb923c', emoji:'💡' },
-  { id:'cat-vest',  name:'Vestuário',       type:'expense', scope:'personal', color:'#e879f9', emoji:'👕' },
-  { id:'cat-pess',  name:'Outros Pessoal',  type:'expense', scope:'personal', color:'#64748b', emoji:'🏷️' },
-  // despesas empresariais
-  { id:'cat-emp-op',  name:'Empresa - Operacional', type:'expense', scope:'business', color:'#0ea5e9', emoji:'🏢' },
-  { id:'cat-emp-mkt', name:'Empresa - Marketing',   type:'expense', scope:'business', color:'#ec4899', emoji:'📣' },
-  { id:'cat-emp-sw',  name:'Empresa - Software',    type:'expense', scope:'business', color:'#8b5cf6', emoji:'💻' },
-  { id:'cat-emp-imp', name:'Empresa - Impostos',    type:'expense', scope:'business', color:'#ef4444', emoji:'📑' },
-  { id:'cat-emp-out', name:'Empresa - Outros',      type:'expense', scope:'business', color:'#475569', emoji:'🗂️' },
-  // receitas pessoais
-  { id:'cat-sal',   name:'Salário',         type:'income', scope:'personal', color:'#10b981', emoji:'💼' },
-  { id:'cat-rext',  name:'Renda Extra',     type:'income', scope:'personal', color:'#34d399', emoji:'✨' },
-  // receitas empresariais
-  { id:'cat-vserv', name:'Venda Serviço',   type:'income', scope:'business', color:'#22c55e', emoji:'🛠️' },
-  { id:'cat-vprod', name:'Venda Produto',   type:'income', scope:'business', color:'#16a34a', emoji:'📦' },
-  { id:'cat-com',   name:'Comissão',        type:'income', scope:'business', color:'#84cc16', emoji:'💵' },
-]
+const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random()*16|0, v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
 
 // =====================================================================
-// Storage utils
+// Row converters (DB <-> app)
 // =====================================================================
-function readJSON(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback }
-  catch { return fallback }
-}
-function writeJSON(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
-}
-function k(profileId, suffix) { return `${STORAGE_PREFIX}:${profileId}:${suffix}` }
+const rowToTx = r => ({
+  id: r.id, type: r.type, scope: r.scope, amount: Number(r.amount),
+  description: r.description || '', categoryId: r.category_id,
+  date: r.date, dueDate: r.due_date, paid: r.paid !== false,
+  note: r.note, source: r.source, confidence: r.confidence != null ? Number(r.confidence) : undefined,
+  userId: r.user_id, createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+})
+const txToRow = (t, householdId, userId) => ({
+  id: t.id,
+  household_id: householdId,
+  user_id: t.userId || userId || null,
+  type: t.type, scope: t.scope, amount: t.amount,
+  description: t.description || null,
+  category_id: t.categoryId || null,
+  date: t.date,
+  due_date: t.dueDate || null,
+  paid: t.paid !== false,
+  note: t.note || null,
+  source: t.source || null,
+  confidence: (t.confidence != null && !Number.isNaN(t.confidence)) ? t.confidence : null,
+})
+const rowToCat = r => ({
+  id: r.id, name: r.name, type: r.type, scope: r.scope,
+  color: r.color || '#64748b', emoji: r.emoji || '🏷️',
+})
+const catToRow = (c, householdId) => ({
+  id: c.id, household_id: householdId,
+  name: c.name, type: c.type, scope: c.scope,
+  color: c.color || null, emoji: c.emoji || null,
+})
 
-function useLocalState(key, initial) {
-  const [val, setVal] = useState(() => readJSON(key, initial))
-  useEffect(() => { writeJSON(key, val) }, [key, val])
-  return [val, setVal]
+// detecta diff entre dois arrays de items {id, ...} pra propagar inserts/updates/deletes
+function diffById(oldList, newList) {
+  const oldMap = new Map(oldList.map(x => [x.id, x]))
+  const newMap = new Map(newList.map(x => [x.id, x]))
+  const added = newList.filter(x => !oldMap.has(x.id))
+  const removed = oldList.filter(x => !newMap.has(x.id))
+  const updated = newList.filter(x => {
+    const o = oldMap.get(x.id)
+    return o && JSON.stringify(o) !== JSON.stringify(x)
+  })
+  return { added, removed, updated }
 }
 
 // =====================================================================
@@ -274,37 +287,60 @@ const I = {
 }
 
 // =====================================================================
-// Profile management (multi-user local)
+// Splash/Loader
 // =====================================================================
-function ProfileGate({ onSelect }) {
-  const [profiles, setProfiles] = useState(() => readJSON(`${STORAGE_PREFIX}:profiles`, []))
+function SplashLoader({ label = 'Carregando...' }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center text-3xl font-bold text-white mb-4 shadow-lg shadow-emerald-500/30">$</div>
+      <div className="flex items-center gap-2 text-neutral-400 text-sm">
+        <span className="animate-spin w-4 h-4 border-2 border-neutral-700 border-t-emerald-500 rounded-full"/>
+        {label}
+      </div>
+    </div>
+  )
+}
+
+// =====================================================================
+// AuthScreen — login + signup com email/senha
+// =====================================================================
+function AuthScreen() {
+  const [mode, setMode] = useState('login') // 'login' | 'signup'
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPwd, setShowPwd] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const [info, setInfo] = useState(null)
 
-  const create = () => {
-    const n = name.trim()
-    if (!n) return
-    const p = { id: uid(), name: n, createdAt: Date.now() }
-    const next = [...profiles, p]
-    setProfiles(next)
-    writeJSON(`${STORAGE_PREFIX}:profiles`, next)
-    writeJSON(`${STORAGE_PREFIX}:activeProfileId`, p.id)
-    onSelect(p)
-  }
-
-  const pick = (p) => {
-    writeJSON(`${STORAGE_PREFIX}:activeProfileId`, p.id)
-    onSelect(p)
-  }
-
-  const remove = (id) => {
-    if (!confirm('Remover este perfil e todos os dados dele deste celular?')) return
-    const next = profiles.filter(p => p.id !== id)
-    setProfiles(next)
-    writeJSON(`${STORAGE_PREFIX}:profiles`, next)
-    // limpa dados do perfil
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith(`${STORAGE_PREFIX}:${id}:`)) localStorage.removeItem(key)
-    })
+  const submit = async () => {
+    setError(null); setInfo(null)
+    if (!email.trim()) return setError('Informe seu email.')
+    if (password.length < 6) return setError('A senha precisa ter ao menos 6 caracteres.')
+    if (mode === 'signup' && !name.trim()) return setError('Informe seu nome.')
+    setBusy(true)
+    try {
+      if (mode === 'login') {
+        const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password })
+        if (error) throw error
+      } else {
+        const { data, error } = await sb.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { data: { name: name.trim() } },
+        })
+        if (error) throw error
+        if (!data.session) {
+          setInfo('Conta criada. Verifique seu email para confirmar e depois entre.')
+          setMode('login')
+        }
+      }
+    } catch (e) {
+      setError(e.message || String(e))
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -313,48 +349,172 @@ function ProfileGate({ onSelect }) {
         <div className="text-center mb-8">
           <div className="w-20 h-20 rounded-3xl bg-emerald-500 mx-auto flex items-center justify-center text-4xl font-bold text-white mb-4 shadow-lg shadow-emerald-500/30">$</div>
           <h1 className="text-3xl font-bold">Finança</h1>
-          <p className="text-neutral-400 mt-1">Controle financeiro pessoal e empresarial</p>
+          <p className="text-neutral-400 mt-1">Controle financeiro do casal, sincronizado.</p>
         </div>
 
-        {profiles.length > 0 && (
-          <div className="space-y-2 mb-6">
-            <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">Perfis salvos neste aparelho</p>
-            {profiles.map(p => (
-              <div key={p.id} className="flex items-center gap-2">
-                <button onClick={() => pick(p)} className="flex-1 flex items-center gap-3 p-3 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 transition">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-semibold">{p.name[0]?.toUpperCase()}</div>
-                  <div className="flex-1 text-left">
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-neutral-500">Toque para entrar</div>
-                  </div>
-                </button>
-                <button onClick={() => remove(p.id)} className="p-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-500 hover:text-red-400">
-                  {I.trash}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="flex bg-neutral-900 border border-neutral-800 rounded-xl p-1 mb-4">
+          <button onClick={()=>{setMode('login');setError(null);setInfo(null)}} className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode==='login'?'bg-emerald-500 text-black':'text-neutral-400'}`}>Entrar</button>
+          <button onClick={()=>{setMode('signup');setError(null);setInfo(null)}} className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode==='signup'?'bg-emerald-500 text-black':'text-neutral-400'}`}>Criar conta</button>
+        </div>
 
-        <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-          <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">{profiles.length ? 'Adicionar novo perfil' : 'Criar seu perfil'}</p>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && create()}
-            placeholder="Seu nome"
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-emerald-500"
-          />
+        <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-3">
+          {mode === 'signup' && (
+            <Field label="Seu nome">
+              <input
+                value={name}
+                onChange={e=>setName(e.target.value)}
+                placeholder="Como você quer ser chamado"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500"
+              />
+            </Field>
+          )}
+          <Field label="Email">
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={e=>setEmail(e.target.value)}
+              placeholder="seu@email.com"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500"
+            />
+          </Field>
+          <Field label="Senha">
+            <div className="flex gap-2">
+              <input
+                type={showPwd?'text':'password'}
+                autoComplete={mode==='login'?'current-password':'new-password'}
+                value={password}
+                onChange={e=>setPassword(e.target.value)}
+                onKeyDown={e=>e.key==='Enter' && submit()}
+                placeholder="ao menos 6 caracteres"
+                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500"
+              />
+              <button type="button" onClick={()=>setShowPwd(s=>!s)} className="px-3 rounded-xl bg-neutral-800 text-neutral-400 text-xs">{showPwd?'ocultar':'ver'}</button>
+            </div>
+          </Field>
+
+          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {info && <p className="text-xs text-emerald-400">{info}</p>}
+
           <button
-            onClick={create}
-            disabled={!name.trim()}
-            className="w-full mt-3 bg-emerald-500 hover:bg-emerald-400 disabled:bg-neutral-800 disabled:text-neutral-500 text-black font-semibold py-3 rounded-xl transition"
+            onClick={submit}
+            disabled={busy}
+            className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-neutral-800 disabled:text-neutral-500 text-black font-semibold py-3 rounded-xl flex items-center justify-center gap-2"
           >
-            Entrar
+            {busy && <span className="animate-spin w-4 h-4 border-2 border-black/40 border-t-black rounded-full"/>}
+            {busy ? 'Aguarde...' : (mode==='login' ? 'Entrar' : 'Criar conta')}
           </button>
         </div>
 
-        <p className="text-xs text-neutral-600 text-center mt-6">Os dados ficam salvos só neste aparelho.</p>
+        <p className="text-xs text-neutral-600 text-center mt-6">
+          Seus dados ficam sincronizados entre dispositivos via Supabase. {mode==='signup' ? 'Após criar a conta você decide se quer começar uma conta familiar nova ou entrar com um código de convite.' : 'Entre com a conta que vocês compartilham.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// =====================================================================
+// HouseholdSetupScreen — escolher criar novo household ou entrar com código
+// =====================================================================
+function HouseholdSetupScreen({ session, onReady, onLogout }) {
+  const defaultName = (session.user.user_metadata?.name || '').trim()
+  const [mode, setMode] = useState('create') // 'create' | 'join'
+  const [householdName, setHouseholdName] = useState(defaultName ? `Conta de ${defaultName.split(' ')[0]}` : 'Minha conta')
+  const [inviteCode, setInviteCode] = useState('')
+  const [displayName, setDisplayName] = useState(defaultName)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  const submit = async () => {
+    setError(null); setBusy(true)
+    try {
+      if (mode === 'create') {
+        const { data, error } = await sb.rpc('create_household', {
+          p_household_name: householdName.trim() || 'Minha conta',
+          p_display_name: displayName.trim() || null,
+        })
+        if (error) throw error
+        onReady(data)
+      } else {
+        const code = inviteCode.trim().toUpperCase()
+        if (code.length < 4) throw new Error('Informe o código de convite.')
+        const { data, error } = await sb.rpc('join_household_with_code', {
+          p_invite_code: code,
+          p_display_name: displayName.trim() || null,
+        })
+        if (error) throw error
+        onReady(data)
+      }
+    } catch (e) {
+      setError(e.message || String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 fade-in">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500 mx-auto flex items-center justify-center text-3xl font-bold text-white mb-3">$</div>
+          <h1 className="text-2xl font-bold">Quase lá</h1>
+          <p className="text-neutral-400 mt-1 text-sm">Crie uma conta familiar nova ou entre na de quem te convidou.</p>
+        </div>
+
+        <div className="flex bg-neutral-900 border border-neutral-800 rounded-xl p-1 mb-4">
+          <button onClick={()=>{setMode('create');setError(null)}} className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode==='create'?'bg-emerald-500 text-black':'text-neutral-400'}`}>Criar nova</button>
+          <button onClick={()=>{setMode('join');setError(null)}} className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode==='join'?'bg-emerald-500 text-black':'text-neutral-400'}`}>Tenho código</button>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-3">
+          <Field label="Como você quer ser chamado">
+            <input
+              value={displayName}
+              onChange={e=>setDisplayName(e.target.value)}
+              placeholder="Seu nome"
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500"
+            />
+          </Field>
+
+          {mode === 'create' && (
+            <Field label="Nome da conta familiar">
+              <input
+                value={householdName}
+                onChange={e=>setHouseholdName(e.target.value)}
+                placeholder='ex: "Casa do Fabiano"'
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500"
+              />
+              <span className="text-xs text-neutral-500 mt-1 block">Você poderá convidar seu(sua) parceiro(a) depois — basta gerar um código no menu Configurações.</span>
+            </Field>
+          )}
+
+          {mode === 'join' && (
+            <Field label="Código de convite">
+              <input
+                value={inviteCode}
+                onChange={e=>setInviteCode(e.target.value.toUpperCase())}
+                placeholder="ex: ABCD2345"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500 tracking-widest font-mono uppercase"
+                maxLength={12}
+              />
+              <span className="text-xs text-neutral-500 mt-1 block">Peça o código pra quem te convidou. Ele(a) gera em Configurações → Convidar.</span>
+            </Field>
+          )}
+
+          {error && <p className="text-xs text-rose-400">{error}</p>}
+
+          <button
+            onClick={submit}
+            disabled={busy}
+            className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-neutral-800 disabled:text-neutral-500 text-black font-semibold py-3 rounded-xl flex items-center justify-center gap-2"
+          >
+            {busy && <span className="animate-spin w-4 h-4 border-2 border-black/40 border-t-black rounded-full"/>}
+            {busy ? 'Aguarde...' : (mode==='create' ? 'Criar conta familiar' : 'Entrar com código')}
+          </button>
+        </div>
+
+        <button onClick={onLogout} className="w-full mt-4 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 text-sm">Sair</button>
       </div>
     </div>
   )
@@ -1115,62 +1275,94 @@ function CategoryForm({ initial, onSave }) {
 // =====================================================================
 // Tela: Configurações
 // =====================================================================
-function ConfigScreen({ profile, setProfile, settings, setSettings, transactions, setTransactions, categories, setCategories, onLogout }) {
+function ConfigScreen({ profile, setProfile, settings, setSettings, household, onRegenerateInvite, transactions, categories, onLogout }) {
   const [keyDraft, setKeyDraft] = useState(settings.geminiKey || '')
   const [showKey, setShowKey] = useState(false)
-  const fileRef = useRef(null)
+  const [savedKey, setSavedKey] = useState(false)
+  const [savedName, setSavedName] = useState(false)
+  const [nameDraft, setNameDraft] = useState(profile.name || '')
+  const [copied, setCopied] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
 
-  const saveKey = () => {
-    setSettings({ ...settings, geminiKey: keyDraft.trim() })
-    alert('Chave salva.')
+  useEffect(() => { setKeyDraft(settings.geminiKey || '') }, [settings.geminiKey])
+  useEffect(() => { setNameDraft(profile.name || '') }, [profile.name])
+
+  const saveKey = async () => {
+    await setSettings({ ...settings, geminiKey: keyDraft.trim() })
+    setSavedKey(true)
+    setTimeout(() => setSavedKey(false), 2000)
   }
 
-  const exportData = () => {
-    const data = { profile, transactions, categories, settings, exportedAt: new Date().toISOString() }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `financa-${profile.name}-${todayISO()}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+  const saveName = async () => {
+    if (!nameDraft.trim()) return
+    await setProfile({ ...profile, name: nameDraft.trim() })
+    setSavedName(true)
+    setTimeout(() => setSavedName(false), 2000)
   }
 
-  const importData = (file) => {
-    const r = new FileReader()
-    r.onload = () => {
-      try {
-        const data = JSON.parse(r.result)
-        if (!confirm(`Importar ${data.transactions?.length || 0} lançamentos e ${data.categories?.length || 0} categorias? Os dados atuais serão SUBSTITUÍDOS.`)) return
-        if (Array.isArray(data.transactions)) setTransactions(data.transactions)
-        if (Array.isArray(data.categories)) setCategories(data.categories)
-        if (data.settings?.geminiKey) setSettings(prev => ({ ...prev, geminiKey: data.settings.geminiKey }))
-        alert('Importação concluída.')
-      } catch (e) {
-        alert('Arquivo inválido: ' + e.message)
-      }
+  const copyCode = async () => {
+    if (!household?.invite_code) return
+    try {
+      await navigator.clipboard.writeText(household.invite_code)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      alert('Código: ' + household.invite_code)
     }
-    r.readAsText(file)
   }
 
-  const resetCategories = () => {
-    if (!confirm('Restaurar lista padrão de categorias? Suas categorias customizadas serão removidas.')) return
-    setCategories(SEED_CATEGORIES)
+  const shareCode = async () => {
+    if (!household?.invite_code) return
+    const text = `Te convidei pra acompanhar nossas finanças no Finança. Crie sua conta e use este código de convite: ${household.invite_code}\n\nAcesse: ${location.origin}${location.pathname}`
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Convite Finança', text }) } catch {}
+    } else {
+      copyCode()
+    }
+  }
+
+  const regenerate = async () => {
+    if (!confirm('Gerar um novo código de convite? O código anterior deixa de funcionar imediatamente.')) return
+    setRegenerating(true)
+    try { await onRegenerateInvite() }
+    finally { setRegenerating(false) }
   }
 
   return (
     <div className="px-4 pt-4 pb-32 fade-in space-y-4">
       <Card className="p-4">
-        <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">Perfil</p>
-        <input value={profile.name} onChange={e=>setProfile({ ...profile, name: e.target.value })} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500"/>
+        <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">Seu nome</p>
+        <div className="flex gap-2">
+          <input value={nameDraft} onChange={e=>setNameDraft(e.target.value)} className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 outline-none focus:border-emerald-500"/>
+          <button onClick={saveName} className="px-4 rounded-xl bg-emerald-500 text-black font-semibold text-sm">{savedName?'✓':'Salvar'}</button>
+        </div>
+        <p className="text-[11px] text-neutral-600 mt-2">Logado como <span className="text-neutral-400">{profile.email}</span></p>
+      </Card>
+
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs uppercase tracking-wider text-neutral-500">Convidar parceiro(a)</p>
+          <span className="text-[10px] uppercase tracking-wider text-emerald-400">{household?.name}</span>
+        </div>
+        <p className="text-xs text-neutral-500 mb-3">Compartilhe este código com seu(sua) parceiro(a). Ele(a) cria uma conta própria e digita o código pra entrar nesta mesma conta familiar — vocês passam a ver e atualizar tudo juntos.</p>
+        <div className="bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-4 flex items-center justify-between gap-3">
+          <span className="font-mono text-2xl tracking-[0.3em] text-emerald-400 font-bold">{household?.invite_code || '—'}</span>
+          <div className="flex gap-1">
+            <button onClick={copyCode} className="px-3 py-2 rounded-lg bg-neutral-800 text-neutral-300 text-xs">{copied?'✓ copiado':'copiar'}</button>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button onClick={shareCode} className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm">Compartilhar convite</button>
+          <button onClick={regenerate} disabled={regenerating} className="px-3 py-2.5 rounded-xl bg-neutral-800 text-neutral-300 text-xs disabled:opacity-50">{regenerating?'...':'Gerar novo'}</button>
+        </div>
       </Card>
 
       <Card className="p-4">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs uppercase tracking-wider text-neutral-500">Chave da IA (Gemini)</p>
-          <span className="text-[10px] uppercase tracking-wider text-neutral-600">opcional</span>
+          <span className="text-[10px] uppercase tracking-wider text-neutral-600">opcional · compartilhada</span>
         </div>
-        <p className="text-xs text-neutral-500 mb-2">A IA serve só pra interpretar texto/áudio e preencher os campos automaticamente. O app funciona 100% sem ela. Pegue grátis em <span className="text-emerald-400">ai.google.dev</span> → "Get API key". A chave fica salva só neste celular.</p>
+        <p className="text-xs text-neutral-500 mb-2">A IA interpreta texto/áudio e preenche os campos automaticamente. O app funciona 100% sem ela. Pegue grátis em <span className="text-emerald-400">ai.google.dev</span> → "Get API key". A chave fica salva na conta familiar — todos do casal usam a mesma.</p>
         <div className="flex gap-2">
           <input
             type={showKey?'text':'password'}
@@ -1181,59 +1373,162 @@ function ConfigScreen({ profile, setProfile, settings, setSettings, transactions
           />
           <button onClick={()=>setShowKey(s=>!s)} className="px-3 rounded-xl bg-neutral-800 text-neutral-400 text-xs">{showKey?'ocultar':'mostrar'}</button>
         </div>
-        <button onClick={saveKey} className="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold py-2.5 rounded-xl">Salvar chave</button>
-      </Card>
-
-      <Card className="p-4">
-        <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">Dados</p>
-        <button onClick={exportData} className="w-full text-left p-3 rounded-xl bg-neutral-950 border border-neutral-800 mb-2">
-          <div className="font-medium">Exportar backup</div>
-          <div className="text-xs text-neutral-500">Baixa um JSON com tudo deste perfil</div>
-        </button>
-        <button onClick={() => fileRef.current?.click()} className="w-full text-left p-3 rounded-xl bg-neutral-950 border border-neutral-800 mb-2">
-          <div className="font-medium">Importar backup</div>
-          <div className="text-xs text-neutral-500">Substitui os dados atuais</div>
-        </button>
-        <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={e => e.target.files?.[0] && importData(e.target.files[0])}/>
-        <button onClick={resetCategories} className="w-full text-left p-3 rounded-xl bg-neutral-950 border border-neutral-800">
-          <div className="font-medium">Restaurar categorias padrão</div>
-          <div className="text-xs text-neutral-500">{categories.length} categorias atualmente</div>
-        </button>
+        <button onClick={saveKey} className="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold py-2.5 rounded-xl">{savedKey?'✓ salvo':'Salvar chave'}</button>
       </Card>
 
       <Card className="p-4">
         <p className="text-xs uppercase tracking-wider text-neutral-500 mb-2">Sobre</p>
-        <p className="text-sm text-neutral-400">Finança · uso pessoal</p>
+        <p className="text-sm text-neutral-400">Finança · sincronizado na nuvem</p>
         <p className="text-xs text-neutral-600 mt-1">{transactions.length} lançamentos · {categories.length} categorias</p>
       </Card>
 
-      <button onClick={onLogout} className="w-full py-3 rounded-xl border border-neutral-800 text-neutral-400">Trocar de perfil</button>
+      <button onClick={onLogout} className="w-full py-3 rounded-xl border border-neutral-800 text-neutral-400">Sair</button>
     </div>
   )
 }
 
 // =====================================================================
-// App principal
+// App principal — carrega/sincroniza dados via Supabase
 // =====================================================================
-function MainApp({ profile, onLogout, onProfileChange }) {
-  const txKey  = k(profile.id, 'transactions')
-  const catKey = k(profile.id, 'categories')
-  const setKey = k(profile.id, 'settings')
+function MainApp({ session, householdId, onLogout }) {
+  const userId = session.user.id
+  const [transactions, setTransactionsLocal] = useState([])
+  const [categories, setCategoriesLocal]     = useState([])
+  const [household, setHousehold]            = useState(null)
+  const [member, setMember]                  = useState(null)
+  const [loading, setLoading]                = useState(true)
+  const [tab, setTab]                        = useState('home')
 
-  const [transactions, setTransactions] = useLocalState(txKey, [])
-  const [categories, setCategories]     = useLocalState(catKey, SEED_CATEGORIES)
-  const [settings, setSettings]         = useLocalState(setKey, { geminiKey: '' })
-
-  const [profileLocal, setProfileLocal] = useState(profile)
+  // Carrega tudo do household
   useEffect(() => {
-    // sincroniza alterações no nome/perfil
-    const list = readJSON(`${STORAGE_PREFIX}:profiles`, [])
-    const next = list.map(p => p.id === profileLocal.id ? profileLocal : p)
-    writeJSON(`${STORAGE_PREFIX}:profiles`, next)
-    onProfileChange?.(profileLocal)
-  }, [profileLocal])
+    let cancelled = false
+    setLoading(true)
+    Promise.all([
+      sb.from('transactions').select('*').eq('household_id', householdId),
+      sb.from('categories').select('*').eq('household_id', householdId),
+      sb.from('households').select('*').eq('id', householdId).single(),
+      sb.from('household_members').select('*').eq('household_id', householdId).eq('user_id', userId).maybeSingle(),
+    ]).then(([txRes, catRes, hhRes, memRes]) => {
+      if (cancelled) return
+      setTransactionsLocal((txRes.data || []).map(rowToTx))
+      setCategoriesLocal((catRes.data || []).map(rowToCat))
+      setHousehold(hhRes.data)
+      setMember(memRes.data)
+      setLoading(false)
+    }).catch(e => {
+      if (!cancelled) { console.error(e); setLoading(false) }
+    })
+    return () => { cancelled = true }
+  }, [householdId, userId])
 
-  const [tab, setTab] = useState('home') // home|register|list|plan|settings|categories
+  // Realtime — sincroniza mudanças entre dispositivos
+  useEffect(() => {
+    if (!householdId) return
+    const ch = sb.channel(`hh:${householdId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `household_id=eq.${householdId}` }, p => {
+        if (p.eventType === 'INSERT') {
+          setTransactionsLocal(prev => prev.find(t => t.id === p.new.id) ? prev : [rowToTx(p.new), ...prev])
+        } else if (p.eventType === 'UPDATE') {
+          setTransactionsLocal(prev => prev.map(t => t.id === p.new.id ? rowToTx(p.new) : t))
+        } else if (p.eventType === 'DELETE') {
+          setTransactionsLocal(prev => prev.filter(t => t.id !== p.old.id))
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` }, p => {
+        if (p.eventType === 'INSERT') {
+          setCategoriesLocal(prev => prev.find(c => c.id === p.new.id) ? prev : [...prev, rowToCat(p.new)])
+        } else if (p.eventType === 'UPDATE') {
+          setCategoriesLocal(prev => prev.map(c => c.id === p.new.id ? rowToCat(p.new) : c))
+        } else if (p.eventType === 'DELETE') {
+          setCategoriesLocal(prev => prev.filter(c => c.id !== p.old.id))
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'households', filter: `id=eq.${householdId}` }, p => {
+        setHousehold(p.new)
+      })
+      .subscribe()
+    return () => { sb.removeChannel(ch) }
+  }, [householdId])
+
+  // Setters compatíveis com a API antiga (set state com next array ou função)
+  const setTransactions = useCallback((next) => {
+    setTransactionsLocal(prev => {
+      const newList = typeof next === 'function' ? next(prev) : next
+      const { added, removed, updated } = diffById(prev, newList)
+      added.forEach(async t => {
+        const { error } = await sb.from('transactions').insert(txToRow(t, householdId, userId))
+        if (error) console.error('insert tx', error)
+      })
+      removed.forEach(async t => {
+        const { error } = await sb.from('transactions').delete().eq('id', t.id)
+        if (error) console.error('delete tx', error)
+      })
+      updated.forEach(async t => {
+        const row = txToRow(t, householdId, t.userId || userId)
+        delete row.household_id
+        delete row.id
+        const { error } = await sb.from('transactions').update(row).eq('id', t.id)
+        if (error) console.error('update tx', error)
+      })
+      return newList
+    })
+  }, [householdId, userId])
+
+  const setCategories = useCallback((next) => {
+    setCategoriesLocal(prev => {
+      const newList = typeof next === 'function' ? next(prev) : next
+      const { added, removed, updated } = diffById(prev, newList)
+      added.forEach(async c => {
+        const { error } = await sb.from('categories').insert(catToRow(c, householdId))
+        if (error) console.error('insert cat', error)
+      })
+      removed.forEach(async c => {
+        const { error } = await sb.from('categories').delete().eq('id', c.id)
+        if (error) console.error('delete cat', error)
+      })
+      updated.forEach(async c => {
+        const row = catToRow(c, householdId)
+        delete row.household_id
+        delete row.id
+        const { error } = await sb.from('categories').update(row).eq('id', c.id)
+        if (error) console.error('update cat', error)
+      })
+      return newList
+    })
+  }, [householdId])
+
+  // settings derivado de household.gemini_api_key
+  const settings = useMemo(() => ({ geminiKey: household?.gemini_api_key || '' }), [household])
+  const setSettings = useCallback(async (next) => {
+    const newVal = typeof next === 'function' ? next(settings) : next
+    const key = (newVal.geminiKey || '').trim() || null
+    setHousehold(prev => prev ? { ...prev, gemini_api_key: key } : prev)
+    const { error } = await sb.from('households').update({ gemini_api_key: key }).eq('id', householdId)
+    if (error) console.error('update household key', error)
+  }, [householdId, settings])
+
+  // profile derivado de session + member
+  const profile = useMemo(() => ({
+    id: userId,
+    name: member?.display_name || session.user.user_metadata?.name || (session.user.email?.split('@')[0]) || 'Você',
+    email: session.user.email,
+  }), [member, session, userId])
+  const setProfile = useCallback(async (next) => {
+    const newP = typeof next === 'function' ? next(profile) : next
+    setMember(prev => prev ? { ...prev, display_name: newP.name } : prev)
+    const { error } = await sb.from('household_members')
+      .update({ display_name: newP.name })
+      .eq('household_id', householdId).eq('user_id', userId)
+    if (error) console.error('update member name', error)
+  }, [profile, householdId, userId])
+
+  const handleRegenerateInvite = useCallback(async () => {
+    const { data, error } = await sb.rpc('regenerate_invite_code', { p_household_id: householdId })
+    if (error) { alert(error.message); return }
+    setHousehold(prev => prev ? { ...prev, invite_code: data } : prev)
+  }, [householdId])
+
+  if (loading) return <SplashLoader label="Sincronizando..."/>
 
   return (
     <div className="min-h-screen pb-20 safe-top">
@@ -1250,12 +1545,12 @@ function MainApp({ profile, onLogout, onProfileChange }) {
         )}
       </header>
 
-      {tab === 'home'       && <Dashboard transactions={transactions} categories={categories} profile={profileLocal} onGoTo={setTab}/>}
-      {tab === 'register'   && <RegistrarScreen profile={profileLocal} transactions={transactions} setTransactions={setTransactions} categories={categories} settings={settings} onDone={() => setTab('list')} onGoTo={setTab}/>}
+      {tab === 'home'       && <Dashboard transactions={transactions} categories={categories} profile={profile} onGoTo={setTab}/>}
+      {tab === 'register'   && <RegistrarScreen profile={profile} transactions={transactions} setTransactions={setTransactions} categories={categories} settings={settings} onDone={() => setTab('list')} onGoTo={setTab}/>}
       {tab === 'list'       && <ListaScreen transactions={transactions} setTransactions={setTransactions} categories={categories}/>}
       {tab === 'plan'       && <PlanejamentoScreen transactions={transactions} setTransactions={setTransactions} categories={categories}/>}
       {tab === 'categories' && <CategoriasScreen categories={categories} setCategories={setCategories}/>}
-      {tab === 'settings'   && <ConfigScreen profile={profileLocal} setProfile={setProfileLocal} settings={settings} setSettings={setSettings} transactions={transactions} setTransactions={setTransactions} categories={categories} setCategories={setCategories} onLogout={onLogout}/>}
+      {tab === 'settings'   && <ConfigScreen profile={profile} setProfile={setProfile} settings={settings} setSettings={setSettings} household={household} onRegenerateInvite={handleRegenerateInvite} transactions={transactions} categories={categories} onLogout={onLogout}/>}
 
       <BottomNav tab={tab} setTab={setTab}/>
     </div>
@@ -1296,23 +1591,54 @@ function BottomNav({ tab, setTab }) {
 }
 
 // =====================================================================
-// Root
+// Root — gerencia sessão Supabase + escolha do household
 // =====================================================================
 function App() {
-  const [profile, setProfile] = useState(() => {
-    const id = readJSON(`${STORAGE_PREFIX}:activeProfileId`, null)
-    if (!id) return null
-    const list = readJSON(`${STORAGE_PREFIX}:profiles`, [])
-    return list.find(p => p.id === id) || null
-  })
+  const [session, setSession] = useState(null)
+  const [loadingSession, setLoadingSession] = useState(true)
+  const [householdId, setHouseholdId] = useState(null)
+  const [householdLoading, setHouseholdLoading] = useState(false)
 
-  const handleLogout = () => {
-    localStorage.removeItem(`${STORAGE_PREFIX}:activeProfileId`)
-    setProfile(null)
+  // Boot: pega sessão atual + listener
+  useEffect(() => {
+    sb.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setLoadingSession(false)
+    })
+    const { data: sub } = sb.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess)
+      if (!sess) setHouseholdId(null)
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [])
+
+  // Quando há sessão, busca household do user
+  useEffect(() => {
+    if (!session) return
+    setHouseholdLoading(true)
+    sb.from('household_members')
+      .select('household_id')
+      .eq('user_id', session.user.id)
+      .order('joined_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        setHouseholdId(data?.household_id || null)
+        setHouseholdLoading(false)
+      })
+      .catch(() => setHouseholdLoading(false))
+  }, [session?.user?.id])
+
+  const handleLogout = async () => {
+    await sb.auth.signOut()
+    setHouseholdId(null)
   }
 
-  if (!profile) return <ProfileGate onSelect={setProfile}/>
-  return <MainApp profile={profile} onLogout={handleLogout} onProfileChange={setProfile}/>
+  if (loadingSession) return <SplashLoader/>
+  if (!session) return <AuthScreen/>
+  if (householdLoading) return <SplashLoader label="Carregando conta..."/>
+  if (!householdId) return <HouseholdSetupScreen session={session} onReady={setHouseholdId} onLogout={handleLogout}/>
+  return <MainApp session={session} householdId={householdId} onLogout={handleLogout}/>
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>)
