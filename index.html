@@ -125,6 +125,8 @@
     .glass-card{background:var(--bg-card);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.2),inset 0 0.5px 0 var(--inner)}
     .glass-input{background:var(--bg-input);border:1px solid var(--border);color:var(--text)}
     .glass-input:focus{outline:none;border-color:rgba(16,185,129,0.5);box-shadow:0 0 0 3px rgba(16,185,129,0.12)}
+    .glass-input.error{border-color:rgba(239,68,68,0.7)!important;box-shadow:0 0 0 3px rgba(239,68,68,0.12)!important}
+    .field-error{color:#ef4444;font-size:11px;margin-top:3px;display:block}
     .modal-backdrop{background:var(--modal-bg);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
     .modal-content{background:var(--bg-modal);backdrop-filter:blur(40px) saturate(200%);-webkit-backdrop-filter:blur(40px) saturate(200%);border:1px solid var(--border);box-shadow:var(--shadow-modal),inset 0 0.5px 0 var(--inner)}
     .card-section{background:var(--bg-card);border:1px solid var(--border)}
@@ -797,10 +799,10 @@ function ProgressBar({label,current,total,color}){
   )
 }
 
-function Field({label,children}){return <div><label className="block text-xs font-medium mb-1.5" style={{color:'var(--text-2)',letterSpacing:'0.02em'}}>{label}</label>{children}</div>}
+function Field({label,children,error}){return <div><label className="block text-xs font-medium mb-1.5" style={{color:error?'#ef4444':'var(--text-2)',letterSpacing:'0.02em'}}>{label}</label>{children}{error&&<span className="field-error">{error}</span>}</div>}
 const iCls="w-full px-3.5 py-2.5 rounded-2xl text-sm outline-none transition-all glass-input"
 const iSty={background:'var(--bg-input)',border:'1px solid var(--border)',color:'var(--text)'}
-function Inp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls} style={iSty}/>}
+function Inp({value,onChange,type='text',placeholder,error}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className={iCls+(error?' error':'')} style={iSty}/>}
 
 // ─── Componentes de form locais movidos pra escopo global ────────────────────
 // Bug: definir componentes dentro de função-pai faz React desmontar e remontar
@@ -1015,16 +1017,21 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
   const [filter,setFilter]=useState('Todos')
   const [modal,setModal]=useState(null)
   const [form,setForm]=useState({})
+  const [errors,setErrors]=useState({})
   const filtered=filter==='Todos'?entries:entries.filter(e=>e.status===filter)
   const totalExp=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
   const totalReal=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
   const totalPend=entries.filter(e=>e.status!=='Recebido').reduce((s,e)=>s+(e.expectedValue||0),0)
   const clientMap={};entries.forEach(e=>{clientMap[e.client]=(clientMap[e.client]||0)+(e.expectedValue||0)})
   const pieData=Object.entries(clientMap).map(([name,value])=>({name,value}))
-  function openAdd(){setForm({client:'',dueDay:'',expectedValue:'',status:'Previsto',realValue:'',note:''});setModal('add')}
-  function openEdit(e){setForm({...e});setModal(e)}
+  function openAdd(){setForm({client:'',dueDay:'',expectedValue:'',status:'Previsto',realValue:'',note:''});setErrors({});setModal('add')}
+  function openEdit(e){setForm({...e});setErrors({});setModal(e)}
   function save(){
-    if(!form.client||!form.expectedValue)return toast('Preencha cliente e valor','error')
+    const errs={}
+    if(!form.client)errs.client='Campo obrigatório'
+    if(!form.expectedValue)errs.expectedValue='Campo obrigatório'
+    if(Object.keys(errs).length){setErrors(errs);return}
+    setErrors({})
     const entry={...form,expectedValue:parseFloat(form.expectedValue)||0,realValue:parseFloat(form.realValue)||0,dueDay:parseInt(form.dueDay)||0}
     if(modal==='add')dispatch({type:'ADD_ENTRY',payload:{monthKey:mk,entry}})
     else dispatch({type:'UPDATE_ENTRY',payload:{monthKey:mk,entry}})
@@ -1098,13 +1105,13 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
       {modal&&(
         <Modal title={modal==='add'?'Nova Entrada':'Editar Entrada'} onClose={()=>setModal(null)}>
           <div className="space-y-4">
-            <Field label="Cliente / Empresa"><Inp value={form.client} onChange={v=>setForm(f=>({...f,client:v}))} placeholder="Nome do cliente"/></Field>
+            <Field label="Cliente / Empresa" error={errors.client}><Inp value={form.client} onChange={v=>{setForm(f=>({...f,client:v}));setErrors(e=>({...e,client:''}))}} placeholder="Nome do cliente" error={!!errors.client}/></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Dia previsto"><Inp type="number" value={form.dueDay} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field>
               <Field label="Status"><Sel value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={['Previsto','Cobrado','Recebido']}/></Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Valor previsto (R$)"><Inp type="number" value={form.expectedValue} onChange={v=>setForm(f=>({...f,expectedValue:v}))} placeholder="0,00"/></Field>
+              <Field label="Valor previsto (R$)" error={errors.expectedValue}><Inp type="number" value={form.expectedValue} onChange={v=>{setForm(f=>({...f,expectedValue:v}));setErrors(e=>({...e,expectedValue:''}))}} placeholder="0,00" error={!!errors.expectedValue}/></Field>
               <Field label="Valor recebido (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>
             </div>
             <Field label="Observação"><Inp value={form.note} onChange={v=>setForm(f=>({...f,note:v}))} placeholder="Opcional"/></Field>
@@ -1124,6 +1131,7 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
   const [filter,setFilter]=useState('Todos')
   const [modal,setModal]=useState(null)
   const [form,setForm]=useState({})
+  const [errors,setErrors]=useState({})
   const filtered=filter==='Todos'?exits:exits.filter(e=>e.status===filter)
   const totalExp=exits.reduce((s,e)=>s+(e.expectedValue||0),0)
   const totalPaid=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
@@ -1131,7 +1139,11 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
   const catMap={}; exits.forEach(e=>{catMap[e.category]=(catMap[e.category]||0)+(e.expectedValue||0)})
   const pieData=Object.entries(catMap).map(([name,value])=>({name,value}))
   function save(){
-    if(!form.name||!form.expectedValue)return toast('Preencha nome e valor','error')
+    const errs={}
+    if(!form.name)errs.name='Campo obrigatório'
+    if(!form.expectedValue)errs.expectedValue='Campo obrigatório'
+    if(Object.keys(errs).length){setErrors(errs);return}
+    setErrors({})
     const exit={...form,expectedValue:parseFloat(form.expectedValue)||0,realValue:parseFloat(form.realValue)||0,day:parseInt(form.day)||0}
     if(modal==='add')dispatch({type:'ADD_EXIT',payload:{monthKey:mk,exit}})
     else dispatch({type:'UPDATE_EXIT',payload:{monthKey:mk,exit}})
@@ -1197,13 +1209,13 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
       {modal&&(
         <Modal title={modal==='add'?'Nova Saída':'Editar Saída'} onClose={()=>setModal(null)}>
           <div className="space-y-4">
-            <Field label="Nome / Fornecedor"><Inp value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Ex: Conta de luz"/></Field>
+            <Field label="Nome / Fornecedor" error={errors.name}><Inp value={form.name} onChange={v=>{setForm(f=>({...f,name:v}));setErrors(e=>({...e,name:''}))}} placeholder="Ex: Conta de luz" error={!!errors.name}/></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Categoria"><Sel value={form.category} onChange={v=>setForm(f=>({...f,category:v}))} options={CATEGORIES}/></Field>
               <Field label="Dia"><Inp type="number" value={form.day} onChange={v=>setForm(f=>({...f,day:v}))} placeholder="10"/></Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Valor previsto (R$)"><Inp type="number" value={form.expectedValue} onChange={v=>setForm(f=>({...f,expectedValue:v}))} placeholder="0,00"/></Field>
+              <Field label="Valor previsto (R$)" error={errors.expectedValue}><Inp type="number" value={form.expectedValue} onChange={v=>{setForm(f=>({...f,expectedValue:v}));setErrors(e=>({...e,expectedValue:''}))}} placeholder="0,00" error={!!errors.expectedValue}/></Field>
               <Field label="Valor pago (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
