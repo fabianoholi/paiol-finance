@@ -1075,6 +1075,15 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
   const pieData=Object.entries(clientMap).map(([name,value])=>({name,value}))
   function openAdd(){setForm({client:'',dueDay:'',expectedValue:'',status:'Previsto',realValue:'',note:''});setErrors({});setModal('add')}
   function openEdit(e){setForm({...e});setErrors({});setModal(e)}
+  function copyPrevMonth(){
+    const{year,month:m}=parseMonthKey(mk)
+    const prevMk=monthKey(m===1?year-1:year,m===1?12:m-1)
+    const prevEntries=(state.months[prevMk]?.entries||[])
+    if(!prevEntries.length){toast('Mês anterior não tem entradas','warn');return}
+    if(entries.length&&!window.confirm(`Este mês já tem ${entries.length} entrada(s). Adicionar as ${prevEntries.length} do mês anterior mesmo assim?`))return
+    prevEntries.forEach(e=>dispatch({type:'ADD_ENTRY',payload:{monthKey:mk,entry:{...e,id:uid(),status:'Previsto',realValue:0,note:e.note||''}}}))
+    toast(`${prevEntries.length} entradas copiadas do mês anterior ✓`)
+  }
   function save(){
     const errs={}
     if(!form.client)errs.client='Campo obrigatório'
@@ -1119,7 +1128,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
                   style={{background:filter===s?'#10b981':'var(--bg-input)',color:filter===s?'#fff':'var(--text-2)',border:'1px solid var(--border)'}}>{s}</button>
               ))}
             </div>
-            <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
+            <div className="flex gap-2"><BtnG onClick={copyPrevMonth}><Copy size={14}/> Copiar mês anterior</BtnG><Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn></div>
           </div>
           <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
             <table className="w-full min-w-[500px]">
@@ -1187,6 +1196,15 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
   const totalPend=exits.filter(e=>e.status!=='Pago').reduce((s,e)=>s+(e.expectedValue||0),0)
   const catMap={}; exits.forEach(e=>{catMap[e.category]=(catMap[e.category]||0)+(e.expectedValue||0)})
   const pieData=Object.entries(catMap).map(([name,value])=>({name,value}))
+  function copyPrevMonthExits(){
+    const{year,month:m}=parseMonthKey(mk)
+    const prevMk=monthKey(m===1?year-1:year,m===1?12:m-1)
+    const prevExits=(state.months[prevMk]?.exits||[])
+    if(!prevExits.length){toast('Mês anterior não tem saídas','warn');return}
+    if(exits.length&&!window.confirm(`Este mês já tem ${exits.length} saída(s). Adicionar as ${prevExits.length} do mês anterior mesmo assim?`))return
+    prevExits.forEach(e=>dispatch({type:'ADD_EXIT',payload:{monthKey:mk,exit:{...e,id:uid(),status:'Pendente',realValue:0}}}))
+    toast(`${prevExits.length} saídas copiadas do mês anterior ✓`)
+  }
   function save(){
     const errs={}
     if(!form.name)errs.name='Campo obrigatório'
@@ -1230,7 +1248,7 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
                   style={{background:filter===s?'#ef4444':'var(--bg-overlay)',color:filter===s?'#fff':'var(--text-3)',border:'1px solid var(--border)'}}>{s}</button>
               ))}
             </div>
-            <Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setModal('add')}}><Plus size={14}/> Adicionar</Btn>
+            <div className="flex gap-2"><BtnG onClick={copyPrevMonthExits}><Copy size={14}/> Copiar mês anterior</BtnG><Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setErrors({});setModal('add')}} color="#ef4444"><Plus size={14}/> Adicionar</Btn></div>
           </div>
           <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
             <table className="w-full min-w-[500px]">
