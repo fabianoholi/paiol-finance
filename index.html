@@ -1060,6 +1060,64 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
 }
 
 // ─── ENTRADAS ─────────────────────────────────────────────────────────────────
+function CopyMonthModal({items,type,targetMonthLabel,onConfirm,onClose}){
+  const [selected,setSelected]=useState(()=>new Set(items.map(i=>i.id)))
+  const allSelected=selected.size===items.length
+  function toggle(id){setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n})}
+  function toggleAll(){setSelected(allSelected?new Set():new Set(items.map(i=>i.id)))}
+  const isEntry=type==='entry'
+  return(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" onClick={onClose}>
+      <div className="w-full max-w-md rounded-3xl modal-content flex flex-col" style={{maxHeight:'80vh'}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 pb-4">
+          <div>
+            <h2 className="text-base font-semibold" style={{color:'var(--text)'}}>Copiar mês anterior</h2>
+            <p className="text-xs mt-0.5" style={{color:'var(--text-3)'}}>Selecione o que trazer para {targetMonthLabel}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><X size={15}/></button>
+        </div>
+        {/* Select all toggle */}
+        <div className="px-6 pb-3 flex items-center justify-between">
+          <span className="text-xs" style={{color:'var(--text-3)'}}>{selected.size} de {items.length} selecionados</span>
+          <button onClick={toggleAll} className="text-xs font-medium" style={{color:'#10b981'}}>{allSelected?'Desmarcar tudo':'Selecionar tudo'}</button>
+        </div>
+        {/* List */}
+        <div className="overflow-y-auto flex-1 px-4">
+          {items.length===0?<p className="text-sm text-center py-8" style={{color:'var(--text-3)'}}>Nenhum registro no mês anterior</p>:(
+            <div className="space-y-1 pb-2">
+              {items.map(item=>{
+                const checked=selected.has(item.id)
+                return(
+                  <div key={item.id} onClick={()=>toggle(item.id)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors" style={{background:checked?'rgba(16,185,129,0.08)':'var(--bg-input)',border:`1px solid ${checked?'rgba(16,185,129,0.25)':'transparent'}`}}>
+                    <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors" style={{background:checked?'#10b981':'var(--bg-overlay)',border:`1.5px solid ${checked?'#10b981':'var(--border)'}`}}>
+                      {checked&&<Check size={10} style={{color:'#fff'}}/>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate" style={{color:'var(--text)'}}>{isEntry?item.client:item.name}</div>
+                      <div className="text-xs" style={{color:'var(--text-3)'}}>{isEntry?`Dia ${item.dueDay||'—'}`:`${item.category||'—'} · Dia ${item.day||'—'}`}</div>
+                    </div>
+                    <span className="text-sm font-semibold shrink-0" style={{color:isEntry?'#10b981':'#ef4444'}}>{fmtBRL(item.expectedValue)}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        {/* Footer */}
+        <div className="p-6 pt-4 flex gap-3">
+          <BtnG onClick={onClose}>Cancelar</BtnG>
+          <button onClick={()=>selected.size>0&&onConfirm([...selected])} disabled={selected.size===0}
+            className="flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all active:scale-95"
+            style={{background:selected.size>0?'#10b981':'var(--bg-overlay)',color:selected.size>0?'#fff':'var(--text-3)',boxShadow:selected.size>0?'0 4px 16px #10b98140':'none'}}>
+            Copiar {selected.size} {isEntry?'entrada':'saída'}{selected.size!==1?'s':''}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EntriesPage({state,dispatch,monthKey:mk,toast}){
   const month=state.months[mk]||{}
   const entries=month.entries||[]
@@ -1075,14 +1133,20 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
   const pieData=Object.entries(clientMap).map(([name,value])=>({name,value}))
   function openAdd(){setForm({client:'',dueDay:'',expectedValue:'',status:'Previsto',realValue:'',note:''});setErrors({});setModal('add')}
   function openEdit(e){setForm({...e});setErrors({});setModal(e)}
+  const [copyModal,setCopyModal]=useState(false)
+  const prevMkEntry=useMemo(()=>{const{year,month:m}=parseMonthKey(mk);return monthKey(m===1?year-1:year,m===1?12:m-1)},[mk])
+  const prevEntries=useMemo(()=>state.months[prevMkEntry]?.entries||[],[state.months,prevMkEntry])
+  const{month:curM,year:curY}=parseMonthKey(mk)
+  const targetLabel=`${MONTH_NAMES[curM-1]} ${curY}`
   function copyPrevMonth(){
-    const{year,month:m}=parseMonthKey(mk)
-    const prevMk=monthKey(m===1?year-1:year,m===1?12:m-1)
-    const prevEntries=(state.months[prevMk]?.entries||[])
     if(!prevEntries.length){toast('Mês anterior não tem entradas','warn');return}
-    if(entries.length&&!window.confirm(`Este mês já tem ${entries.length} entrada(s). Adicionar as ${prevEntries.length} do mês anterior mesmo assim?`))return
-    prevEntries.forEach(e=>dispatch({type:'ADD_ENTRY',payload:{monthKey:mk,entry:{...e,id:uid(),status:'Previsto',realValue:0,note:e.note||''}}}))
-    toast(`${prevEntries.length} entradas copiadas do mês anterior ✓`)
+    setCopyModal(true)
+  }
+  function confirmCopy(selectedIds){
+    const toAdd=prevEntries.filter(e=>selectedIds.includes(e.id))
+    toAdd.forEach(e=>dispatch({type:'ADD_ENTRY',payload:{monthKey:mk,entry:{...e,id:uid(),status:'Previsto',realValue:0,note:e.note||''}}}))
+    toast(`${toAdd.length} entrada${toAdd.length!==1?'s':''} copiada${toAdd.length!==1?'s':''} ✓`)
+    setCopyModal(false)
   }
   function save(){
     const errs={}
@@ -1177,6 +1241,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
           </div>
         </Modal>
       )}
+      {copyModal&&<CopyMonthModal items={prevEntries} type="entry" targetMonthLabel={targetLabel} onConfirm={confirmCopy} onClose={()=>setCopyModal(false)}/>}
     </div>
   )
 }
@@ -1196,14 +1261,20 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
   const totalPend=exits.filter(e=>e.status!=='Pago').reduce((s,e)=>s+(e.expectedValue||0),0)
   const catMap={}; exits.forEach(e=>{catMap[e.category]=(catMap[e.category]||0)+(e.expectedValue||0)})
   const pieData=Object.entries(catMap).map(([name,value])=>({name,value}))
+  const [copyModal,setCopyModal]=useState(false)
+  const prevMkExit=useMemo(()=>{const{year,month:m}=parseMonthKey(mk);return monthKey(m===1?year-1:year,m===1?12:m-1)},[mk])
+  const prevExits=useMemo(()=>state.months[prevMkExit]?.exits||[],[state.months,prevMkExit])
+  const{month:curME,year:curYE}=parseMonthKey(mk)
+  const targetLabelE=`${MONTH_NAMES[curME-1]} ${curYE}`
   function copyPrevMonthExits(){
-    const{year,month:m}=parseMonthKey(mk)
-    const prevMk=monthKey(m===1?year-1:year,m===1?12:m-1)
-    const prevExits=(state.months[prevMk]?.exits||[])
     if(!prevExits.length){toast('Mês anterior não tem saídas','warn');return}
-    if(exits.length&&!window.confirm(`Este mês já tem ${exits.length} saída(s). Adicionar as ${prevExits.length} do mês anterior mesmo assim?`))return
-    prevExits.forEach(e=>dispatch({type:'ADD_EXIT',payload:{monthKey:mk,exit:{...e,id:uid(),status:'Pendente',realValue:0}}}))
-    toast(`${prevExits.length} saídas copiadas do mês anterior ✓`)
+    setCopyModal(true)
+  }
+  function confirmCopyExits(selectedIds){
+    const toAdd=prevExits.filter(e=>selectedIds.includes(e.id))
+    toAdd.forEach(e=>dispatch({type:'ADD_EXIT',payload:{monthKey:mk,exit:{...e,id:uid(),status:'Pendente',realValue:0}}}))
+    toast(`${toAdd.length} saída${toAdd.length!==1?'s':''} copiada${toAdd.length!==1?'s':''} ✓`)
+    setCopyModal(false)
   }
   function save(){
     const errs={}
@@ -1293,6 +1364,7 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
           </div>
         </Modal>
       )}
+      {copyModal&&<CopyMonthModal items={prevExits} type="exit" targetMonthLabel={targetLabelE} onConfirm={confirmCopyExits} onClose={()=>setCopyModal(false)}/>}
     </div>
   )
 }
