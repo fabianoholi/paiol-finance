@@ -144,8 +144,16 @@
     @keyframes asstRec{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.85)}}
     @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
     @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    @keyframes statusFlash{0%{transform:scale(1)}30%{transform:scale(1.18)}70%{transform:scale(0.95)}100%{transform:scale(1)}}
+    @keyframes cashGlow{0%{box-shadow:0 4px 20px #10b98108}40%{box-shadow:0 0 0 6px #10b98130,0 4px 24px #10b98140}100%{box-shadow:0 4px 20px #10b98108}}
+    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
     .page-enter{animation:fadeIn 0.25s ease-out}
     .skeleton{background:linear-gradient(90deg,var(--bg-card) 25%,var(--border) 50%,var(--bg-card) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:12px}
+    .badge-flash{animation:statusFlash 0.6s ease-out}
+    .cash-glow{animation:cashGlow 0.9s ease-out}
+    .spin{animation:spin 0.8s linear infinite}
+    .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;gap:12px;opacity:0.55}
+    .empty-state svg{opacity:0.4}
     @media print{
       .no-print{display:none!important}
       body{background:#fff!important;color:#000!important}
@@ -776,7 +784,8 @@ function SummaryCard({label,value,sub,color,icon:Icon,onClick}){
   )
 }
 
-function StatusBadge({status}){
+const STATUS_TIPS={'Previsto':'Cobrança ainda não enviada','Cobrado':'Cobrança enviada — aguardando pagamento','Recebido':'Pagamento confirmado','Pendente':'Pagamento pendente','Pago':'Pagamento realizado'}
+function StatusBadge({status,flash}){
   const cfg={
     'Previsto':{bg:'#1e40af20',color:'#60a5fa',border:'#3b82f630'},
     'Cobrado':{bg:'#78350f20',color:'#f59e0b',border:'#f59e0b30'},
@@ -784,7 +793,7 @@ function StatusBadge({status}){
     'Pendente':{bg:'#78350f20',color:'#f59e0b',border:'#f59e0b30'},
     'Pago':{bg:'#06522020',color:'#10b981',border:'#10b98130'},
   }[status]||{bg:'var(--bg-overlay)',color:'var(--text-3)',border:'var(--border)'}
-  return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`}}>{status}</span>
+  return <span title={STATUS_TIPS[status]||status} className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold${flash?' badge-flash':''}`} style={{background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`}}>{status}</span>
 }
 
 function ProgressBar({label,current,total,color}){
@@ -856,8 +865,9 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
   const showCarryOver=!month.cashBalance&&prevEndBal!==null&&prevEndBal!==0
   const [editBal,setEditBal]=useState(false)
   const [balVal,setBalVal]=useState(String(month.cashBalance||''))
+  const [balGlow,setBalGlow]=useState(false)
 
-  function saveBal(){const v=parseFloat(balVal.replace(',','.')); if(!isNaN(v)){dispatch({type:'SET_CASH_BALANCE',payload:{monthKey:mk,value:v}});toast('Saldo atualizado')}; setEditBal(false)}
+  function saveBal(){const v=parseFloat(balVal.replace(',','.')); if(!isNaN(v)){dispatch({type:'SET_CASH_BALANCE',payload:{monthKey:mk,value:v}});toast('Saldo atualizado');setBalGlow(true);setTimeout(()=>setBalGlow(false),1000)}; setEditBal(false)}
   const [showReport,setShowReport]=useState(false)
   function printReport(){setShowReport(true);setTimeout(()=>{window.print();setShowReport(false)},300)}
 
@@ -903,7 +913,7 @@ function DashboardPage({state,dispatch,monthKey:mk,toast,setActivePage}){
   return(
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="col-span-1 sm:col-span-2 rounded-2xl p-5" style={{background:'linear-gradient(135deg,#10b98115,#10b98105)',border:'1px solid #10b98130',boxShadow:'0 4px 20px #10b98108'}}>
+        <div className={`col-span-1 sm:col-span-2 rounded-2xl p-5${balGlow?' cash-glow':''}`} style={{background:'linear-gradient(135deg,#10b98115,#10b98105)',border:'1px solid #10b98130',boxShadow:'0 4px 20px #10b98108'}}>
           <div className="flex items-start justify-between mb-3"><span className="text-xs text-slate-400 uppercase tracking-wider">Saldo em Caixa</span><Wallet size={16} style={{color:'#10b981'}}/></div>
           {editBal?(
             <div className="flex gap-2 items-center">
@@ -1088,7 +1098,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
                     </div></Td>
                   </tr>
                 ))}
-                {filtered.length===0&&<tr><td colSpan={6} className="px-3 py-8 text-center text-sm" style={{color:'var(--text-3)'}}>Nenhuma entrada</td></tr>}
+                {filtered.length===0&&<tr><td colSpan={6}><div className="empty-state"><TrendingUp size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma entrada {filter!=='Todos'?`com status "${filter}"`:'neste mês'}</span><button onClick={openAdd} className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>+ Adicionar entrada</button></div></td></tr>}
               </tbody>
               <tfoot style={{background:'var(--bg)',borderTop:'1px solid var(--border)'}}>
                 <tr>
@@ -1200,7 +1210,7 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
                     </div></Td>
                   </tr>
                 ))}
-                {filtered.length===0&&<tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">Nenhuma saída</td></tr>}
+                {filtered.length===0&&<tr><td colSpan={7}><div className="empty-state"><TrendingDown size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma saída {filter!=='Todos'?`com status "${filter}"`:'neste mês'}</span><button onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setErrors({});setModal('add')}} className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{background:'#ef444420',color:'#ef4444',border:'1px solid #ef444430'}}>+ Adicionar saída</button></div></td></tr>}
               </tbody>
             </table>
           </div>
@@ -3978,7 +3988,7 @@ function PaiolFinanceApp({currentUser,onLogout,isLight,toggleTheme}){
                 <div className="text-xs" style={{color:'var(--text-3)'}}>Saldo em caixa</div>
                 <div className="text-sm font-bold" style={{color:'#10b981'}}>{fmtBRL(monthData.cashBalance)}</div>
               </div>
-              <div className="p-1.5 rounded-xl hidden sm:block" style={{background:'rgba(16,185,129,0.12)'}}><Wallet size={15} style={{color:'#10b981'}}/></div>
+              <div className="p-1.5 rounded-xl hidden sm:block" style={{background:'rgba(16,185,129,0.12)'}}>{syncing?<RefreshCw size={15} style={{color:'#10b981'}} className="spin"/>:<Wallet size={15} style={{color:'#10b981'}}/>}</div>
               <button onClick={toggleTheme} title={isLight?'Modo escuro':'Modo claro'} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-3)'}}>
                 {isLight?<Moon size={15}/>:<Sun size={15}/>}
               </button>
