@@ -22,6 +22,7 @@
   <script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
   <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
   // Ícones SVG inline — substitui lucide-react sem dependência CDN
   (function(){
@@ -703,12 +704,25 @@ function loadState(){
   }catch(e){logError('loadState',e);return migrateSchema(SEED)}
 }
 
-// ─── GOOGLE SHEETS BACKEND ────────────────────────────────────────────────────
-// TODO: mover autenticação para o lado do GAS (checar origin ou emitir token de sessão)
-const GAS_URL='https://script.google.com/macros/s/AKfycbxwj9_gm5mgHLneYirU5xtCZw2xNMdnp-tuejBZSxry4iCIRUpU2VBX-fnL6KU6gG1DFQ/exec'
-const _gt=()=>atob('cGFpb2wyMDI2c2VjcmV0')
-async function gasGet(){try{const r=await fetch(`${GAS_URL}?token=${_gt()}`);if(!r.ok)throw new Error(`HTTP ${r.status}`);const j=await r.json();return j.ok?j.data:null}catch(e){logError('gasGet',e);return null}}
-async function gasPost(data){try{await fetch(GAS_URL,{method:'POST',body:JSON.stringify({token:_gt(),data})})}catch(e){logError('gasPost',e)}}
+// ─── SUPABASE REALTIME BACKEND ────────────────────────────────────────────────
+const SB_URL='https://zffcleurthevujpypsrs.supabase.co'
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmZmNsZXVydGhldnVqcHlwc3JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMDMxMTUsImV4cCI6MjA5Mzg3OTExNX0.EL8Oqs1TjuDnJZdJG37XzSI1mkcCFW0WdFlEjhuuSrU'
+const _sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY,{realtime:{params:{eventsPerSecond:2}}}):null
+async function gasGet(){
+  if(!_sb){logError('sbGet','Supabase não carregado');return null}
+  try{
+    const{data,error}=await _sb.from('finance_state').select('state').eq('id','paiol').single()
+    if(error)throw error
+    const s=data?.state
+    return s&&Object.keys(s).length>0?s:null
+  }catch(e){logError('sbGet',e);return null}
+}
+async function gasPost(state,by='app'){
+  if(!_sb){logError('sbPost','Supabase não carregado');return}
+  try{
+    await _sb.from('finance_state').upsert({id:'paiol',state,updated_at:new Date().toISOString(),updated_by:by},{onConflict:'id'})
+  }catch(e){logError('sbPost',e)}
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── ERROR BOUNDARY ──────────────────────────────────────────────────────────
@@ -4017,21 +4031,18 @@ function PaiolFinanceApp({currentUser,onLogout,isLight,toggleTheme}){
   const [selMonth,setSelMonth]=useState(today.getMonth()+1)
   const mk=monthKey(selYear,selMonth)
 
-  // Salva localmente com debounce de 500ms + envia para Sheets com debounce de 2s
+  // ID desta sessão — usado pra não reprocessar nossos próprios broadcasts
+  const _sessId=useRef(uid())
+
+  // Salva localmente com debounce de 500ms + envia para Supabase com debounce de 2s
   useEffect(()=>{
     const tLocal=setTimeout(()=>{try{localStorage.setItem('paiolfinance_v3',JSON.stringify(state))}catch(e){logError('saveLocal',e)}},500)
-    const tGas=setTimeout(()=>gasPost(state),2000)
-    return()=>{clearTimeout(tLocal);clearTimeout(tGas)}
+    const tSB=setTimeout(()=>gasPost(state,_sessId.current),2000)
+    return()=>{clearTimeout(tLocal);clearTimeout(tSB)}
   },[state])
 
-  // Na inicialização, sincroniza do Sheets com resolução de conflitos
+  // Na inicialização, sincroniza do Supabase e assina canal Realtime
   useEffect(()=>{
-    const migFlag=localStorage.getItem('paiolfinance_migrated')
-    if(migFlag&&(Date.now()-parseInt(migFlag))<120000){
-      localStorage.removeItem('paiolfinance_migrated')
-      gasPost(state).catch(e=>logError('migSync',e))
-      return
-    }
     setSyncing(true)
     gasGet().then(data=>{
       if(data){
@@ -4040,13 +4051,31 @@ function PaiolFinanceApp({currentUser,onLogout,isLight,toggleTheme}){
         if(remoteMod>localMod){
           dispatch({type:'IMPORT',payload:{data}})
           localStorage.setItem('paiolfinance_v3',JSON.stringify(data))
-          setTimeout(()=>toast('Dados sincronizados da nuvem'),500)
+          setTimeout(()=>toast('Dados sincronizados da nuvem ☁️'),500)
         } else if(localMod>remoteMod){
-          gasPost(state)
-          setTimeout(()=>toast('Dados locais enviados para a nuvem'),500)
+          gasPost(state,_sessId.current)
         }
       }
-    }).catch(e=>{logError('syncInit',e);setTimeout(()=>toast('Sincronização offline — usando dados locais','warn'),500)}).finally(()=>setSyncing(false))
+    }).catch(e=>{logError('syncInit',e);setTimeout(()=>toast('Sem conexão — usando dados locais','warn'),500)}).finally(()=>setSyncing(false))
+
+    // Assinatura Realtime — recebe atualizações de outros dispositivos ao vivo
+    if(!_sb)return
+    const channel=_sb.channel('finance-state')
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'finance_state',filter:'id=eq.paiol'},(payload)=>{
+        const by=payload.new?.updated_by
+        if(by===_sessId.current)return // foi a gente mesmos, ignora
+        const remote=payload.new?.state
+        if(!remote||!Object.keys(remote).length)return
+        const localMod=stateRef.current?.lastModified||0
+        const remoteMod=remote.lastModified||0
+        if(remoteMod>localMod){
+          dispatch({type:'IMPORT',payload:{data:remote}})
+          try{localStorage.setItem('paiolfinance_v3',JSON.stringify(remote))}catch(e){}
+          toast('⚡ Atualizado ao vivo!')
+        }
+      })
+      .subscribe()
+    return()=>{_sb.removeChannel(channel)}
   },[])
 
   const toast=useCallback((msg,type='success')=>{
