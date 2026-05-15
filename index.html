@@ -847,8 +847,8 @@ function SaveBtn({onSave,children,color='#10b981'}){
 }
 function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)',borderRadius:10}}>{children}</button>}
 
-function Th({children,right}){return <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-widest ${right?'text-right':'text-left'}`} style={{color:'var(--text-3)'}}>{children}</th>}
-function Td({children,right,muted,color}){return <td className={`px-3 py-3.5 text-sm ${right?'text-right':''}`} style={{color:color||(muted?'var(--text-3)':'var(--text-2)'),borderBottom:'1px solid var(--sep)'}}>{children}</td>}
+function Th({children,right,className}){return <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-widest ${right?'text-right':'text-left'} ${className||''}`} style={{color:'var(--text-3)'}}>{children}</th>}
+function Td({children,right,muted,color,className}){return <td className={`px-3 py-3.5 text-sm ${right?'text-right':''} ${className||''}`} style={{color:color||(muted?'var(--text-3)':'var(--text-2)'),borderBottom:'1px solid var(--sep)'}}>{children}</td>}
 
 const CTip=({active,payload,label})=>{
   if(!active||!payload?.length)return null
@@ -1140,10 +1140,33 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
   const month=state.months[mk]||{}
   const entries=month.entries||[]
   const [filter,setFilter]=useState('Todos')
+  const [search,setSearch]=useState('')
   const [modal,setModal]=useState(null)
   const [form,setForm]=useState({})
   const [errors,setErrors]=useState({})
-  const filtered=filter==='Todos'?entries:entries.filter(e=>e.status===filter)
+  const [quickMark,setQuickMark]=useState(null)
+  const [pendingDel,setPendingDel]=useState(null)
+  const pendingRef=useRef(null)
+  function delEntry(id,name){
+    if(pendingRef.current){clearTimeout(pendingRef.current.timer);dispatch({type:'DELETE_ENTRY',payload:{monthKey:mk,id:pendingRef.current.id}})}
+    const timer=setTimeout(()=>{dispatch({type:'DELETE_ENTRY',payload:{monthKey:mk,id}});setPendingDel(null);pendingRef.current=null},5000)
+    pendingRef.current={id,name,timer};setPendingDel({id,name})
+  }
+  function undoDel(){if(!pendingRef.current)return;clearTimeout(pendingRef.current.timer);pendingRef.current=null;setPendingDel(null)}
+  useEffect(()=>()=>{if(pendingRef.current){clearTimeout(pendingRef.current.timer);dispatch({type:'DELETE_ENTRY',payload:{monthKey:mk,id:pendingRef.current.id}})}},[])
+  const today=new Date()
+  const{year:cY,month:cM}=parseMonthKey(mk)
+  const isCurr=today.getFullYear()===cY&&today.getMonth()+1===cM
+  const todayD=today.getDate()
+  function urgency(e){
+    if(e.status==='Recebido')return 100+(e.dueDay||0)
+    const late=isCurr&&e.dueDay&&e.dueDay<todayD
+    if(late)return e.dueDay||0
+    return 50+(e.dueDay||99)
+  }
+  const sorted=[...entries].sort((a,b)=>urgency(a)-urgency(b))
+  const byFilter=filter==='Todos'?sorted:sorted.filter(e=>e.status===filter)
+  const filtered=search?byFilter.filter(e=>(e.client||'').toLowerCase().includes(search.toLowerCase())):byFilter
   const totalExp=entries.reduce((s,e)=>s+(e.expectedValue||0),0)
   const totalReal=entries.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0)
   const totalPend=entries.filter(e=>e.status!=='Recebido').reduce((s,e)=>s+(e.expectedValue||0),0)
@@ -1156,10 +1179,7 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
   const prevEntries=useMemo(()=>state.months[prevMkEntry]?.entries||[],[state.months,prevMkEntry])
   const{month:curM,year:curY}=parseMonthKey(mk)
   const targetLabel=`${MONTH_NAMES[curM-1]} ${curY}`
-  function copyPrevMonth(){
-    if(!prevEntries.length){toast('Mês anterior não tem entradas','warn');return}
-    setCopyModal(true)
-  }
+  function copyPrevMonth(){if(!prevEntries.length){toast('Mês anterior não tem entradas','warn');return};setCopyModal(true)}
   function confirmCopy(selectedIds){
     const toAdd=prevEntries.filter(e=>selectedIds.includes(e.id))
     toAdd.forEach(e=>dispatch({type:'ADD_ENTRY',payload:{monthKey:mk,entry:{...e,id:uid(),status:'Previsto',realValue:0,note:e.note||''}}}))
@@ -1177,7 +1197,36 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
     else dispatch({type:'UPDATE_ENTRY',payload:{monthKey:mk,entry}})
     toast('Salvo');setModal(null)
   }
-  function del(id){dispatch({type:'DELETE_ENTRY',payload:{monthKey:mk,id}});toast('Removido','warn')}
+  const visible=e=>!pendingDel||e.id!==pendingDel.id
+  const pending=filtered.filter(e=>e.status!=='Recebido'&&visible(e))
+  const received=filtered.filter(e=>e.status==='Recebido'&&visible(e))
+  const showGroups=filter==='Todos'
+  function renderRow(e,i){
+    const late=isCurr&&e.dueDay&&e.dueDay<todayD&&e.status!=='Recebido'?todayD-e.dueDay:0
+    const isDone=e.status==='Recebido'
+    return(
+      <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)',opacity:isDone?0.75:1}}>
+        <Td>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span>{e.client}</span>
+            {late>0&&<span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{background:'#ef444420',color:'#ef4444'}}>{late}d atraso</span>}
+          </div>
+        </Td>
+        <Td muted className="hidden sm:table-cell">{e.dueDay||'—'}</Td>
+        <Td right className="hidden sm:table-cell">{fmtBRL(e.expectedValue)}</Td>
+        <Td right color={e.realValue?'var(--text)':'var(--text-3)'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
+        <Td><StatusBadge status={e.status}/></Td>
+        <Td><div className="flex gap-1">
+          {!isDone&&<button onClick={()=>setQuickMark({item:e,type:'entry'})} title="Marcar recebido" className="p-1 rounded" style={{color:'#10b981'}}><CheckCircle size={14}/></button>}
+          <button onClick={()=>openEdit(e)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Pencil size={13}/></button>
+          <button onClick={()=>delEntry(e.id,e.client)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Trash2 size={13}/></button>
+        </div></Td>
+      </tr>
+    )
+  }
+  function GroupHeader({label,count,total,color}){
+    return(<tr style={{background:'var(--bg)'}}><td colSpan={6} className="px-3 py-2"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-widest" style={{color}}>{label} ({count})</span><span className="text-xs font-semibold" style={{color}}>{fmtBRL(total)}</span></div></td></tr>)
+  }
   return(
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1186,7 +1235,6 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
         <SummaryCard label="A Receber" value={fmtBRL(totalPend)} color="#f59e0b" icon={Clock}/>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Gráfico por cliente */}
         <div className="rounded-2xl p-4" style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
           <h3 className="text-xs font-medium mb-2" style={{color:'var(--text-3)'}}>Por Cliente</h3>
           <ResponsiveContainer width="100%" height={160}>
@@ -1201,40 +1249,58 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
             </div>
           ))}</div>
         </div>
-        {/* Tabela */}
         <div className="lg:col-span-2 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1.5 flex-wrap">
               {['Todos','Previsto','Cobrado','Recebido'].map(s=>(
                 <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
                   style={{background:filter===s?'#10b981':'var(--bg-input)',color:filter===s?'#fff':'var(--text-2)',border:'1px solid var(--border)'}}>{s}</button>
               ))}
             </div>
-            <div className="flex gap-2"><BtnG onClick={copyPrevMonth}><Copy size={14}/> Copiar mês anterior</BtnG><Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn></div>
+            <div className="flex-1 min-w-[140px]">
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente…" className={iCls} style={{...iSty,padding:'6px 10px',fontSize:12}}/>
+            </div>
           </div>
+          <div className="flex justify-end gap-2">
+            <BtnG onClick={copyPrevMonth}><Copy size={14}/> Copiar mês anterior</BtnG>
+            <Btn onClick={openAdd}><Plus size={14}/> Adicionar</Btn>
+          </div>
+          {pendingDel&&(
+            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl text-sm" style={{background:'#f59e0b18',border:'1px solid #f59e0b40'}}>
+              <span style={{color:'var(--text-2)'}}>"{pendingDel.name}" será removido em 5s…</span>
+              <button onClick={undoDel} className="text-xs font-semibold px-3 py-1 rounded-lg" style={{background:'#f59e0b',color:'#000'}}>Desfazer</button>
+            </div>
+          )}
           <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
-            <table className="w-full min-w-[500px]">
-              <thead style={{background:'var(--bg)'}}><tr><Th>Cliente</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Recebido</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+            <table className="w-full">
+              <thead style={{background:'var(--bg)'}}><tr>
+                <Th>Cliente</Th>
+                <Th className="hidden sm:table-cell">Dia</Th>
+                <Th right className="hidden sm:table-cell">Previsto</Th>
+                <Th right>Recebido</Th>
+                <Th>Status</Th>
+                <Th>Ações</Th>
+              </tr></thead>
               <tbody>
-                {filtered.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
-                    <Td>{e.client}</Td><Td muted>{e.dueDay||'—'}</Td>
-                    <Td right>{fmtBRL(e.expectedValue)}</Td>
-                    <Td right color={e.realValue?'var(--text)':'var(--text-3)'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
-                    <Td><StatusBadge status={e.status}/></Td>
-                    <Td><div className="flex gap-1.5">
-                      <button onClick={()=>openEdit(e)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Pencil size={13}/></button>
-                      <button onClick={()=>del(e.id)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Trash2 size={13}/></button>
-                    </div></Td>
-                  </tr>
-                ))}
-                {filtered.length===0&&<tr><td colSpan={6}><div className="empty-state"><TrendingUp size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma entrada {filter!=='Todos'?`com status "${filter}"`:'neste mês'}</span><button onClick={openAdd} className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>+ Adicionar entrada</button></div></td></tr>}
+                {showGroups?(
+                  <>
+                    {pending.length>0&&<>{GroupHeader({label:'A receber',count:pending.length,total:pending.reduce((s,e)=>s+(e.expectedValue||0),0),color:'#f59e0b'})}{pending.map((e,i)=>renderRow(e,i))}</>}
+                    {received.length>0&&<>{GroupHeader({label:'Recebidos',count:received.length,total:received.reduce((s,e)=>s+(e.realValue||0),0),color:'#10b981'})}{received.map((e,i)=>renderRow(e,i))}</>}
+                    {pending.length===0&&received.length===0&&<tr><td colSpan={6}><div className="empty-state"><TrendingUp size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma entrada neste mês</span><button onClick={openAdd} className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{background:'#10b98120',color:'#10b981',border:'1px solid #10b98130'}}>+ Adicionar entrada</button></div></td></tr>}
+                  </>
+                ):(
+                  <>
+                    {filtered.filter(visible).map((e,i)=>renderRow(e,i))}
+                    {filtered.filter(visible).length===0&&<tr><td colSpan={6}><div className="empty-state"><TrendingUp size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma entrada com status "{filter}"</span></div></td></tr>}
+                  </>
+                )}
               </tbody>
               <tfoot style={{background:'var(--bg)',borderTop:'1px solid var(--border)'}}>
                 <tr>
-                  <td colSpan={2} className="px-3 py-2 text-xs font-medium" style={{color:'var(--text-3)'}}>Total ({filtered.length})</td>
-                  <td className="px-3 py-2 text-sm text-right font-bold" style={{color:'var(--text)'}}>{fmtBRL(filtered.reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
-                  <td className="px-3 py-2 text-sm text-right font-bold" style={{color:'#10b981'}}>{fmtBRL(filtered.filter(e=>e.status==='Recebido').reduce((s,e)=>s+(e.realValue||0),0))}</td>
+                  <td colSpan={2} className="px-3 py-2 text-xs font-medium hidden sm:table-cell" style={{color:'var(--text-3)'}}>Total ({filtered.filter(visible).length})</td>
+                  <td className="px-3 py-2 text-xs font-medium sm:hidden" style={{color:'var(--text-3)'}}>Total</td>
+                  <td className="px-3 py-2 text-sm text-right font-bold hidden sm:table-cell" style={{color:'var(--text)'}}>{fmtBRL(filtered.filter(visible).reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
+                  <td className="px-3 py-2 text-sm text-right font-bold" style={{color:'#10b981'}}>{fmtBRL(filtered.filter(e=>e.status==='Recebido'&&visible(e)).reduce((s,e)=>s+(e.realValue||0),0))}</td>
                   <td colSpan={2}/>
                 </tr>
               </tfoot>
@@ -1250,16 +1316,15 @@ function EntriesPage({state,dispatch,monthKey:mk,toast}){
               <Field label="Dia previsto"><Inp type="number" value={form.dueDay} onChange={v=>setForm(f=>({...f,dueDay:v}))} placeholder="10"/></Field>
               <Field label="Status"><Sel value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={['Previsto','Cobrado','Recebido']}/></Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Valor previsto (R$)" error={errors.expectedValue}><Inp type="number" value={form.expectedValue} onChange={v=>{setForm(f=>({...f,expectedValue:v}));setErrors(e=>({...e,expectedValue:''}))}} placeholder="0,00" error={!!errors.expectedValue}/></Field>
-              <Field label="Valor recebido (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>
-            </div>
+            <Field label="Valor previsto (R$)" error={errors.expectedValue}><Inp type="number" value={form.expectedValue} onChange={v=>{setForm(f=>({...f,expectedValue:v}));setErrors(e=>({...e,expectedValue:''}))}} placeholder="0,00" error={!!errors.expectedValue}/></Field>
+            {form.status==='Recebido'&&<Field label="Valor recebido (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>}
             <Field label="Observação"><Inp value={form.note} onChange={v=>setForm(f=>({...f,note:v}))} placeholder="Opcional"/></Field>
             <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><SaveBtn onSave={save}><Save size={14}/> Salvar</SaveBtn></div>
           </div>
         </Modal>
       )}
       {copyModal&&<CopyMonthModal items={prevEntries} type="entry" targetMonthLabel={targetLabel} onConfirm={confirmCopy} onClose={()=>setCopyModal(false)}/>}
+      {quickMark&&<QuickMarkSheet item={quickMark.item} type={quickMark.type} monthKey={mk} dispatch={dispatch} toast={toast} onClose={()=>setQuickMark(null)}/>}
     </div>
   )
 }
@@ -1270,24 +1335,44 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
   const exits=month.exits||[]
   const cards=state.settings?.cards||[]
   const [filter,setFilter]=useState('Todos')
+  const [search,setSearch]=useState('')
   const [modal,setModal]=useState(null)
   const [form,setForm]=useState({})
   const [errors,setErrors]=useState({})
-  const filtered=filter==='Todos'?exits:exits.filter(e=>e.status===filter)
+  const [quickMark,setQuickMark]=useState(null)
+  const [pendingDel,setPendingDel]=useState(null)
+  const pendingRef=useRef(null)
+  function delExit(id,name){
+    if(pendingRef.current){clearTimeout(pendingRef.current.timer);dispatch({type:'DELETE_EXIT',payload:{monthKey:mk,id:pendingRef.current.id}})}
+    const timer=setTimeout(()=>{dispatch({type:'DELETE_EXIT',payload:{monthKey:mk,id}});setPendingDel(null);pendingRef.current=null},5000)
+    pendingRef.current={id,name,timer};setPendingDel({id,name})
+  }
+  function undoDel(){if(!pendingRef.current)return;clearTimeout(pendingRef.current.timer);pendingRef.current=null;setPendingDel(null)}
+  useEffect(()=>()=>{if(pendingRef.current){clearTimeout(pendingRef.current.timer);dispatch({type:'DELETE_EXIT',payload:{monthKey:mk,id:pendingRef.current.id}})}},[])
+  const today=new Date()
+  const{year:cY,month:cM}=parseMonthKey(mk)
+  const isCurr=today.getFullYear()===cY&&today.getMonth()+1===cM
+  const todayD=today.getDate()
+  function urgency(e){
+    if(e.status==='Pago')return 100+(e.day||0)
+    const late=isCurr&&e.day&&e.day<todayD
+    if(late)return e.day||0
+    return 50+(e.day||99)
+  }
+  const sorted=[...exits].sort((a,b)=>urgency(a)-urgency(b))
+  const byFilter=filter==='Todos'?sorted:sorted.filter(e=>e.status===filter)
+  const filtered=search?byFilter.filter(e=>(e.name||'').toLowerCase().includes(search.toLowerCase())||(e.category||'').toLowerCase().includes(search.toLowerCase())):byFilter
   const totalExp=exits.reduce((s,e)=>s+(e.expectedValue||0),0)
   const totalPaid=exits.filter(e=>e.status==='Pago').reduce((s,e)=>s+(e.realValue||0),0)
   const totalPend=exits.filter(e=>e.status!=='Pago').reduce((s,e)=>s+(e.expectedValue||0),0)
-  const catMap={}; exits.forEach(e=>{catMap[e.category]=(catMap[e.category]||0)+(e.expectedValue||0)})
+  const catMap={};exits.forEach(e=>{catMap[e.category]=(catMap[e.category]||0)+(e.expectedValue||0)})
   const pieData=Object.entries(catMap).map(([name,value])=>({name,value}))
   const [copyModal,setCopyModal]=useState(false)
   const prevMkExit=useMemo(()=>{const{year,month:m}=parseMonthKey(mk);return monthKey(m===1?year-1:year,m===1?12:m-1)},[mk])
   const prevExits=useMemo(()=>state.months[prevMkExit]?.exits||[],[state.months,prevMkExit])
   const{month:curME,year:curYE}=parseMonthKey(mk)
   const targetLabelE=`${MONTH_NAMES[curME-1]} ${curYE}`
-  function copyPrevMonthExits(){
-    if(!prevExits.length){toast('Mês anterior não tem saídas','warn');return}
-    setCopyModal(true)
-  }
+  function copyPrevMonthExits(){if(!prevExits.length){toast('Mês anterior não tem saídas','warn');return};setCopyModal(true)}
   function confirmCopyExits(selectedIds){
     const toAdd=prevExits.filter(e=>selectedIds.includes(e.id))
     toAdd.forEach(e=>dispatch({type:'ADD_EXIT',payload:{monthKey:mk,exit:{...e,id:uid(),status:'Pendente',realValue:0}}}))
@@ -1305,8 +1390,42 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
     else dispatch({type:'UPDATE_EXIT',payload:{monthKey:mk,exit}})
     toast('Salvo');setModal(null)
   }
-  function del(id){dispatch({type:'DELETE_EXIT',payload:{monthKey:mk,id}});toast('Removido','warn')}
   const cardName=id=>cards.find(c=>c.id===id)?.name||'—'
+  const visible=e=>!pendingDel||e.id!==pendingDel.id
+  const pending=filtered.filter(e=>e.status!=='Pago'&&visible(e))
+  const paid=filtered.filter(e=>e.status==='Pago'&&visible(e))
+  const showGroups=filter==='Todos'
+  const addExit=()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setErrors({});setModal('add')}
+  function renderRow(e,i){
+    const late=isCurr&&e.day&&e.day<todayD&&e.status!=='Pago'?todayD-e.day:0
+    const isDone=e.status==='Pago'
+    return(
+      <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)',opacity:isDone?0.75:1}}>
+        <Td>
+          <div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span>{e.name}</span>
+              {late>0&&<span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{background:'#ef444420',color:'#ef4444'}}>{late}d atraso</span>}
+            </div>
+            {e.cardId&&<div className="text-xs mt-0.5" style={{color:'var(--text-3)'}}>{cardName(e.cardId)}</div>}
+          </div>
+        </Td>
+        <Td muted className="hidden sm:table-cell">{e.category}</Td>
+        <Td muted className="hidden sm:table-cell">{e.day||'—'}</Td>
+        <Td right className="hidden sm:table-cell">{fmtBRL(e.expectedValue)}</Td>
+        <Td right color={e.realValue?'var(--text)':'var(--text-3)'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
+        <Td><StatusBadge status={e.status}/></Td>
+        <Td><div className="flex gap-1">
+          {!isDone&&<button onClick={()=>setQuickMark({item:e,type:'exit'})} title="Marcar pago" className="p-1 rounded" style={{color:'#10b981'}}><CheckCircle size={14}/></button>}
+          <button onClick={()=>{setForm({...e});setErrors({});setModal(e)}} className="p-1 rounded" style={{color:'var(--text-3)'}}><Pencil size={13}/></button>
+          <button onClick={()=>delExit(e.id,e.name)} className="p-1 rounded" style={{color:'var(--text-3)'}}><Trash2 size={13}/></button>
+        </div></Td>
+      </tr>
+    )
+  }
+  function GroupHeader({label,count,total,color}){
+    return(<tr style={{background:'var(--bg)'}}><td colSpan={7} className="px-3 py-2"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-widest" style={{color}}>{label} ({count})</span><span className="text-xs font-semibold" style={{color}}>{fmtBRL(total)}</span></div></td></tr>)
+  }
   return(
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1330,34 +1449,61 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
           ))}</div>
         </div>
         <div className="lg:col-span-2 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1.5 flex-wrap">
               {['Todos','Pendente','Pago'].map(s=>(
                 <button key={s} onClick={()=>setFilter(s)} className="px-3 py-1.5 text-xs rounded-lg transition-all"
                   style={{background:filter===s?'#ef4444':'var(--bg-overlay)',color:filter===s?'#fff':'var(--text-3)',border:'1px solid var(--border)'}}>{s}</button>
               ))}
             </div>
-            <div className="flex gap-2"><BtnG onClick={copyPrevMonthExits}><Copy size={14}/> Copiar mês anterior</BtnG><Btn onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setErrors({});setModal('add')}} color="#ef4444"><Plus size={14}/> Adicionar</Btn></div>
+            <div className="flex-1 min-w-[140px]">
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar despesa…" className={iCls} style={{...iSty,padding:'6px 10px',fontSize:12}}/>
+            </div>
           </div>
+          <div className="flex justify-end gap-2">
+            <BtnG onClick={copyPrevMonthExits}><Copy size={14}/> Copiar mês anterior</BtnG>
+            <Btn onClick={addExit} color="#ef4444"><Plus size={14}/> Adicionar</Btn>
+          </div>
+          {pendingDel&&(
+            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl text-sm" style={{background:'#f59e0b18',border:'1px solid #f59e0b40'}}>
+              <span style={{color:'var(--text-2)'}}>"{pendingDel.name}" será removido em 5s…</span>
+              <button onClick={undoDel} className="text-xs font-semibold px-3 py-1 rounded-lg" style={{background:'#f59e0b',color:'#000'}}>Desfazer</button>
+            </div>
+          )}
           <div className="rounded-2xl overflow-auto" style={{border:'1px solid var(--border)'}}>
-            <table className="w-full min-w-[500px]">
-              <thead style={{background:'var(--bg)'}}><tr><Th>Despesa</Th><Th>Cat.</Th><Th>Dia</Th><Th right>Previsto</Th><Th right>Pago</Th><Th>Status</Th><Th>Ações</Th></tr></thead>
+            <table className="w-full">
+              <thead style={{background:'var(--bg)'}}><tr>
+                <Th>Despesa</Th>
+                <Th className="hidden sm:table-cell">Cat.</Th>
+                <Th className="hidden sm:table-cell">Dia</Th>
+                <Th right className="hidden sm:table-cell">Previsto</Th>
+                <Th right>Pago</Th>
+                <Th>Status</Th>
+                <Th>Ações</Th>
+              </tr></thead>
               <tbody>
-                {filtered.map((e,i)=>(
-                  <tr key={e.id} className="border-t" style={{borderColor:'var(--sep)',background:i%2===0?'transparent':'var(--row-alt)'}}>
-                    <Td><div>{e.name}</div>{e.cardId&&<div className="text-xs text-slate-500">{cardName(e.cardId)}</div>}</Td>
-                    <Td muted>{e.category}</Td><Td muted>{e.day||'—'}</Td>
-                    <Td right>{fmtBRL(e.expectedValue)}</Td>
-                    <Td right color={e.realValue?'var(--text)':'var(--text-3)'}>{e.realValue?fmtBRL(e.realValue):'—'}</Td>
-                    <Td><StatusBadge status={e.status}/></Td>
-                    <Td><div className="flex gap-1.5">
-                      <button onClick={()=>{setForm({...e});setModal(e)}} className="p-1 rounded text-slate-400 hover:text-slate-200"><Pencil size={13}/></button>
-                      <button onClick={()=>del(e.id)} className="p-1 rounded text-slate-400 hover:text-red-400"><Trash2 size={13}/></button>
-                    </div></Td>
-                  </tr>
-                ))}
-                {filtered.length===0&&<tr><td colSpan={7}><div className="empty-state"><TrendingDown size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma saída {filter!=='Todos'?`com status "${filter}"`:'neste mês'}</span><button onClick={()=>{setForm({name:'',category:'Outros',day:'',cardId:'',expectedValue:'',status:'Pendente',realValue:'',note:''});setErrors({});setModal('add')}} className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{background:'#ef444420',color:'#ef4444',border:'1px solid #ef444430'}}>+ Adicionar saída</button></div></td></tr>}
+                {showGroups?(
+                  <>
+                    {pending.length>0&&<>{GroupHeader({label:'A pagar',count:pending.length,total:pending.reduce((s,e)=>s+(e.expectedValue||0),0),color:'#f59e0b'})}{pending.map((e,i)=>renderRow(e,i))}</>}
+                    {paid.length>0&&<>{GroupHeader({label:'Pagos',count:paid.length,total:paid.reduce((s,e)=>s+(e.realValue||0),0),color:'#10b981'})}{paid.map((e,i)=>renderRow(e,i))}</>}
+                    {pending.length===0&&paid.length===0&&<tr><td colSpan={7}><div className="empty-state"><TrendingDown size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma saída neste mês</span><button onClick={addExit} className="text-xs px-3 py-1.5 rounded-lg font-semibold" style={{background:'#ef444420',color:'#ef4444',border:'1px solid #ef444430'}}>+ Adicionar saída</button></div></td></tr>}
+                  </>
+                ):(
+                  <>
+                    {filtered.filter(visible).map((e,i)=>renderRow(e,i))}
+                    {filtered.filter(visible).length===0&&<tr><td colSpan={7}><div className="empty-state"><TrendingDown size={36}/><span className="text-sm font-medium" style={{color:'var(--text-2)'}}>Nenhuma saída com status "{filter}"</span></div></td></tr>}
+                  </>
+                )}
               </tbody>
+              <tfoot style={{background:'var(--bg)',borderTop:'1px solid var(--border)'}}>
+                <tr>
+                  <td colSpan={3} className="px-3 py-2 text-xs font-medium hidden sm:table-cell" style={{color:'var(--text-3)'}}>Total ({filtered.filter(visible).length})</td>
+                  <td className="px-3 py-2 text-xs font-medium sm:hidden" style={{color:'var(--text-3)'}}>Total</td>
+                  <td className="px-3 py-2 text-sm text-right font-bold hidden sm:table-cell" style={{color:'var(--text)'}}>{fmtBRL(filtered.filter(visible).reduce((s,e)=>s+(e.expectedValue||0),0))}</td>
+                  <td className="px-3 py-2 text-sm text-right font-bold" style={{color:'#10b981'}}>{fmtBRL(filtered.filter(e=>e.status==='Pago'&&visible(e)).reduce((s,e)=>s+(e.realValue||0),0))}</td>
+                  <td colSpan={2}/>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -1370,19 +1516,19 @@ function ExitsPage({state,dispatch,monthKey:mk,toast}){
               <Field label="Categoria"><Sel value={form.category} onChange={v=>setForm(f=>({...f,category:v}))} options={CATEGORIES}/></Field>
               <Field label="Dia"><Inp type="number" value={form.day} onChange={v=>setForm(f=>({...f,day:v}))} placeholder="10"/></Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Valor previsto (R$)" error={errors.expectedValue}><Inp type="number" value={form.expectedValue} onChange={v=>{setForm(f=>({...f,expectedValue:v}));setErrors(e=>({...e,expectedValue:''}))}} placeholder="0,00" error={!!errors.expectedValue}/></Field>
-              <Field label="Valor pago (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>
-            </div>
+            <Field label="Valor previsto (R$)" error={errors.expectedValue}><Inp type="number" value={form.expectedValue} onChange={v=>{setForm(f=>({...f,expectedValue:v}));setErrors(e=>({...e,expectedValue:''}))}} placeholder="0,00" error={!!errors.expectedValue}/></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Status"><Sel value={form.status} onChange={v=>setForm(f=>({...f,status:v}))} options={['Pendente','Pago']}/></Field>
               <Field label="Cartão"><Sel value={form.cardId||''} onChange={v=>setForm(f=>({...f,cardId:v}))} options={[{value:'',label:'Conta corrente'},...cards.map(c=>({value:c.id,label:c.name}))]}/></Field>
             </div>
+            {form.status==='Pago'&&<Field label="Valor pago (R$)"><Inp type="number" value={form.realValue} onChange={v=>setForm(f=>({...f,realValue:v}))} placeholder="0,00"/></Field>}
+            <Field label="Observação"><Inp value={form.note||''} onChange={v=>setForm(f=>({...f,note:v}))} placeholder="Opcional"/></Field>
             <div className="flex justify-end gap-2 pt-2"><BtnG onClick={()=>setModal(null)}>Cancelar</BtnG><SaveBtn onSave={save}><Save size={14}/> Salvar</SaveBtn></div>
           </div>
         </Modal>
       )}
       {copyModal&&<CopyMonthModal items={prevExits} type="exit" targetMonthLabel={targetLabelE} onConfirm={confirmCopyExits} onClose={()=>setCopyModal(false)}/>}
+      {quickMark&&<QuickMarkSheet item={quickMark.item} type={quickMark.type} monthKey={mk} dispatch={dispatch} toast={toast} onClose={()=>setQuickMark(null)}/>}
     </div>
   )
 }
