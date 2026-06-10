@@ -171,9 +171,11 @@
     body.light .summary-card.clickable:hover{background:rgba(0,0,0,0.04)!important}
     .summary-card.clickable{cursor:pointer}
     .nav-section{padding:0 10px;margin-top:14px;margin-bottom:2px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-4);user-select:none}
+    .grain::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0.035;background:#fff;filter:url(#grain-filter);mix-blend-mode:overlay}
   </style>
 </head>
 <body>
+<svg style="display:none" aria-hidden="true"><defs><filter id="grain-filter"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter></defs></svg>
 <div id="root"></div>
 <script>
 // Limpa versões antigas e força re-seed se dados incompletos
@@ -772,7 +774,7 @@ function Modal({title,onClose,children,wide}){
     <div role="dialog" aria-modal="true" aria-labelledby={modalId} className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" onClick={onClose}>
       <div className={`relative rounded-3xl p-6 w-full modal-content ${wide?'max-w-2xl':'max-w-lg'}`} onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h2 id={modalId} className="text-base font-semibold tracking-tight" style={{color:'var(--text)'}}>{title}</h2>
+          <h2 id={modalId} className="text-base font-semibold tracking-tight" style={{color:'var(--text)',textWrap:'balance'}}>{title}</h2>
           <button onClick={onClose} aria-label="Fechar" className="w-8 h-8 rounded-full flex items-center justify-center transition-all" style={{background:'var(--bg-overlay)',color:'var(--text-3)'}}><X size={15}/></button>
         </div>
         {children}
@@ -816,7 +818,7 @@ function StatusBadge({status,flash}){
     'Pendente':{bg:'#78350f20',color:'#f59e0b',border:'#f59e0b30'},
     'Pago':{bg:'#06522020',color:'#10b981',border:'#10b98130'},
   }[status]||{bg:'var(--bg-overlay)',color:'var(--text-3)',border:'var(--border)'}
-  return <span title={STATUS_TIPS[status]||status} className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold${flash?' badge-flash':''}`} style={{background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`}}>{status}</span>
+  return <span title={STATUS_TIPS[status]||status} className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold${flash?' badge-flash':''}`} style={{background:cfg.bg,color:cfg.color}}>{status}</span>
 }
 
 function ProgressBar({label,current,total,color}){
@@ -3970,7 +3972,7 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
   return(
     <>
       {open&&<div className="fixed inset-0 z-30 lg:hidden" style={{background:'var(--modal-bg)',backdropFilter:'blur(4px)'}} onClick={()=>setOpen(false)}/>}
-      <nav aria-label="Menu principal" className={`fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
+      <nav aria-label="Menu principal" className={`grain fixed top-0 left-0 h-full z-40 flex flex-col transition-transform duration-300 ${open?'translate-x-0':'-translate-x-full'} lg:translate-x-0`}
         style={{width:220,background:'var(--bg-sidebar)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',borderRight:'1px solid var(--border-s)'}}>
         <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2.5">
@@ -4092,7 +4094,7 @@ function LoginScreen({onLogin}){
   const inputSt={background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:16,padding:'16px',color:'#ffffff',fontSize:24,outline:'none',textAlign:'center',letterSpacing:'0.5em',width:'100%',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}
 
   return(
-    <div className="min-h-screen flex items-center justify-center px-4" style={{background:'var(--bg)'}}>
+    <div className="flex items-center justify-center px-4" style={{minHeight:'100dvh',background:'var(--bg)'}}>
       <div className="w-full max-w-xs">
         {/* Logo */}
         <div className="text-center mb-10">
@@ -4283,13 +4285,13 @@ function PaiolFinanceApp({currentUser,onLogout,isLight,toggleTheme}){
   const monthData=state.months[mk]||{}
 
   return(
-    <div className="min-h-screen flex" style={{background:'var(--bg)',color:'var(--text)'}}>
+    <div className="flex" style={{minHeight:'100dvh',background:'var(--bg)',color:'var(--text)'}}>
       <Sidebar activePage={activePage} setActivePage={setActivePage} open={sidebarOpen} setOpen={setSidebarOpen} state={state}/>
-      <div className="flex-1 flex flex-col min-h-screen" style={{marginLeft:0,paddingLeft:0}}>
-        <div className="flex-1 flex flex-col min-h-screen lg:ml-[220px]">
+      <div className="flex-1 flex flex-col" style={{minHeight:'100dvh',marginLeft:0,paddingLeft:0}}>
+        <div className="flex-1 flex flex-col lg:ml-[220px]">
           {/* Header */}
           {syncing&&<div className="fixed top-0 left-0 right-0 z-50 h-0.5" style={{background:'linear-gradient(90deg,#10b981,#3b82f6,#10b981)',backgroundSize:'200% 100%',animation:'syncbar 1.5s linear infinite'}}/>}
-          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'var(--bg-header)',borderBottom:'1px solid var(--sep)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)'}}>
+          <header className="grain sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{background:'var(--bg-header)',borderBottom:'1px solid var(--sep)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)'}}>
             <div className="flex items-center gap-3">
               <button onClick={()=>setSidebarOpen(true)} title="Menu" aria-label="Abrir menu" className="lg:hidden p-2 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><Menu size={18}/></button>
               {activePage==='annual'?(
