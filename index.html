@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.json"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -97,12 +97,12 @@
     /* ── CSS Variables ────────────────────────────── */
     :root{
       color-scheme:dark;
-      --bg:#000000;--bg-sidebar:rgba(10,10,10,0.9);--bg-header:rgba(0,0,0,0.82);
+      --bg:#080808;--bg-sidebar:rgba(8,8,8,0.97);--bg-header:rgba(8,8,8,0.92);
       --bg-card:rgba(255,255,255,0.05);--bg-input:rgba(255,255,255,0.06);--bg-overlay:rgba(255,255,255,0.08);
       --text:#ffffff;--text-2:rgba(235,235,245,0.6);--text-3:rgba(235,235,245,0.38);--text-4:rgba(235,235,245,0.22);
       --border:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.06);--sep:rgba(255,255,255,0.07);
       --inner:rgba(255,255,255,0.15);--modal-bg:rgba(0,0,0,0.72);
-      --row-alt:rgba(255,255,255,0.025);--row-hi:rgba(16,185,129,0.1);--nav-active:rgba(255,255,255,0.1);
+      --row-alt:rgba(255,255,255,0.025);--row-hi:rgba(16,185,129,0.1);--nav-active:rgba(16,185,129,0.1);--nav-active-shadow:inset 3px 0 0 #10b981;
       --bg-modal:rgba(20,20,20,0.95);--shadow-modal:0 32px 80px rgba(0,0,0,0.7);
     }
     body.light{
@@ -115,7 +115,7 @@
       --row-alt:rgba(0,0,0,0.03);--row-hi:rgba(16,185,129,0.07);--nav-active:rgba(0,0,0,0.08);
       --bg-modal:rgba(255,255,255,0.98);--shadow-modal:0 32px 80px rgba(0,0,0,0.15);
     }
-    body{margin:0;background:var(--bg);font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:'cv02','cv03','cv04','cv11';font-variant-numeric:tabular-nums}
+    body{margin:0;background:var(--bg);font-family:'Outfit',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums}
     ::-webkit-scrollbar{width:5px;height:5px}
     ::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
@@ -162,6 +162,15 @@
       .print-only{display:block!important}
     }
     .print-only{display:none}
+    .nav-btn{transition:background 0.15s ease,box-shadow 0.15s ease,color 0.15s ease}
+    .nav-btn:hover{background:rgba(255,255,255,0.05)!important}
+    body.light .nav-btn:hover{background:rgba(0,0,0,0.05)!important}
+    .nav-btn.active{background:var(--nav-active)!important;box-shadow:var(--nav-active-shadow)!important}
+    .summary-card{transition:background 0.18s ease,transform 0.18s ease,box-shadow 0.18s ease}
+    .summary-card.clickable:hover{background:rgba(255,255,255,0.08)!important;transform:translateY(-2px)}
+    body.light .summary-card.clickable:hover{background:rgba(0,0,0,0.04)!important}
+    .summary-card.clickable{cursor:pointer}
+    .nav-section{padding:0 10px;margin-top:14px;margin-bottom:2px;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-4);user-select:none}
   </style>
 </head>
 <body>
@@ -787,12 +796,12 @@ function Toast({toasts}){
 
 function SummaryCard({label,value,sub,color,icon:Icon,onClick}){
   return(
-    <div onClick={onClick} className="rounded-2xl p-4 transition-all" style={{background:'var(--bg-card)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',border:'1px solid var(--border)',boxShadow:'0 4px 24px rgba(0,0,0,0.3),inset 0 0.5px 0 var(--inner)',cursor:onClick?'pointer':'default'}}>
-      <div className="flex items-start justify-between mb-4">
-        <span className="text-xs font-medium uppercase tracking-widest" style={{color:'var(--text-2)'}}>{label}</span>
-        {Icon&&<div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{background:`${color}20`,border:`1px solid ${color}35`}}><Icon size={16} style={{color}}/></div>}
+    <div onClick={onClick} className={`summary-card rounded-2xl p-4${onClick?' clickable':''}`} style={{background:'var(--bg-card)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',border:'1px solid var(--border)',boxShadow:'0 4px 24px rgba(0,0,0,0.2),inset 0 0.5px 0 var(--inner)'}}>
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-xs font-medium" style={{color:'var(--text-2)',letterSpacing:'0.01em'}}>{label}</span>
+        {Icon&&<div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{background:`${color}18`}}><Icon size={15} style={{color}}/></div>}
       </div>
-      <div className="text-lg sm:text-xl font-bold tracking-tight mb-1" style={{color:color||'var(--text)'}}>{value}</div>
+      <div className="text-lg sm:text-xl font-bold mb-1" style={{color:color||'var(--text)',letterSpacing:'-0.02em'}}>{value}</div>
       {sub&&<div className="text-xs" style={{color:'var(--text-3)'}}>{sub}</div>}
     </div>
   )
@@ -839,15 +848,15 @@ const _styPermInp={background:'var(--bg)',border:'1px solid var(--border)',borde
 function PInp({value,onChange,type='text',placeholder}){return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={_styPermInp}/>}
 function PFld({label,children}){return <div><label className="block text-xs text-slate-400 mb-1">{label}</label>{children}</div>}
 function Sel({value,onChange,options}){return <select value={value} onChange={e=>onChange(e.target.value)} className={iCls} style={iSty}>{options.map(o=><option key={o.value??o} value={o.value??o}>{o.label??o}</option>)}</select>}
-function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 4px 12px ${color}55`}}>{children}</button>}
+function Btn({onClick,children,small,color='#10b981'}){return <button onClick={onClick} className={`flex items-center gap-1.5 font-semibold transition-all active:scale-[0.97] hover:brightness-110 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 2px 8px ${color}40`}}>{children}</button>}
 function SaveBtn({onSave,children,color='#10b981'}){
   const [saved,setSaved]=useState(false)
   function handle(){if(saved)return;setSaved(true);setTimeout(()=>onSave(),600)}
   return <button onClick={handle} disabled={saved} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold transition-all active:scale-95" style={{background:saved?'#10b981':color,color:'#fff',borderRadius:10,boxShadow:`inset 0 1px 0 rgba(255,255,255,0.2),0 4px 12px ${saved?'#10b981':color}55`,transform:saved?'scale(0.97)':'scale(1)'}}>{saved?<><Check size={14}/> Salvo!</>:<>{children}</>}</button>
 }
-function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-95 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)',borderRadius:10}}>{children}</button>}
+function BtnG({onClick,children,small}){return <button onClick={onClick} className={`flex items-center gap-1.5 transition-all active:scale-[0.97] hover:brightness-110 ${small?'px-3 py-1.5 text-xs':'px-4 py-2 text-sm'}`} style={{background:'var(--bg-overlay)',color:'var(--text-2)',border:'1px solid var(--border)',borderRadius:10}}>{children}</button>}
 
-function Th({children,right,className}){return <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-widest ${right?'text-right':'text-left'} ${className||''}`} style={{color:'var(--text-3)'}}>{children}</th>}
+function Th({children,right,className}){return <th className={`px-3 py-3 text-xs font-medium ${right?'text-right':'text-left'} ${className||''}`} style={{color:'var(--text-3)',letterSpacing:'0.02em'}}>{children}</th>}
 function Td({children,right,muted,color,className}){return <td className={`px-3 py-3.5 text-sm ${right?'text-right':''} ${className||''}`} style={{color:color||(muted?'var(--text-3)':'var(--text-2)'),borderBottom:'1px solid var(--sep)'}}>{children}</td>}
 
 const CTip=({active,payload,label})=>{
@@ -3923,12 +3932,12 @@ const NAV=[
   {id:'assistant',icon:Sparkles,label:'Assistente'},
   {id:'dashboard',icon:LayoutDashboard,label:'Dashboard'},
   {id:'cashflow',icon:CalendarDays,label:'Fluxo de Caixa'},
-  {id:'entries',icon:TrendingUp,label:'Entradas'},
+  {id:'entries',icon:TrendingUp,label:'Entradas',group:'Financeiro'},
   {id:'exits',icon:TrendingDown,label:'Saídas'},
   {id:'permuta',icon:ArrowLeftRight,label:'Permuta'},
-  {id:'objetivos',icon:Flag,label:'Objetivos'},
+  {id:'objetivos',icon:Flag,label:'Objetivos',group:'Gestão'},
   {id:'tasks',icon:ListTodo,label:'Tarefas'},
-  {id:'calendar',icon:CalendarRange,label:'Calendário'},
+  {id:'calendar',icon:CalendarRange,label:'Calendário',group:'Análise'},
   {id:'annual',icon:Target,label:'Projeção Anual'},
   {id:'simulator',icon:Zap,label:'Simulador'},
   {id:'activity',icon:Activity,label:'Atividade'},
@@ -3965,37 +3974,45 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
         style={{width:220,background:'var(--bg-sidebar)',backdropFilter:'blur(40px) saturate(200%)',WebkitBackdropFilter:'blur(40px) saturate(200%)',borderRight:'1px solid var(--border-s)'}}>
         <div className="flex items-center justify-between p-4 border-b" style={{borderColor:'var(--border-s)'}}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-2xl flex items-center justify-center font-bold text-sm" style={{background:'#10b981',color:'#fff',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.25),0 4px 12px #10b98155'}}>P</div>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm" style={{background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',boxShadow:'0 2px 8px rgba(16,185,129,0.3)'}}>P</div>
             <div>
-              <span className="font-semibold text-white text-sm tracking-tight">Paiol Finance</span>
-              <div className="text-xs leading-none" style={{color:'var(--text-3)'}}>Paiol Mídias</div>
+              <span className="font-semibold text-sm" style={{color:'var(--text)',letterSpacing:'-0.01em'}}>Paiol Finance</span>
+              <div className="text-xs leading-none" style={{color:'var(--text-4)'}}>Paiol Mídias</div>
             </div>
           </div>
           <button onClick={()=>setOpen(false)} className="lg:hidden" style={{color:'var(--text-3)'}}><X size={16}/></button>
         </div>
-        <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto">
-          {NAV.map(({id,icon:Icon,label})=>(
-            <button key={id} title={label} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left"
-              style={{background:activePage===id?'var(--nav-active)':'transparent',color:activePage===id?'var(--text)':'var(--text-3)',fontWeight:activePage===id?600:400}}>
-              <span style={{color:activePage===id?'#10b981':'var(--text-4)'}}><Icon size={16}/></span>{label}
-              {id==='permuta'&&permuteNegCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#ef4444',color:'#fff',fontSize:10}}>!</span>}
-              {id==='tasks'&&openTasksCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:overdueCount>0?'#ef4444':'#3b82f6',color:'#fff',fontSize:10}}>{openTasksCount}</span>}
-            </button>
+        <nav className="flex-1 px-2 pb-2 overflow-y-auto">
+          {NAV.map(({id,icon:Icon,label,group})=>(
+            <React.Fragment key={id}>
+              {group!==undefined&&<div className="nav-section">{group}</div>}
+              <button title={label} onClick={()=>{setActivePage(id);setOpen(false)}}
+                className={`nav-btn w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-left${activePage===id?' active':''}`}
+                style={{color:activePage===id?'var(--text)':'var(--text-3)',fontWeight:activePage===id?600:400,marginBottom:1}}>
+                <span style={{color:activePage===id?'#10b981':'var(--text-4)',flexShrink:0}}><Icon size={15}/></span>
+                <span className="truncate">{label}</span>
+                {id==='permuta'&&permuteNegCount>0&&<span className="ml-auto shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md" style={{background:'#ef444420',color:'#ef4444',fontSize:10}}>!</span>}
+                {id==='tasks'&&openTasksCount>0&&<span className="ml-auto shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md" style={{background:overdueCount>0?'#ef444420':'#3b82f620',color:overdueCount>0?'#ef4444':'#60a5fa',fontSize:10}}>{openTasksCount}</span>}
+              </button>
+            </React.Fragment>
           ))}
           {/* Configurações accordion */}
-          <button onClick={()=>setSettingsOpen(o=>!o)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all text-left"
-            style={{background:isSettingsActive&&!settingsOpen?'var(--nav-active)':'transparent',color:isSettingsActive?'var(--text)':'var(--text-3)',fontWeight:isSettingsActive?600:400}}>
-            <span style={{color:isSettingsActive?'#10b981':'var(--text-4)'}}><Settings size={16}/></span>
-            <span className="flex-1">Configurações</span>
-            <span style={{color:'var(--text-4)',transition:'transform 0.2s',transform:settingsOpen?'rotate(180deg)':'rotate(0deg)'}}><ChevronDown size={14}/></span>
+          <div className="nav-section">Sistema</div>
+          <button onClick={()=>setSettingsOpen(o=>!o)}
+            className={`nav-btn w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-left${isSettingsActive&&!settingsOpen?' active':''}`}
+            style={{color:isSettingsActive?'var(--text)':'var(--text-3)',fontWeight:isSettingsActive?600:400,marginBottom:1}}>
+            <span style={{color:isSettingsActive?'#10b981':'var(--text-4)',flexShrink:0}}><Settings size={15}/></span>
+            <span className="flex-1 truncate">Configurações</span>
+            <span style={{color:'var(--text-4)',transition:'transform 0.2s',transform:settingsOpen?'rotate(180deg)':'rotate(0deg)',flexShrink:0}}><ChevronDown size={13}/></span>
           </button>
           {settingsOpen&&(
-            <div className="ml-2 space-y-0.5">
+            <div className="ml-1.5 space-y-0.5 border-l" style={{borderColor:'var(--border-s)'}}>
               {SETTINGS_SUB.map(({id,icon:Icon,label})=>(
-                <button key={id} title={label} onClick={()=>{setActivePage(id);setOpen(false)}} className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-all text-left"
-                  style={{background:activePage===id?'rgba(16,185,129,0.12)':'transparent',color:activePage===id?'#10b981':'var(--text-3)',fontWeight:activePage===id?600:400,borderLeft:activePage===id?'2px solid #10b981':'2px solid transparent'}}>
-                  <Icon size={14}/>{label}
-                  {id==='clients'&&expCount>0&&<span className="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full" style={{background:'#f59e0b',color:'#000',fontSize:10}}>{expCount}</span>}
+                <button key={id} title={label} onClick={()=>{setActivePage(id);setOpen(false)}}
+                  className="nav-btn w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs text-left"
+                  style={{color:activePage===id?'#10b981':'var(--text-3)',fontWeight:activePage===id?600:400,background:activePage===id?'rgba(16,185,129,0.1)':'transparent',marginBottom:1}}>
+                  <Icon size={13}/><span className="truncate">{label}</span>
+                  {id==='clients'&&expCount>0&&<span className="ml-auto shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md" style={{background:'#f59e0b20',color:'#f59e0b',fontSize:10}}>{expCount}</span>}
                 </button>
               ))}
             </div>
