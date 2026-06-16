@@ -716,22 +716,23 @@ function loadState(){
 }
 
 // ─── SUPABASE REALTIME BACKEND ────────────────────────────────────────────────
-const SB_URL='https://zffcleurthevujpypsrs.supabase.co'
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmZmNsZXVydGhldnVqcHlwc3JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMDMxMTUsImV4cCI6MjA5Mzg3OTExNX0.EL8Oqs1TjuDnJZdJG37XzSI1mkcCFW0WdFlEjhuuSrU'
+// Migrado 2026-06-15: paiol-finance (projeto próprio) → paiol-portal, schema `financas` (acesso via RPC public.finance_state_*)
+const SB_URL='https://pxiqsylprzvauguxflrd.supabase.co'
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4aXFzeWxwcnp2YXVndXhmbHJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODM2NDQsImV4cCI6MjA5MTE1OTY0NH0.MZ5YZ5LLKyo7bSpynfObCLr3ytZ_bJWZAKuWg8rVqQw'
 const _sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY,{realtime:{params:{eventsPerSecond:2}}}):null
 async function gasGet(){
   if(!_sb){logError('sbGet','Supabase não carregado');return null}
   try{
-    const{data,error}=await _sb.from('finance_state').select('state').eq('id','paiol').single()
+    const{data,error}=await _sb.rpc('finance_state_get')
     if(error)throw error
-    const s=data?.state
+    const s=data
     return s&&Object.keys(s).length>0?s:null
   }catch(e){logError('sbGet',e);return null}
 }
 async function gasPost(state,by='app'){
   if(!_sb){logError('sbPost','Supabase não carregado');return}
   try{
-    await _sb.from('finance_state').upsert({id:'paiol',state,updated_at:new Date().toISOString(),updated_by:by},{onConflict:'id'})
+    await _sb.rpc('finance_state_set',{p_state:state,p_by:by})
   }catch(e){logError('sbPost',e)}
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4233,7 +4234,7 @@ function PaiolFinanceApp({currentUser,onLogout,isLight,toggleTheme}){
     // Assinatura Realtime — recebe atualizações de outros dispositivos ao vivo
     if(!_sb)return
     const channel=_sb.channel('finance-state')
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'finance_state',filter:'id=eq.paiol'},(payload)=>{
+      .on('postgres_changes',{event:'UPDATE',schema:'financas',table:'finance_state',filter:'id=eq.paiol'},(payload)=>{
         const by=payload.new?.updated_by
         if(by===_sessId.current)return // foi a gente mesmos, ignora
         const remote=payload.new?.state
