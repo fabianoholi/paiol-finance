@@ -3280,10 +3280,7 @@ function GoalsPage({state,dispatch,toast}){
 // ─── ATIVIDADE ────────────────────────────────────────────────────────────────
 function ActivityPage({state}){
   const log=state.activityLog||[]
-  const [filterUser,setFilterUser]=useState('todos')
-  const users=[{id:'todos',label:'Todos'},{id:'Fabiano',label:'Fabiano'},{id:'Mainara',label:'Mainara'}]
-
-  const filtered=filterUser==='todos'?log:log.filter(e=>e.user===filterUser)
+  const filtered=log
 
   function relTime(iso){
     const diff=Date.now()-new Date(iso).getTime()
@@ -3317,19 +3314,9 @@ function ActivityPage({state}){
 
   return(
     <div className="space-y-5 max-w-2xl">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-base font-semibold" style={{color:'var(--text)'}}>Registro de Atividade</h2>
-          <p className="text-xs mt-0.5" style={{color:'var(--text-3)'}}>Tudo que foi feito no app, por quem e quando</p>
-        </div>
-        <div className="flex gap-2">
-          {users.map(u=>(
-            <button key={u.id} onClick={()=>setFilterUser(u.id)} className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-              style={{background:filterUser===u.id?'#10b981':'var(--bg-overlay)',color:filterUser===u.id?'#fff':'var(--text-3)',border:filterUser===u.id?'1px solid #10b981':'1px solid var(--border)'}}>
-              {u.label}
-            </button>
-          ))}
-        </div>
+      <div>
+        <h2 className="text-base font-semibold" style={{color:'var(--text)'}}>Registro de Atividade</h2>
+        <p className="text-xs mt-0.5" style={{color:'var(--text-3)'}}>O que foi feito no app e quando</p>
       </div>
 
       {filtered.length===0&&(
@@ -3352,15 +3339,9 @@ function ActivityPage({state}){
               {group.entries.map(entry=>(
                 <div key={entry.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-all"
                   style={{background:'var(--bg-card)',border:'1px solid var(--border)'}}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
-                    style={{background:`${entry.userColor||'#10b981'}25`,color:entry.userColor||'#10b981',border:`1px solid ${entry.userColor||'#10b981'}40`}}>
-                    {entry.userInitials||'??'}
-                  </div>
+                  <div className="w-2 h-2 rounded-full shrink-0 mt-2" style={{background:'#10b981'}}/>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-1.5 flex-wrap">
-                      <span className="text-xs font-semibold" style={{color:entry.userColor||'var(--text)'}}>{entry.user}</span>
-                      <span className="text-sm" style={{color:'var(--text-2)'}}>{entry.text}</span>
-                    </div>
+                    <span className="text-sm" style={{color:'var(--text-2)'}}>{entry.text}</span>
                   </div>
                   <div className="text-xs shrink-0" style={{color:'var(--text-4)'}}>{relTime(entry.at)}</div>
                 </div>
@@ -3937,7 +3918,6 @@ const NAV=[
   {id:'cashflow',icon:CalendarDays,label:'Fluxo de Caixa'},
   {id:'entries',icon:TrendingUp,label:'Entradas',group:'Financeiro'},
   {id:'exits',icon:TrendingDown,label:'Saídas'},
-  {id:'permuta',icon:ArrowLeftRight,label:'Permuta'},
   {id:'objetivos',icon:Flag,label:'Objetivos',group:'Gestão'},
   {id:'tasks',icon:ListTodo,label:'Tarefas'},
   {id:'calendar',icon:CalendarRange,label:'Calendário',group:'Análise'},
@@ -3946,9 +3926,7 @@ const NAV=[
   {id:'activity',icon:Activity,label:'Atividade'},
 ]
 const SETTINGS_SUB=[
-  {id:'clients',icon:Briefcase,label:'Clientes'},
   {id:'cards',icon:CreditCard,label:'Cartões'},
-  {id:'collaborators',icon:Users,label:'Colaboradores'},
   {id:'settings',icon:Settings,label:'Dados & Backup'},
 ]
 
@@ -4042,7 +4020,6 @@ function Sidebar({activePage,setActivePage,open,setOpen,state}){
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 const USERS=[
   {id:'fabiano',name:'Fabiano',role:'admin',  color:'#10b981',initials:'FA',roleLabel:'Administrador'},
-  {id:'mainara', name:'Mainara', role:'manager',color:'#8b5cf6',initials:'MA',roleLabel:'Gestora'},
 ]
 async function hashPin(pin){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pin+'paiol_salt_2026'))
@@ -4055,8 +4032,9 @@ const loadPins=()=>{try{const p=localStorage.getItem('paiol_pins');return p?JSON
 const savePins=p=>localStorage.setItem('paiol_pins',JSON.stringify(p))
 
 function LoginScreen({onLogin}){
-  const [step,setStep]=useState('select')
-  const [user,setUser]=useState(null)
+  const single=USERS.length===1
+  const [step,setStep]=useState(single?(loadPins()[USERS[0].id]?'pin':'setup'):'select')
+  const [user,setUser]=useState(single?USERS[0]:null)
   const [pin,setPin]=useState('')
   const [confirm,setConfirm]=useState('')
   const [err,setErr]=useState('')
@@ -4274,9 +4252,7 @@ function PaiolFinanceApp({currentUser,onLogout,isLight,toggleTheme}){
   const pages={
     assistant:<AssistantPage {...pp}/>,
     dashboard:<DashboardPage {...pp} setActivePage={setActivePage}/>,cashflow:<CashFlowPage {...pp}/>,entries:<EntriesPage {...pp}/>,
-    exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,collaborators:<CollaboratorsPage {...pp}/>,
-    clients:<ClientsPage state={state} dispatch={trackedDispatch} toast={toast}/>,
-    permuta:<PermutaPage state={state} dispatch={trackedDispatch} toast={toast}/>,
+    exits:<ExitsPage {...pp}/>,cards:<CardsPage {...pp}/>,
     objetivos:<GoalsPage state={state} dispatch={trackedDispatch} toast={toast}/>,
     tasks:<TasksPage state={state} dispatch={trackedDispatch} toast={toast}/>,
     calendar:<CalendarPage state={state} dispatch={trackedDispatch} monthKey={mk} toast={toast}/>,
@@ -4301,9 +4277,9 @@ function PaiolFinanceApp({currentUser,onLogout,isLight,toggleTheme}){
                   <span className="text-sm font-semibold min-w-[80px] text-center tracking-tight" style={{color:'var(--text)'}}>{selYear}</span>
                   <button onClick={nextYear} className="p-1.5 rounded-xl transition-colors" style={{color:'var(--text-2)'}}><ChevronRight size={16}/></button>
                 </div>
-              ):['settings','clients','cards','collaborators','activity','assistant'].includes(activePage)?(
+              ):['settings','cards','activity','assistant'].includes(activePage)?(
                 <span className="text-sm font-semibold tracking-tight" style={{color:'var(--text)'}}>
-                  {activePage==='clients'?'Clientes':activePage==='cards'?'Cartões':activePage==='collaborators'?'Colaboradores':activePage==='activity'?'Atividade':activePage==='assistant'?'Assistente':'Dados & Backup'}
+                  {activePage==='cards'?'Cartões':activePage==='activity'?'Atividade':activePage==='assistant'?'Assistente':'Dados & Backup'}
                 </span>
               ):(
                 <div className="flex items-center gap-1.5">
